@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전자재료사업부 품질경영팀 업무 포털</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1f2e;
+  --surface2: #222840;
+  --border: #2e3554;
+  --border-active: #4f6ef7;
+  --text: #e4e8f5;
+  --text-muted: #7b84a8;
+  --accent: #4f6ef7;
+  --accent-hover: #6b83ff;
+  --accent-glow: rgba(79,110,247,0.18);
+  --success: #34d399;
+  --radius: 10px;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', 'Noto Sans KR', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ── Top Bar ── */
+.topbar {
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  user-select: none;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.brand-icon {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, var(--accent), #7c4dff);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -1px;
+}
+
+.brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.brand-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Tab Nav ── */
+.tab-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.tab-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent-hover);
+  border: 1px solid rgba(79,110,247,0.35);
+}
+
+.tab-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.tab-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  line-height: 1.4;
+}
+
+/* ── Content Frame ── */
+.frame-area {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.frame-wrap {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.frame-wrap.active {
+  display: block;
+}
+
+.frame-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}
+
+/* ── Loading Overlay ── */
+.frame-loader {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 10;
+  transition: opacity .3s;
+}
+
+.frame-loader.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loader-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Status dot in topbar ── */
+.topbar-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: blink 3s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top Navigation Bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon">QM</div>
+    <div>
+      <div class="brand-name">품질경영팀 포털</div>
+      <div class="brand-sub">전자재료사업부</div>
+    </div>
+  </div>
+
+  <div class="topbar-divider"></div>
+
+  <nav class="tab-nav" id="tabNav">
+    <button class="tab-btn active" data-tab="ivl_lt" onclick="switchTab('ivl_lt', this)">
+      <span class="tab-icon">📊</span>
+      OLED IVL &amp; LT 분석기
+    </button>
+    <button class="tab-btn" data-tab="preliminary" onclick="switchTab('preliminary', this)">
+      <span class="tab-icon">📋</span>
+      사전심사자료 자동화
+      <span class="tab-badge">GAS</span>
+    </button>
+  </nav>
+
+  <div class="topbar-status">
+    <div class="status-dot"></div>
+    가동 중
+  </div>
+</div>
+
+<!-- Frame Content Area -->
+<div class="frame-area">
+
+  <!-- Tab 1: OLED IVL & LT Analyzer -->
+  <div class="frame-wrap active" id="tab-ivl_lt">
+    <div class="frame-loader" id="loader-ivl_lt">
+      <div class="loader-spinner"></div>
+      <div class="loader-text">OLED IVL &amp; LT 분석기 로딩 중...</div>
+    </div>
+    <iframe
+      src="./ivl_lt.html"
+      title="OLED IVL & LT Analyzer"
+      onload="hideLoader('ivl_lt')"
+      onerror="hideLoader('ivl_lt')"
+    ></iframe>
+  </div>
+
+  <!-- Tab 2: 사전심사자료 자동화 (Google Apps Script) -->
+  <div class="frame-wrap" id="tab-preliminary">
+    <div class="frame-loader" id="loader-preliminary">
+      <div class="loader-spinner"></div>
+      <div class="loader-text">사전심사자료 자동화 로딩 중...</div>
+    </div>
+    <iframe
+      src="https://script.google.com/macros/s/AKfycbxv4hTJIlnNUr0qjmfAdHrV4WrjLfPz5MkiW3Te4BIWj5iLO6_4btqs82huib6U4Wsq/exec"
+      title="사전심사자료 자동화"
+      onload="hideLoader('preliminary')"
+      onerror="hideLoader('preliminary')"
+    ></iframe>
+  </div>
+
+</div>
+
+<script>
+var loaded = {};
+
+function switchTab(tabId, btn) {
+  // deactivate all tabs
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  document.querySelectorAll('.frame-wrap').forEach(function(w) {
+    w.classList.remove('active');
+  });
+
+  // activate selected
+  btn.classList.add('active');
+  document.getElementById('tab-' + tabId).classList.add('active');
+
+  // show loader if not yet loaded
+  if (!loaded[tabId]) {
+    document.getElementById('loader-' + tabId).classList.remove('hidden');
+  }
+}
+
+function hideLoader(tabId) {
+  loaded[tabId] = true;
+  var loader = document.getElementById('loader-' + tabId);
+  if (loader) loader.classList.add('hidden');
+}
+
+// Hide initial loader for ivl_lt after short delay (local file loads fast)
+window.addEventListener('DOMContentLoaded', function() {
+  // Mark ivl_lt loader visible until iframe fires onload
+});
+</script>
+
+</body>
+</html>

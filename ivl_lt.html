@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OLED IVL & LT Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--card:#161b22;--bdr:#30363d;--input:#0d1117;
+  --tx:#e6edf3;--tx2:#7d8590;--acc:#58a6ff;--red:#f85149;
+  --hdr:#21262d;--row1:#161b22;--row2:#1c2129;
+}
+body{font-family:Consolas,'Courier New',monospace;background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
+.wrap{max-width:1400px;margin:0 auto;padding:1rem}
+header{position:relative;text-align:center;margin-bottom:1rem}
+.ci{position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.6rem}
+.ci img{height:32px}
+.ci span{color:var(--tx2);font-size:.75rem;font-weight:600;border-left:1px solid var(--bdr);padding-left:.6rem}
+header h1{font-size:1.3rem;color:var(--acc);letter-spacing:1px}
+header p{color:var(--tx2);font-size:.8rem}
+
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:1rem;margin-bottom:1rem;position:relative}
+.card h2{font-size:.9rem;color:var(--acc);margin-bottom:.6rem;border-bottom:1px solid var(--bdr);padding-bottom:.4rem}
+
+/* Drop Zone */
+.dz{border:2px dashed var(--bdr);border-radius:6px;padding:2rem;text-align:center;cursor:pointer;transition:.2s}
+.dz:hover,.dz.over{border-color:var(--acc);background:#161b22}
+.dz input{display:none}
+.dz .ic{font-size:2rem}
+.dz-hint{color:var(--tx2);font-size:.75rem;margin-top:.3rem}
+
+/* File Grid */
+.fg{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem}
+.fs{display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border:1px solid var(--bdr);border-radius:4px;font-size:.78rem}
+.fs.ok{border-color:#238636;background:#0d1117}
+.fs .lb{font-weight:700;min-width:100px;flex-shrink:0;color:var(--acc)}
+.fs .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2);font-size:.72rem;direction:rtl;text-align:left}
+.fs .st{flex-shrink:0}
+.fs .mb{background:var(--bdr);border:none;color:var(--tx2);padding:1px 5px;border-radius:3px;cursor:pointer;font-size:.7rem}
+.fs .mb:hover{background:var(--acc);color:#000}
+.fs input[type=file]{display:none}
+.um{margin-top:.6rem;padding:.5rem .7rem;background:#2d1b00;border:1px solid #6e4000;border-radius:4px;font-size:.75rem;color:#d29922}
+.um-title{font-weight:700;margin-bottom:.3rem}
+.um-list{list-style:none;padding:0;margin:0}
+.um-list li{padding:2px 0;font-size:.72rem;color:#d29922}
+.um-list li::before{content:'• ';color:#6e4000}
+.um-dup{margin-top:.6rem;padding:.5rem .7rem;background:#3d0a0a;border:1px solid #9e2a2a;border-radius:4px;font-size:.75rem;color:#f85149}
+.um-dup .um-title{color:#f85149}
+.um-dup .um-list li{color:#f85149}
+.um-dup .um-list li::before{color:#9e2a2a}
+
+/* Button */
+.btn{display:block;width:100%;padding:.7rem;font-size:.9rem;font-weight:700;color:#fff;background:var(--acc);border:none;border-radius:4px;cursor:pointer;font-family:inherit;transition:.2s}
+.btn:hover{background:#1f6feb}
+.btn:disabled{background:#30363d;color:var(--tx2);cursor:default}
+
+/* Tables */
+.tw{overflow-x:auto}
+.t{width:100%;border-collapse:collapse;font-size:.78rem;white-space:nowrap}
+.t th,.t td{border:1px solid var(--bdr);padding:4px 8px;text-align:center}
+.t th{background:var(--hdr);color:var(--acc);font-weight:600;position:sticky;top:0;z-index:1}
+.t .bh{background:#1c2333;color:var(--tx);font-weight:700;text-align:left;font-size:.8rem}
+.t .r1 td{background:var(--row1)}
+.t .r2 td{background:var(--row2)}
+.t .ev td{background:#0d1a2d;font-weight:700}
+.t td.blue{color:var(--acc)}
+.t td.red{color:var(--red)}
+.t td.purple{color:#b388ff}
+.t td:first-child{text-align:left;font-weight:600}
+
+/* Copy Button */
+.cpb{position:absolute;top:8px;right:8px;background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 10px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit}
+.cpb:hover{background:var(--acc);color:#000}
+.cpb.done{background:#238636;color:#fff}
+.cpb.sum{right:65px;background:#f85149;border-color:#da3633;color:#fff;font-weight:700}
+.cpb.sum:hover{background:#da3633}
+.cpb.sum.done{background:#238636;border-color:#2ea043}
+.sel-tag{display:inline-block;padding:0 5px;border-radius:3px;font-size:.65rem;cursor:pointer;margin-left:4px;border:1.5px solid #484f58;color:var(--tx2);transition:.15s;user-select:none;vertical-align:middle}
+.sel-tag:hover{border-color:#f85149;color:#f85149}
+.sel-tag.rec{border-color:#f85149;border-style:dashed;color:#f85149}
+.sel-tag.act{background:#f85149;border-color:#f85149;color:#fff;font-weight:700}
+.t td.ivl-d{background:rgba(248,81,73,.22)!important;border-color:rgba(248,81,73,.5)!important}
+.t td.lt-sum{background:rgba(88,166,255,.22)!important;border-color:rgba(88,166,255,.5)!important}
+
+/* Chart */
+.ch-wrap{position:relative;height:450px;background:#0d1117;border:1px solid var(--bdr);border-radius:4px;padding:4px;transition:background .2s}
+.ch-wrap.wh{background:#ffffff;border-color:#ccc}
+
+/* Chart Controls */
+.ct-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.5rem}
+.ct-sl{display:flex;align-items:center;gap:6px;flex:1;min-width:240px;padding:5px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--bdr);border-radius:5px}
+.ct-sl .sl{color:var(--tx2);font-size:.78rem;font-weight:600;min-width:52px}
+.ct-sl input[type=range]{flex:1;accent-color:var(--acc);cursor:pointer}
+.ct-sl .rv{color:var(--acc);font-weight:700;min-width:44px;text-align:right;font-size:.88rem}
+.ct-grp{display:inline-flex;align-items:center;gap:3px;padding:4px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--bdr);border-radius:5px}
+.ct-gl{color:var(--tx2);font-size:.68rem;font-weight:700;margin-right:5px;letter-spacing:.5px}
+.ct-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx);padding:4px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.15s}
+.ct-btn:hover{background:var(--acc);color:#000}
+.ct-btn.active{background:var(--acc);color:#000}
+.ct-btn.copy{background:#238636;border-color:#2ea043;color:#fff;font-weight:700;padding:4px 16px}
+.ct-btn.copy:hover{background:#2ea043}
+.ct-data{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+.ct-data label{display:inline-flex;align-items:center;gap:3px;font-size:.8rem;cursor:pointer}
+.ct-data input[type=checkbox]{accent-color:var(--acc)}
+.ct-ni{background:var(--input);border:1px solid var(--bdr);color:inherit;padding:2px 5px;border-radius:3px;font-family:inherit;font-size:.78rem;width:120px}
+.ch-wrap.sq{max-width:600px;height:600px;margin-left:auto;margin-right:auto}
+
+/* Decimal Precision Selector */
+.dp-wrap{display:inline-flex;align-items:center;gap:6px;position:absolute;top:8px;right:125px}
+.dp-wrap .dp-label{color:var(--tx2);font-size:.72rem;font-weight:600}
+.dp-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit;transition:.15s}
+.dp-btn:hover{background:var(--acc);color:#000}
+.dp-btn.active{background:var(--acc);color:#000;font-weight:700}
+
+.hidden{display:none}
+.results{animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+footer{text-align:center;padding:1rem 0;color:var(--tx2);font-size:.8rem}
+
+/* Help Button */
+.help-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);border-radius:4px;border:1.5px solid var(--bdr);background:var(--card);color:var(--tx2);font-size:.72rem;font-weight:600;cursor:pointer;padding:4px 10px;transition:.2s;font-family:inherit;letter-spacing:.3px}
+.help-btn:hover{border-color:var(--acc);color:var(--acc);background:#1c2129}
+
+/* Help Modal */
+.help-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.help-overlay.show{opacity:1;pointer-events:auto}
+.help-modal{background:var(--card);border:1px solid var(--bdr);border-radius:10px;width:92%;max-width:680px;max-height:85vh;overflow-y:auto;padding:0;position:relative;transform:translateY(20px);transition:transform .25s}
+.help-overlay.show .help-modal{transform:translateY(0)}
+.help-modal::-webkit-scrollbar{width:6px}
+.help-modal::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+.help-modal::-webkit-scrollbar-track{background:transparent}
+.help-close{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;background:var(--hdr);border-bottom:1px solid var(--bdr);border-radius:10px 10px 0 0}
+.help-close h3{color:var(--acc);font-size:1rem;margin:0}
+.help-close button{background:none;border:none;color:var(--tx2);font-size:1.3rem;cursor:pointer;padding:0 4px;line-height:1}
+.help-close button:hover{color:var(--red)}
+.help-body{padding:1.2rem}
+.help-step{margin-bottom:1.6rem}
+.help-step-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--acc);color:#000;font-size:.8rem;font-weight:700;margin-right:8px;flex-shrink:0}
+.help-step-title{font-size:.95rem;font-weight:700;color:var(--tx);display:inline}
+.help-step-desc{color:var(--tx2);font-size:.82rem;margin-top:.5rem;line-height:1.6}
+.help-step-desc b{color:var(--tx)}
+.help-step-desc .acc{color:var(--acc)}
+
+/* Mini mockup styles */
+.hm-box{background:var(--bg);border:1px solid var(--bdr);border-radius:6px;padding:.7rem;margin-top:.6rem;font-size:.75rem}
+.hm-dz{border:2px dashed var(--bdr);border-radius:5px;padding:.8rem;text-align:center;color:var(--tx2);font-size:.72rem}
+.hm-dz .hm-ic{font-size:1.4rem;margin-bottom:4px}
+.hm-slot{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--bdr);border-radius:3px;margin:3px 0;font-size:.7rem}
+.hm-slot.ok{border-color:#238636;background:rgba(35,134,54,.1)}
+.hm-slot .hm-lb{color:var(--acc);font-weight:700;min-width:80px}
+.hm-slot .hm-fn{color:var(--tx2);flex:1;font-size:.65rem}
+.hm-slot .hm-st{font-size:.75rem}
+.hm-slot .hm-clip{background:var(--bdr);border:none;color:var(--tx2);padding:1px 5px;border-radius:2px;font-size:.6rem;cursor:default}
+.hm-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.hm-btn{display:block;width:100%;padding:6px;text-align:center;background:var(--acc);color:#000;border-radius:4px;font-weight:700;font-size:.78rem;margin-top:.5rem}
+.hm-btn.dis{background:var(--bdr);color:var(--tx2)}
+.hm-tbl{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.65rem}
+.hm-tbl th,.hm-tbl td{border:1px solid var(--bdr);padding:2px 5px;text-align:center}
+.hm-tbl th{background:var(--hdr);color:var(--acc);font-weight:600}
+.hm-tbl .hm-bh{background:#1c2333;text-align:left;font-weight:700;color:var(--tx)}
+.hm-tbl .hm-ev td{background:#0d1a2d;font-weight:700}
+.hm-tbl .hm-blue{color:var(--acc)}
+.hm-tbl .hm-red{color:var(--red)}
+.hm-ctrl{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:.5rem}
+.hm-ctrl span{font-size:.6rem;color:var(--tx2)}
+.hm-ctrl-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 6px;border-radius:3px;font-size:.6rem;cursor:default}
+.hm-ctrl-btn.on{background:var(--acc);color:#000}
+.hm-slider{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:4px;padding:3px 6px;font-size:.6rem;color:var(--tx2)}
+.hm-slider input[type=range]{width:60px;height:4px}
+.hm-chart{background:#fff;border:1px solid #ccc;border-radius:4px;height:80px;display:flex;align-items:center;justify-content:center;margin-top:.5rem;font-size:.65rem;color:#999;position:relative;overflow:hidden}
+.hm-chart svg{width:100%;height:100%;position:absolute;top:0;left:0}
+.hm-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.65rem;font-weight:600}
+.hm-tag.blue{background:rgba(88,166,255,.15);color:var(--acc)}
+.hm-tag.red{background:rgba(248,81,73,.15);color:var(--red)}
+.hm-tag.purple{background:rgba(179,136,255,.15);color:#b388ff}
+.hm-tag.green{background:rgba(35,134,54,.15);color:#238636}
+.hm-tag.yellow{background:rgba(210,153,34,.15);color:#d29922}
+.hm-arrow{color:var(--acc);font-size:1.2rem;text-align:center;margin:.3rem 0}
+.hm-sep{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
+.hm-tip{background:#1c2333;border:1px solid var(--bdr);border-radius:5px;padding:.5rem .7rem;margin-top:.5rem;font-size:.72rem;color:var(--tx2);line-height:1.5}
+.hm-tip b{color:var(--acc)}
+
+/* History Modal */
+.hist-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.hist-overlay.show{opacity:1;pointer-events:auto}
+.hist-modal{background:var(--card);border:1px solid var(--bdr);border-radius:10px;width:92%;max-width:720px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;transform:translateY(20px);transition:transform .25s}
+.hist-overlay.show .hist-modal{transform:translateY(0)}
+.hist-close{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1.2rem;background:var(--hdr);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.hist-close h3{color:var(--acc);font-size:1rem;margin:0}
+.hist-body{overflow-y:auto;flex:1;padding:.5rem}
+.hist-body::-webkit-scrollbar{width:6px}
+.hist-body::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+.hist-body::-webkit-scrollbar-track{background:transparent}
+.hist-item{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;border:1px solid var(--bdr);border-radius:5px;margin-bottom:.4rem;cursor:pointer;transition:.15s}
+.hist-item:hover{border-color:var(--acc);background:#1c2129}
+.hist-item-info{flex:1;min-width:0}
+.hist-item-label{font-weight:700;color:var(--tx);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item-meta{color:var(--tx2);font-size:.72rem;margin-top:2px}
+.hist-item-del{background:none;border:1px solid var(--bdr);color:var(--tx2);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:.72rem;flex-shrink:0;font-family:inherit;transition:.15s}
+.hist-item-del:hover{background:var(--red);border-color:var(--red);color:#fff}
+.hist-empty{text-align:center;color:var(--tx2);padding:2rem;font-size:.85rem;line-height:1.7}
+/* Save Modal */
+.save-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:10000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.save-overlay.show{opacity:1;pointer-events:auto}
+.save-modal{background:var(--card);border:1px solid var(--bdr);border-radius:10px;width:92%;max-width:480px;padding:1.5rem;transform:translateY(20px);transition:transform .25s}
+.save-overlay.show .save-modal{transform:translateY(0)}
+.save-modal h3{color:var(--acc);font-size:1rem;margin-bottom:.5rem}
+.save-modal p{color:var(--tx2);font-size:.8rem;margin-bottom:.7rem;line-height:1.6}
+.save-modal input{width:100%;background:var(--input);border:1px solid var(--bdr);color:var(--tx);padding:6px 10px;border-radius:4px;font-family:inherit;font-size:.85rem;outline:none}
+.save-modal input:focus{border-color:var(--acc)}
+.save-btns{display:flex;gap:.5rem;margin-top:.8rem}
+.save-btns .btn{flex:1;font-size:.85rem;padding:.5rem}
+.save-btns .btn.cancel{background:var(--bdr);color:var(--tx2)}
+.save-btns .btn.cancel:hover{background:#484f58}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+    <div class="ci" onclick="location.reload()" style="cursor:pointer"><img src="LT소재 로고(영문).jpg" alt="LT Materials"><span>품질경영팀</span></div>
+    <h1>OLED IVL &amp; LT Analyzer</h1>
+    <p>Raw Data CSV Upload &rarr; Auto Analysis &rarr; Chart</p>
+    <button class="help-btn" id="histBtn" style="right:85px" onclick="showHist()" title="임시저장 목록">임시저장 목록</button>
+    <button class="help-btn" id="helpBtn" title="사용 가이드">사용가이드</button>
+</header>
+
+<!-- Help Modal -->
+<div class="help-overlay" id="helpOverlay">
+<div class="help-modal">
+<div class="help-close"><h3>&#128214; 사용 가이드</h3><button id="helpClose">&times;</button></div>
+<div class="help-body">
+
+<!-- STEP 1 -->
+<div class="help-step">
+<span class="help-step-num">1</span>
+<span class="help-step-title">CSV 파일 업로드</span>
+<div class="help-step-desc">
+측정 장비에서 추출한 <b>CSV 파일</b>들을 아래 영역에 <b>드래그 앤 드롭</b>하거나 <b>클릭</b>하여 업로드합니다.<br>
+IVL 파일 + LT 파일을 합쳐 <b>4~8개</b>를 한번에 넣어주세요.
+</div>
+<div class="hm-box">
+<div class="hm-dz">
+<div class="hm-ic">&#128194;</div>
+CSV 파일 드래그 &amp; 드롭 또는 클릭<br>
+<span style="font-size:.6rem;color:var(--tx2)">IVL + LT (REF/SAMPLE 1,2) - 4~8개 파일</span>
+</div>
+</div>
+</div>
+
+<!-- STEP 2 -->
+<div class="help-step">
+<span class="help-step-num">2</span>
+<span class="help-step-title">파일 자동 매칭 확인</span>
+<div class="help-step-desc">
+파일명을 분석하여 <b>8개 슬롯</b>에 자동 배정됩니다.<br>
+<span class="acc">&#9745;</span> 초록 테두리 = 매칭 성공&emsp;
+<span class="acc">&#9744;</span> 회색 = 미배정<br>
+매칭이 안 된 파일은 <b>&#128206; 버튼</b>을 눌러 수동으로 지정할 수 있습니다.
+</div>
+<div class="hm-box">
+<div class="hm-grid">
+<div class="hm-slot ok"><span class="hm-lb">REF IVL-1</span><span class="hm-fn">REF_IVL1_CH082.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot ok"><span class="hm-lb">REF IVL-2</span><span class="hm-fn">REF_IVL2_CH083.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot ok"><span class="hm-lb">SAMPLE IVL-1</span><span class="hm-fn">SAM_IVL1_CH090.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot"><span class="hm-lb">SAMPLE IVL-2</span><span class="hm-fn" style="color:var(--tx2)">-</span><span class="hm-st">&#9744;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot ok"><span class="hm-lb">REF LT-1</span><span class="hm-fn">REF_LT1_CH082.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot ok"><span class="hm-lb">REF LT-2</span><span class="hm-fn">REF_LT2_CH083.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot ok"><span class="hm-lb">SAMPLE LT-1</span><span class="hm-fn">SAM_LT1_CH090.csv</span><span class="hm-st">&#9745;</span><span class="hm-clip">&#128206;</span></div>
+<div class="hm-slot"><span class="hm-lb">SAMPLE LT-2</span><span class="hm-fn" style="color:var(--tx2)">-</span><span class="hm-st">&#9744;</span><span class="hm-clip">&#128206;</span></div>
+</div>
+</div>
+<div class="hm-tip">
+<b>&#128161; 파일명 규칙</b><br>
+파일명이 <b>REF_</b> 또는 <b>SAMPLE_</b>(SAM_)로 시작하고, <b>IVL</b> 또는 <b>LT</b> + 번호가 포함되어야 자동 인식됩니다.<br>
+예: <b>REF_IVL1</b>_CH082.csv, <b>Sample_LT2</b>_test.csv
+</div>
+</div>
+
+<!-- STEP 3 -->
+<div class="help-step">
+<span class="help-step-num">3</span>
+<span class="help-step-title">ANALYZE 버튼 클릭</span>
+<div class="help-step-desc">
+REF와 SAMPLE 파일이 최소 1개씩 매칭되면 버튼이 활성화됩니다.
+</div>
+<div class="hm-box">
+<div class="hm-btn dis">Upload files (0/8)</div>
+<div class="hm-arrow">&#8595;</div>
+<div class="hm-btn">ANALYZE (6 files)</div>
+</div>
+</div>
+
+<hr class="hm-sep">
+
+<!-- STEP 4 -->
+<div class="help-step">
+<span class="help-step-num">4</span>
+<span class="help-step-title">IVL 분석 결과 테이블</span>
+<div class="help-step-desc">
+J=10mA/cm&sup2; 기준으로 <b>전압, 효율, EQE, 색좌표, 파장</b>을 비교합니다.<br>
+Result 행에서 SAMPLE/REF 비율(%)이 표시됩니다.<br><br>
+<b>IVL 항목</b>&ensp;<span class="hm-tag blue">&#177;5% 이내 = 정상</span>&ensp;
+<span class="hm-tag red">&#177;5% 초과 = 이탈</span><br>
+<b>LT 수명</b>&ensp;<span class="hm-tag red">&lt;95% = 이탈</span>&ensp;
+<span class="hm-tag blue">95~105% = 정상</span>&ensp;
+<span class="hm-tag purple">&gt;105% = 우수</span>
+</div>
+<div class="hm-box" style="overflow-x:auto">
+<table class="hm-tbl">
+<tr><th>Block</th><th>Op.V(V)</th><th>EL EFF</th><th>EQE(%)</th><th>LT(95)</th><th>LT(94)</th></tr>
+<tr class="hm-bh"><td colspan="6">&#9312; REF1 vs SAMPLE1</td></tr>
+<tr><td style="text-align:left;font-weight:600">REF IVL-1</td><td>3.85</td><td>12.34</td><td>8.21</td><td>142.5</td><td>155.7</td></tr>
+<tr><td style="text-align:left;font-weight:600">SAMPLE IVL-1</td><td>3.92</td><td>11.87</td><td>7.95</td><td>165.3</td><td>135.2</td></tr>
+<tr class="hm-ev"><td style="text-align:left;font-weight:600">Result</td><td class="hm-blue">98.2%</td><td class="hm-blue">96.2%</td><td class="hm-blue">96.8%</td><td style="color:#b388ff;font-weight:700">116.0%</td><td style="color:var(--red);font-weight:700">86.8%</td></tr>
+</table>
+</div>
+<div class="hm-tip">
+<b>&#128161; 상단 옵션 버튼</b><br>
+&#8226; <b>LT [95~90] [99~96]</b> : 표시할 LT 레벨 범위 전환<br>
+&#8226; <b>소수점 [정수] [1자리] [2자리]</b> : 결과 비율의 소수점 자릿수<br>
+&#8226; <b>COPY</b> : 테이블 전체 내용을 복사하여 Excel에 붙여넣기 가능<br><br>
+<b style="color:var(--red)">요약 COPY</b> — 핵심 데이터만 추출하여 복사 (REF 1행 + SAMPLE 1행)<br>
+&nbsp;&nbsp;&#9642; <b>IVL 선택</b> : REF1-SAMPLE1의 Op.V·EL EFF·EQE·CIE(x)·CIE(y) 5개 항목이 모두 반올림 후 98~102% 이내이고 MAX 파장 차이가 ±2nm 이내이면 REF1-SAMPLE1 자동 선택<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1개라도 벗어나면 4개 조합(REF1/2 × SAMPLE1/2) 중 5개 비율의 평균편차가 100%에 가장 근접한 조합 선택<br>
+&nbsp;&nbsp;&#9642; <b>LT 선택</b> : SAMPLE/REF 비율이 가장 낮은 블록 자동 추천,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;양쪽 모두 100hr 이상 측정된 첫 번째 LT 레벨 1개만 복사<br>
+&nbsp;&nbsp;&#9642; 각 블록 헤더의 <b style="color:var(--red)">[IVL]</b> <b style="color:var(--acc)">[LT]</b> 뱃지를 클릭하면 수동으로 변경 가능<br>
+&nbsp;&nbsp;&nbsp;&nbsp;— 실선(solid) 뱃지 = 현재 선택, 점선(dashed) 뱃지 = 자동 추천<br>
+&nbsp;&nbsp;&#9642; 복사될 셀은 <span style="background:rgba(248,81,73,.3);padding:0 3px;border-radius:2px">IVL(빨강)</span> · <span style="background:rgba(88,166,255,.3);padding:0 3px;border-radius:2px">LT(파랑)</span> 하이라이트로 미리 확인 가능
+</div>
+</div>
+
+<!-- STEP 5 -->
+<div class="help-step">
+<span class="help-step-num">5</span>
+<span class="help-step-title">LT 수명 그래프</span>
+<div class="help-step-desc">
+시간(hr)에 따른 <b>휘도 변화(%)</b>를 그래프로 표시합니다.<br>
+LT95~LT90 기준선이 점선으로 표시됩니다.
+</div>
+<div class="hm-box">
+<div class="hm-ctrl">
+<div class="hm-slider">X max <input type="range" disabled> <span style="color:var(--acc)">150</span> hr</div>
+<div class="hm-slider">Y min <input type="range" disabled> <span style="color:var(--acc)">95</span> %</div>
+<div class="hm-slider">Smooth <input type="range" disabled> <span style="color:var(--acc)">OFF</span></div>
+</div>
+<div class="hm-ctrl" style="margin-top:3px">
+<span>MODE</span>
+<span class="hm-ctrl-btn on">WHITE</span>
+<span class="hm-ctrl-btn on">SQUARE</span>
+<span style="margin-left:6px">AXIS</span>
+<span class="hm-ctrl-btn on">X Label</span>
+<span class="hm-ctrl-btn on">Y Label</span>
+<span class="hm-ctrl-btn on">X Ticks</span>
+<span class="hm-ctrl-btn on">Y Ticks</span>
+</div>
+<div class="hm-chart">
+<svg viewBox="0 0 300 80" preserveAspectRatio="none">
+<line x1="0" y1="40" x2="300" y2="40" stroke="#ddd" stroke-dasharray="4,3" stroke-width="0.5"/>
+<line x1="0" y1="55" x2="300" y2="55" stroke="#ddd" stroke-dasharray="4,3" stroke-width="0.5"/>
+<polyline points="0,5 30,6 60,8 90,12 120,18 150,25 180,33 210,42 240,52 270,60 300,67" fill="none" stroke="#4a9eff" stroke-width="1.5"/>
+<polyline points="0,5 30,7 60,10 90,15 120,22 150,30 180,40 210,50 240,58 270,65 300,72" fill="none" stroke="#ef4444" stroke-width="1.5"/>
+</svg>
+</div>
+</div>
+<div class="hm-tip">
+<b>&#128161; 차트 조작법</b><br>
+&#8226; <b>슬라이더</b>로 축 범위, 스무딩 실시간 조절<br>
+&#8226; <b>WHITE/SQUARE</b> 토글로 배경색, 비율 전환<br>
+&#8226; <b>체크박스</b>로 개별 데이터 표시/숨기기<br>
+&#8226; <b>이름 입력창</b>에서 범례 텍스트 수정 가능<br>
+&#8226; <b>COPY CHART</b> 버튼으로 그래프 이미지 복사
+</div>
+</div>
+
+<!-- STEP 6 -->
+<div class="help-step">
+<span class="help-step-num">6</span>
+<span class="help-step-title">EL 스펙트럼 차트</span>
+<div class="help-step-desc">
+J=10mA/cm&sup2; 지점의 <b>파장별 발광 스펙트럼</b>을 표시합니다.<br>
+X축: 파장(380~780nm), Y축: 강도(a.u.)
+</div>
+<div class="hm-box">
+<div class="hm-chart" style="height:60px">
+<svg viewBox="0 0 300 60" preserveAspectRatio="none">
+<polygon points="80,58 100,50 120,30 135,10 145,5 155,10 170,30 190,50 210,58" fill="rgba(74,158,255,0.15)" stroke="#4a9eff" stroke-width="1"/>
+<polygon points="85,58 105,48 125,28 138,9 148,4 158,9 173,28 195,48 215,58" fill="rgba(239,68,68,0.12)" stroke="#ef4444" stroke-width="1"/>
+</svg>
+</div>
+</div>
+</div>
+
+<hr class="hm-sep">
+
+<!-- Color legend -->
+<div class="help-step" style="margin-bottom:.8rem">
+<span class="help-step-num" style="background:var(--bdr);color:var(--tx2)">&#9734;</span>
+<span class="help-step-title">데이터 색상 구분</span>
+<div class="help-step-desc" style="margin-top:.5rem">
+<span style="color:#4a9eff;font-weight:700">&#9632; REF-1 (파랑)</span>&emsp;
+<span style="color:#a855f7;font-weight:700">&#9632; REF-2 (보라)</span>&emsp;
+<span style="color:#ef4444;font-weight:700">&#9632; SAMPLE-1 (빨강)</span>&emsp;
+<span style="color:#f59e0b;font-weight:700">&#9632; SAMPLE-2 (주황)</span>
+</div>
+</div>
+
+<div class="help-step" style="margin-bottom:0">
+<span class="help-step-num" style="background:var(--bdr);color:var(--tx2)">&#9734;</span>
+<span class="help-step-title">빠른 팁</span>
+<div class="hm-tip" style="margin-top:.5rem">
+&#8226; <b>로고 클릭</b> &rarr; 페이지 초기화 (새로고침)<br>
+&#8226; <b>COPY 버튼</b> &rarr; 테이블 전체를 탭 구분 텍스트로 복사, Excel에 바로 붙여넣기<br>
+&#8226; <b style="color:var(--red)">요약 버튼</b> &rarr; 핵심 2행(REF+SAMPLE)만 추출, IVL·LT 블록 독립 선택 가능<br>
+&#8226; 파일을 <b>추가 업로드</b>하면 기존 매칭에 덮어씌워집니다<br>
+&#8226; <b>8개 슬롯 모두</b> 채우지 않아도 분석 가능 (최소 REF+SAMPLE IVL 각 1개)<br>
+&#8226; <b style="color:#1f6feb">&#128190; 분석결과 임시저장</b> &rarr; 현재 분석 상태를 브라우저에 저장 (최대 10개, 초과 시 오래된 항목 자동 삭제)<br>
+&#8226; <b>임시저장 목록</b> 버튼 &rarr; 저장된 세션 목록 확인 · 불러오기 · 삭제 가능, 메모로 검색 지원
+</div>
+</div>
+
+<hr class="hm-sep">
+<div style="text-align:center;padding:.3rem 0 .2rem;font-size:.75rem;color:var(--tx2);line-height:1.7">
+문의사항: <b style="color:var(--tx)">전자재료사업부 - 품질보증그룹</b><br>
+<a href="mailto:jhbaik@ltml.co.kr" style="color:var(--acc);text-decoration:none">jhbaik@ltml.co.kr</a>
+</div>
+
+</div><!-- help-body -->
+</div><!-- help-modal -->
+</div><!-- help-overlay -->
+
+<!-- History Modal -->
+<div class="hist-overlay" id="histOverlay">
+<div class="hist-modal">
+<div class="hist-close">
+  <h3>&#128202; 임시저장 목록</h3>
+  <div style="display:flex;align-items:center;gap:.5rem">
+    <input type="text" id="histSearch" class="ct-ni" placeholder="라벨/날짜 검색..." style="width:180px">
+    <button onclick="closeHist()" style="background:none;border:none;color:var(--tx2);font-size:1.3rem;cursor:pointer;padding:0 4px;line-height:1">&times;</button>
+  </div>
+</div>
+<div class="hist-body" id="histList"></div>
+</div>
+</div><!-- hist-overlay -->
+
+<!-- Save Modal -->
+<div class="save-overlay" id="saveOverlay">
+<div class="save-modal">
+  <h3>&#128190; 분석 결과 저장</h3>
+  <p>이 분석 세션에 대한 메모를 입력하세요<br><small>(샘플명, 날짜, 실험 조건 등 — 임시저장 목록에서 검색 가능)</small></p>
+  <input type="text" id="saveLabelInp" placeholder="예: T50_260123 Mono G25 Lot#1 vs Ref">
+  <div class="save-btns">
+    <button class="btn" onclick="confirmSave()">저장</button>
+    <button class="btn cancel" onclick="closeSaveModal()">취소</button>
+  </div>
+</div>
+</div><!-- save-overlay -->
+
+<div class="card">
+    <h2>FILE UPLOAD</h2>
+    <div class="dz" id="dz">
+        <div class="ic">&#128194;</div>
+        <p>CSV 파일 드래그 &amp; 드롭 또는 클릭</p>
+        <p class="dz-hint">IVL + LT (REF/SAMPLE 1,2) - 4~8개 파일</p>
+        <input type="file" id="fi" multiple accept=".csv">
+    </div>
+</div>
+
+<div class="card">
+    <h2>FILE MATCHING</h2>
+    <div class="fg" id="fg"></div>
+    <div id="um" class="hidden"></div>
+</div>
+
+<div class="card">
+    <button class="btn" id="abtn" disabled>파일을 업로드하세요</button>
+</div>
+
+<div id="res" class="hidden results">
+    <!-- Save Result -->
+    <div class="card" style="padding:.6rem 1rem">
+        <button class="btn" id="saveBtn" style="background:#1f6feb;font-size:.85rem" onclick="showSaveModal()">&#128190; 분석결과 임시저장</button>
+    </div>
+    <!-- IVL -->
+    <div class="card">
+        <h2>IVL ANALYSIS</h2>
+        <div class="dp-wrap" id="ltModeWrap" style="right:360px">
+            <span class="dp-label">LT</span>
+            <button class="dp-btn active" data-ltm="low">95~90</button>
+            <button class="dp-btn" data-ltm="high">99~96</button>
+        </div>
+        <div class="dp-wrap" id="dpWrap">
+            <span class="dp-label">소수점</span>
+            <button class="dp-btn" data-dp="0">정수</button>
+            <button class="dp-btn active" data-dp="1">1자리</button>
+            <button class="dp-btn" data-dp="2">2자리</button>
+        </div>
+        <button class="cpb sum" onclick="copySummary()">요약</button>
+        <button class="cpb" onclick="copyTbl('ivlT')">COPY</button>
+        <div class="tw"><table class="t" id="ivlT"></table></div>
+    </div>
+
+    <!-- IVL Extra -->
+    <div class="card hidden" id="ivlExCard">
+        <h2>IVL ANALYSIS (추가)</h2>
+        <button class="cpb" onclick="copyTbl('ivlT2')">COPY</button>
+        <div class="tw"><table class="t" id="ivlT2"></table></div>
+    </div>
+
+    <!-- LT Chart -->
+    <div class="card" id="ltcCard">
+        <h2>LT CHART</h2>
+        <div id="ltCtrl"></div>
+        <div class="ch-wrap wh sq"><canvas id="ltC"></canvas></div>
+    </div>
+
+    <!-- Spectrum -->
+    <div class="card" id="spCard">
+        <h2>IVL SPECTRUM (@J=10mA/cm&sup2;)</h2>
+        <div class="ch-wrap"><canvas id="spC"></canvas></div>
+    </div>
+</div>
+
+<footer>OLED Analyzer v2.0 &nbsp;|&nbsp; jhbaik@ltml.co.kr</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== CONFIG ===== */
+const S={
+  REF_IVL1:{l:'REF IVL-1',t:'IVL',g:'REF',n:'1'},
+  REF_IVL2:{l:'REF IVL-2',t:'IVL',g:'REF',n:'2'},
+  SAMPLE_IVL1:{l:'SAMPLE IVL-1',t:'IVL',g:'SAMPLE',n:'1'},
+  SAMPLE_IVL2:{l:'SAMPLE IVL-2',t:'IVL',g:'SAMPLE',n:'2'},
+  REF_LT1:{l:'REF LT-1',t:'LT',g:'REF',n:'1'},
+  REF_LT2:{l:'REF LT-2',t:'LT',g:'REF',n:'2'},
+  SAMPLE_LT1:{l:'SAMPLE LT-1',t:'LT',g:'SAMPLE',n:'1'},
+  SAMPLE_LT2:{l:'SAMPLE LT-2',t:'LT',g:'SAMPLE',n:'2'},
+};
+
+const BLOCKS_MAIN=[
+  {lb:'REF1 vs SAMPLE1',r1:'REF_IVL1',r2:'SAMPLE_IVL1',lt1:'REF_LT1',lt2:'SAMPLE_LT1'},
+  {lb:'REF1 vs SAMPLE2',r1:'REF_IVL1',r2:'SAMPLE_IVL2',lt1:'REF_LT1',lt2:'SAMPLE_LT2'},
+  {lb:'REF2 vs SAMPLE1',r1:'REF_IVL2',r2:'SAMPLE_IVL1',lt1:'REF_LT2',lt2:'SAMPLE_LT1'},
+  {lb:'REF2 vs SAMPLE2',r1:'REF_IVL2',r2:'SAMPLE_IVL2',lt1:'REF_LT2',lt2:'SAMPLE_LT2'},
+];
+const BLOCKS_EXTRA=[
+  {lb:'SAMPLE1 vs SAMPLE2',r1:'SAMPLE_IVL1',r2:'SAMPLE_IVL2',lt1:'SAMPLE_LT1',lt2:'SAMPLE_LT2'},
+  {lb:'SAMPLE2 vs SAMPLE1',r1:'SAMPLE_IVL2',r2:'SAMPLE_IVL1',lt1:'SAMPLE_LT2',lt2:'SAMPLE_LT1'},
+  {lb:'REF1 vs REF2',r1:'REF_IVL1',r2:'REF_IVL2',lt1:'REF_LT1',lt2:'REF_LT2'},
+  {lb:'REF2 vs REF1',r1:'REF_IVL2',r2:'REF_IVL1',lt1:'REF_LT2',lt2:'REF_LT1'},
+];
+
+const COL={REF_LT1:'#4a9eff',REF_LT2:'#a855f7',SAMPLE_LT1:'#ef4444',SAMPLE_LT2:'#f59e0b',
+           REF_IVL1:'#4a9eff',REF_IVL2:'#a855f7',SAMPLE_IVL1:'#ef4444',SAMPLE_IVL2:'#f59e0b'};
+
+const LT_LEVELS=[95,94,93,92,91,90];
+const LT_LEVELS_HIGH=[99,98,97,96];
+const LT_ALL_LEVELS=[99,98,97,96,95,94,93,92,91,90];
+
+/* ===== STATE ===== */
+const fm={}, pd={};
+let ltCI=null, spCI=null;
+const unm=[];
+let ivlDP=1; /* IVL decimal places: 0=정수, 1=소수1자리, 2=소수2자리 */
+let ltMode='low'; /* 'low'=LT95~90, 'high'=LT99~96 */
+let lastIvl={},lastLtLv={},lastLtMaxHr={};
+let sumSel={ivl:-1,lt:-1,ivlRec:-1,ltRec:-1};
+
+const $=id=>document.getElementById(id);
+const dz=$('dz'),fi=$('fi'),fg=$('fg'),abtn=$('abtn'),res=$('res');
+
+/* ===== INIT ===== */
+function init(){
+  renderGrid();
+  dz.onclick=()=>fi.click();
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')};
+  dz.ondragleave=()=>dz.classList.remove('over');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');handleFiles(e.dataTransfer.files)};
+  fi.onchange=e=>handleFiles(e.target.files);
+  abtn.onclick=run;
+  // Decimal precision buttons
+  $('dpWrap').querySelectorAll('.dp-btn').forEach(btn=>{
+    btn.onclick=function(){
+      ivlDP=parseInt(this.dataset.dp);
+      $('dpWrap').querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('active'));
+      this.classList.add('active');
+      reRenderTbls();
+    };
+  });
+  // LT mode tab buttons
+  $('ltModeWrap').querySelectorAll('.dp-btn').forEach(btn=>{
+    btn.onclick=function(){
+      ltMode=this.dataset.ltm;
+      $('ltModeWrap').querySelectorAll('.dp-btn').forEach(b=>b.classList.remove('active'));
+      this.classList.add('active');
+      reRenderTbls();
+    };
+  });
+}
+
+function renderGrid(){
+  fg.innerHTML='';
+  for(const[k,s]of Object.entries(S)){
+    const d=document.createElement('div');
+    d.className='fs';d.id='s-'+k;
+    d.innerHTML=`<span class="lb">${s.l}</span><span class="fn" id="f-${k}">-</span><span class="st" id="st-${k}">&#9744;</span><button class="mb" data-k="${k}">&#128206;</button><input type="file" accept=".csv" data-k="${k}">`;
+    fg.appendChild(d);
+    d.querySelector('.mb').onclick=function(){d.querySelector('input[type=file]').click()};
+    d.querySelector('input[type=file]').onchange=function(){if(this.files.length){assign(k,this.files[0]);updBtn()}};
+  }
+}
+
+/* ===== FILE DETECT ===== */
+function detect(name){
+  /* strip leading special chars (★, *, etc.) then match strictly */
+  const n=name.replace(/^[^a-zA-Z0-9]+/,'').toLowerCase();
+  let g='';
+  if(/^ref[_\s]/i.test(n))g='REF';
+  else if(/^sam(?:ple)?[_\s]/i.test(n))g='SAMPLE';
+  else return null;
+  let t='',num='';
+  const iv=n.match(/ivl\s*(\d)/),lt=n.match(/(?:^|[_\s])lt\s*(\d)/);
+  if(iv){t='IVL';num=iv[1]}else if(lt){t='LT';num=lt[1]}
+  else if(n.includes('ivl')){t='IVL';num=n.includes('2')?'2':'1'}
+  else if(n.includes('lt')||n.includes('\uc218\uba85')){t='LT';num=n.includes('2')?'2':'1'}
+  else return null;
+  const k=g+'_'+t+num;
+  return S[k]?k:null;
+}
+
+let dup=[];  /* duplicate conflicts: {slot, prev, curr} */
+function handleFiles(files){
+  unm.length=0;dup.length=0;
+  /* track which slots are assigned in THIS batch */
+  const batch={};
+  for(const f of files){
+    if(!f.name.toLowerCase().endsWith('.csv'))continue;
+    const k=detect(f.name);
+    if(!k){unm.push(f.name);continue}
+    if(fm[k]||batch[k]){
+      const prev=batch[k]||fm[k].name;
+      dup.push({slot:S[k].l,prev:prev,curr:f.name});
+    }
+    batch[k]=f.name;
+    assign(k,f);
+  }
+  showUnm();updBtn();
+}
+
+function assign(k,file){
+  fm[k]=file;
+  $('s-'+k).classList.add('ok');
+  $('f-'+k).textContent=file.name;
+  $('f-'+k).title=file.name;
+  $('st-'+k).innerHTML='&#9745;';
+}
+
+function showUnm(){
+  const el=$('um');
+  if(!unm.length&&!dup.length){el.classList.add('hidden');return}
+  el.classList.remove('hidden');
+  let h='';
+  if(dup.length){
+    h+='<div class="um-dup"><div class="um-title">&#10060; 중복 매칭 ('+dup.length+'건) — 마지막 파일로 덮어씌워집니다</div><ul class="um-list">';
+    for(const d of dup)h+='<li><b>['+d.slot+']</b> '+d.prev+' &rarr; '+d.curr+'</li>';
+    h+='</ul></div>';
+  }
+  if(unm.length){
+    h+='<div class="um"><div class="um-title">&#9888; 매칭 실패 파일 ('+unm.length+'개)</div><ul class="um-list">';
+    for(const f of unm)h+='<li>'+f+'</li>';
+    h+='</ul></div>';
+  }
+  el.innerHTML=h;
+}
+
+function updBtn(){
+  const ik=Object.keys(fm).filter(k=>S[k].t==='IVL');
+  const ok=ik.some(k=>S[k].g==='REF')&&ik.some(k=>S[k].g==='SAMPLE')||Object.keys(fm).some(k=>S[k].t==='LT');
+  abtn.disabled=!ok;
+  const c=Object.keys(fm).length;
+  abtn.textContent=ok?`ANALYZE (${c} files)`:`Upload files (${c}/8)`;
+}
+
+/* ===== CSV ===== */
+async function readF(file){
+  const buf=await file.arrayBuffer();
+  let t=new TextDecoder('utf-8').decode(buf);
+  if(t.includes('\uFFFD'))t=new TextDecoder('euc-kr').decode(buf);
+  return t;
+}
+function csv(t){return t.split(/\r?\n/).map(l=>l.trim()).filter(l=>l).map(l=>l.split(',').map(c=>c.trim()))}
+
+/* ===== IVL ===== */
+function aIVL(rows){
+  if(!rows||rows.length<2)return null;
+  const h=rows[0],d=rows.slice(1);
+  let bi=-1,md=1e9;
+  for(let i=0;i<d.length;i++){const v=parseFloat(d[i][5]);if(!isNaN(v)){const dd=Math.abs(v-10);if(dd<md){md=dd;bi=i}}}
+  if(bi<0)return null;
+  const r=d[bi];
+  let mx=-1,mwl='';
+  const spec=[];
+  for(let c=13;c<r.length;c++){
+    const wl=parseFloat(h[c]),v=parseFloat(r[c]);
+    if(!isNaN(wl)&&!isNaN(v)){spec.push({x:wl,y:v});if(v>mx){mx=v;mwl=h[c]||''}}
+  }
+  return{absJ:parseFloat(r[5]),volt:parseFloat(r[1]),eff:parseFloat(r[7]),eqe:parseFloat(r[9]),cx:parseFloat(r[10]),cy:parseFloat(r[11]),mwl,spec,
+    voltR:r[1],effR:r[7],eqeR:r[9],cxR:r[10],cyR:r[11]};
+}
+
+/* ===== LT ===== */
+function pLT(rows){
+  if(!rows||rows.length<4)return{h:[],l:[]};
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,6);i++)if(rows[i].some(c=>c.toLowerCase().includes('hour'))){hi=i;break}
+  if(hi<0)return{h:[],l:[]};
+  const h=[],l=[];
+  for(let i=hi+1;i<rows.length;i++){const hv=parseFloat(rows[i][0]),lv=parseFloat(rows[i][5]);if(!isNaN(hv)&&!isNaN(lv)){h.push(hv);l.push(lv)}}
+  return{h,l};
+}
+
+function ltAll(hours,lum){
+  const r={};
+  for(const lv of LT_ALL_LEVELS){
+    // Find last index where lum >= lv (scan backward)
+    let lastAbove=-1;
+    for(let i=lum.length-1;i>=0;i--){if(lum[i]>=lv){lastAbove=i;break}}
+    if(lastAbove===-1){
+      // All data below level → first point
+      r[lv]={hr:hours[0],pct:lum[0]};
+    }else if(lastAbove===lum.length-1){
+      // Still above at end → no permanent drop
+      r[lv]=null;
+    }else{
+      // First point of final permanent drop
+      r[lv]={hr:hours[lastAbove+1],pct:lum[lastAbove+1]};
+    }
+  }
+  return r;
+}
+
+function bestLT(levels){
+  for(let i=LT_LEVELS.length-1;i>=0;i--){const lv=LT_LEVELS[i];if(levels[lv])return{lv,...levels[lv]};}
+  return null;
+}
+
+function reRenderTbls(){
+  if(Object.keys(lastIvl).length||Object.keys(lastLtLv).length){
+    autoRecommend();
+    renderTbl('ivlT',BLOCKS_MAIN,lastIvl,lastLtLv);
+    const exHas=renderTbl('ivlT2',BLOCKS_EXTRA,lastIvl,lastLtLv);
+    $('ivlExCard').classList.toggle('hidden',!exHas);
+  }
+}
+
+/* ===== MAIN ===== */
+async function run(){
+  abtn.disabled=true;abtn.textContent='Analyzing...';
+  try{
+    for(const[k,f]of Object.entries(fm)){pd[k]=csv(await readF(f))}
+    const ivl={},ltR={},ltD={},ltLv={};
+    for(const k of Object.keys(S)){
+      if(S[k].t==='IVL'&&pd[k])ivl[k]=aIVL(pd[k]);
+      if(S[k].t==='LT'&&pd[k]){ltR[k]=pLT(pd[k]);ltLv[k]=ltAll(ltR[k].h,ltR[k].l);ltD[k]=ltR[k];if(ltR[k].h.length)lastLtMaxHr[k]=ltR[k].h[ltR[k].h.length-1]}
+    }
+    lastIvl=ivl;lastLtLv=ltLv;
+    sumSel={ivl:-1,lt:-1,ivlRec:-1,ltRec:-1};
+    autoRecommend();
+    renderTbl('ivlT',BLOCKS_MAIN,ivl,ltLv);
+    const exHas=renderTbl('ivlT2',BLOCKS_EXTRA,ivl,ltLv);
+    $('ivlExCard').classList.toggle('hidden',!exHas);
+    renderLTC(ltD,ltLv);
+    renderSpec(ivl);
+    res.classList.remove('hidden');
+    $('ltcCard').classList.toggle('hidden',!Object.keys(ltD).length);
+    $('spCard').classList.toggle('hidden',!Object.keys(ivl).some(k=>ivl[k]?.spec?.length));
+    setTimeout(()=>res.scrollIntoView({behavior:'smooth',block:'start'}),80);
+  }catch(e){alert('Error: '+e.message);console.error(e)}
+  finally{abtn.disabled=false;updBtn()}
+}
+
+/* ===== IVL TABLE ===== */
+function renderTbl(tblId,blocks,ivl,ltLv){
+  const t=$(tblId);
+  const isMain=blocks===BLOCKS_MAIN;
+  const curLevels=ltMode==='high'?LT_LEVELS_HIGH:LT_LEVELS;
+  const hasTime=ltMode==='high';
+  const nc=7+curLevels.length+(hasTime?1:0);
+  let h='<thead><tr><th>Block</th><th>Op.V(V)</th><th>EL EFF(cd/A)</th><th>EQE(%)</th><th>CIE(x)</th><th>CIE(y)</th><th>MAX 파장</th>';
+  for(const lv of curLevels)h+=`<th>LT(${lv})</th>`;
+  if(hasTime)h+='<th>측정시간</th>';
+  h+='</tr></thead><tbody>';
+  let bi=0;
+  for(let bIdx=0;bIdx<blocks.length;bIdx++){
+    const b=blocks[bIdx];
+    const d1=ivl[b.r1],d2=ivl[b.r2];
+    if(!d1&&!d2)continue;
+    bi++;
+    const lv1=ltLv[b.lt1],lv2=ltLv[b.lt2];
+    const mh1=lastLtMaxHr[b.lt1],mh2=lastLtMaxHr[b.lt2];
+
+    let badges='';
+    if(isMain){
+      const ivlAct=sumSel.ivl===bIdx,ivlRec=sumSel.ivlRec===bIdx&&!ivlAct;
+      const ltAct=sumSel.lt===bIdx,ltRec=sumSel.ltRec===bIdx&&!ltAct;
+      badges=` <span class="sel-tag${ivlAct?' act':ivlRec?' rec':''}" data-bi="${bIdx}" data-st="ivl">IVL</span>`;
+      badges+=` <span class="sel-tag${ltAct?' act':ltRec?' rec':''}" data-bi="${bIdx}" data-st="lt">LT</span>`;
+    }
+    const isIvlSel=isMain&&sumSel.ivl===bIdx;
+    const isLtSel=isMain&&sumSel.lt===bIdx;
+    const ic=isIvlSel?'ivl-d':'';
+    // Find which LT level to highlight (first where both >=100hr)
+    let sumLtLvl=null;
+    if(isLtSel){
+      for(const l of curLevels){
+        const v1=lv1?.[l]?.hr,v2=lv2?.[l]?.hr;
+        if(v1!=null&&v2!=null&&v1>=100&&v2>=100){sumLtLvl=l;break;}
+      }
+    }
+
+    h+=`<tr class="bh"><td colspan="${nc}">${ci(bi)} ${b.lb}${badges}</td></tr>`;
+    // Row 1 (raw data – fixed decimals)
+    h+=`<tr class="r1"><td>${S[b.r1]?.l||b.r1}</td>`;
+    if(d1)h+=fTd(d1.volt,2,d1.voltR,ic)+fTd(d1.eff,2,d1.effR,ic)+fTd(d1.eqe,2,d1.eqeR,ic)+fTd(d1.cx,3,d1.cxR,ic)+fTd(d1.cy,3,d1.cyR,ic)+`<td${ic?` class="${ic}"`:''} >${d1.mwl||'-'}</td>`;
+    else h+=`<td colspan="6" style="color:var(--tx2)">No file</td>`;
+    for(const l of curLevels){const hr=lv1&&lv1[l]?lv1[l].hr:null;const lc=isLtSel&&l===sumLtLvl?'lt-sum':'';h+=`<td${lc?` class="${lc}"`:''} ${hr!=null?'data-raw="'+hr+'"':''}>${hr!=null?hr.toFixed(2):'-'}</td>`;}
+    if(hasTime)h+=`<td${mh1!=null?' data-raw="'+mh1+'"':''}>${mh1!=null?mh1.toFixed(1)+'h':'-'}</td>`;
+    h+='</tr>';
+    // Row 2 (raw data – fixed decimals)
+    h+=`<tr class="r2"><td>${S[b.r2]?.l||b.r2}</td>`;
+    if(d2)h+=fTd(d2.volt,2,d2.voltR,ic)+fTd(d2.eff,2,d2.effR,ic)+fTd(d2.eqe,2,d2.eqeR,ic)+fTd(d2.cx,3,d2.cxR,ic)+fTd(d2.cy,3,d2.cyR,ic)+`<td${ic?` class="${ic}"`:''} >${d2.mwl||'-'}</td>`;
+    else h+=`<td colspan="6" style="color:var(--tx2)">No file</td>`;
+    for(const l of curLevels){const hr=lv2&&lv2[l]?lv2[l].hr:null;const lc=isLtSel&&l===sumLtLvl?'lt-sum':'';h+=`<td${lc?` class="${lc}"`:''} ${hr!=null?'data-raw="'+hr+'"':''}>${hr!=null?hr.toFixed(2):'-'}</td>`;}
+    if(hasTime)h+=`<td${mh2!=null?' data-raw="'+mh2+'"':''}>${mh2!=null?mh2.toFixed(1)+'h':'-'}</td>`;
+    h+='</tr>';
+    // Eval
+    h+='<tr class="ev"><td>Result</td>';
+    if(d1&&d2){
+      h+=eTd(d1.volt,d2.volt);
+      h+=eTd(d2.eff,d1.eff)+eTd(d2.eqe,d1.eqe)+eTd(d2.cx,d1.cx)+eTd(d2.cy,d1.cy);
+      const w1=parseInt(d1.mwl)||0,w2=parseInt(d2.mwl)||0;
+      h+=`<td>${w1&&w2?(w2-w1):'-'}</td>`;
+    }else h+=`<td colspan="6">-</td>`;
+    for(const l of curLevels){
+      const v1=lv1&&lv1[l]?lv1[l].hr:null,v2=lv2&&lv2[l]?lv2[l].hr:null;
+      if(v1!=null&&v2!=null){
+        const pct=v2/v1*100;
+        const cls=pct<95?'red':pct>105?'purple':'blue';
+        const warn=(v1<100||v2<100)?'<br><span style="font-size:.65rem;color:#d29922">(100h 미만)</span>':'';
+        h+=`<td class="${cls}">${pct.toFixed(ivlDP)}%${warn}</td>`;
+      }else h+='<td>-</td>';
+    }
+    if(hasTime)h+='<td>-</td>';
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  t.innerHTML=h;
+  if(isMain){
+    t.querySelectorAll('.sel-tag').forEach(tag=>{
+      tag.onclick=function(e){
+        e.stopPropagation();
+        const bi=parseInt(this.dataset.bi);
+        const st=this.dataset.st;
+        if(st==='ivl')sumSel.ivl=bi;
+        else sumSel.lt=bi;
+        reRenderTbls();
+      };
+    });
+  }
+  return bi>0;
+}
+
+function fTd(v,dp,raw,cls){
+  const c=cls?` class="${cls}"`:'';
+  if(isNaN(v))return`<td${c}>-</td>`;
+  return`<td${c}${raw!=null?' data-raw="'+raw+'"':''}>${v.toFixed(dp)}</td>`;
+}
+
+function eTd(num,den){
+  if(isNaN(num)||isNaN(den)||den===0)return'<td>-</td>';
+  const pct=num/den*100;
+  const cls=Math.abs(pct-100)<=5?'blue':'red';
+  return`<td class="${cls}">${pct.toFixed(ivlDP)}%</td>`;
+}
+
+function ci(n){return String.fromCodePoint(0x245F+n)}
+
+/* ===== LT CHART ===== */
+let ltState={xMax:150,yMin:95,yMax:101,smooth:1,xOn:true,yOn:true,xTicks:true,yTicks:true,gridOn:true,white:true,square:true,dsVis:{},dsNames:{}};
+let ltRawG={},ltLvG={},ltDataMaxHr=500;
+
+function renderLTC(ltD,ltLv){
+  ltRawG=ltD;ltLvG=ltLv;
+  // Default xMax from data
+  let mx=0;
+  for(const k in ltD)if(ltD[k].h.length)mx=Math.max(mx,...ltD[k].h);
+  ltDataMaxHr=Math.max(Math.ceil(mx/10)*10*2,500);
+  // Init visibility
+  for(const k in ltD)ltState.dsVis[k]=true;
+
+  buildCtrl();
+  drawLT();
+}
+
+function buildCtrl(){
+  const el=$('ltCtrl');
+  let h='';
+
+  // Row 1: Sliders
+  h+='<div class="ct-row">';
+  h+=`<div class="ct-sl"><span class="sl">X max</span><input type="range" id="cxm" min="10" max="${ltDataMaxHr}" step="10" value="${ltState.xMax}"><span class="rv" id="cxmv">${ltState.xMax}</span><span class="sl" style="min-width:auto">hr</span></div>`;
+  h+=`<div class="ct-sl"><span class="sl">Y min</span><input type="range" id="cyn" min="90" max="100" step="0.5" value="${ltState.yMin}"><span class="rv" id="cynv">${ltState.yMin}</span><span class="sl" style="min-width:auto">%</span></div>`;
+  h+=`<div class="ct-sl"><span class="sl">Y max</span><input type="range" id="cyx" min="98" max="101" step="0.5" value="${ltState.yMax}"><span class="rv" id="cyxv">${ltState.yMax}</span><span class="sl" style="min-width:auto">%</span></div>`;
+  h+=`<div class="ct-sl"><span class="sl">Smooth</span><input type="range" id="csm" min="1" max="15" step="1" value="${ltState.smooth}"><span class="rv" id="csmv">${ltState.smooth===1?'OFF':ltState.smooth}</span></div>`;
+  h+='</div>';
+
+  // Row 2: Button groups
+  h+='<div class="ct-row">';
+  h+=`<div class="ct-grp"><span class="ct-gl">MODE</span><button class="ct-btn${ltState.white?' active':''}" id="twb">WHITE</button><button class="ct-btn${ltState.square?' active':''}" id="tsq">SQUARE</button></div>`;
+  h+=`<div class="ct-grp"><span class="ct-gl">AXIS</span><button class="ct-btn${ltState.xOn?' active':''}" id="txb">X Label</button><button class="ct-btn${ltState.yOn?' active':''}" id="tyb">Y Label</button><button class="ct-btn${ltState.xTicks?' active':''}" id="txn">X Ticks</button><button class="ct-btn${ltState.yTicks?' active':''}" id="tyn">Y Ticks</button><button class="ct-btn${ltState.gridOn?' active':''}" id="tgd">Grid</button></div>`;
+  h+=`<button class="ct-btn copy" id="ccpy">COPY CHART</button>`;
+  h+='</div>';
+
+  // Row 3: Dataset checkboxes + editable names
+  h+='<div class="ct-row ct-data">';
+  h+='<span class="ct-gl">DATA</span>';
+  for(const k in ltRawG){
+    const c=COL[k]||'#fff';
+    const nm=ltState.dsNames[k]||S[k]?.l||k;
+    h+=`<label style="color:${c}"><input type="checkbox" data-ds="${k}" ${ltState.dsVis[k]?'checked':''}> <input type="text" class="ct-ni" data-dn="${k}" value="${nm}" style="color:${c};border-color:${c}44"></label>`;
+  }
+  h+='</div>';
+
+  el.innerHTML=h;
+
+  // Slider real-time handlers
+  $('cxm').oninput=function(){$('cxmv').textContent=this.value;ltState.xMax=parseFloat(this.value);drawLT()};
+  $('cyn').oninput=function(){$('cynv').textContent=this.value;ltState.yMin=parseFloat(this.value);drawLT()};
+  $('cyx').oninput=function(){$('cyxv').textContent=this.value;ltState.yMax=parseFloat(this.value);drawLT()};
+  $('csm').oninput=function(){const v=parseInt(this.value);ltState.smooth=v;$('csmv').textContent=v===1?'OFF':v;drawLT()};
+
+  // Button handlers
+  $('twb').onclick=function(){ltState.white=!ltState.white;this.classList.toggle('active');$('ltC').closest('.ch-wrap').classList.toggle('wh',ltState.white);drawLT()};
+  $('tsq').onclick=function(){ltState.square=!ltState.square;this.classList.toggle('active');$('ltC').closest('.ch-wrap').classList.toggle('sq',ltState.square);drawLT()};
+  $('txb').onclick=function(){ltState.xOn=!ltState.xOn;this.classList.toggle('active');drawLT()};
+  $('tyb').onclick=function(){ltState.yOn=!ltState.yOn;this.classList.toggle('active');drawLT()};
+  $('txn').onclick=function(){ltState.xTicks=!ltState.xTicks;this.classList.toggle('active');drawLT()};
+  $('tyn').onclick=function(){ltState.yTicks=!ltState.yTicks;this.classList.toggle('active');drawLT()};
+  $('tgd').onclick=function(){ltState.gridOn=!ltState.gridOn;this.classList.toggle('active');drawLT()};
+  $('ccpy').onclick=copyChart;
+  el.querySelectorAll('[data-ds]').forEach(cb=>cb.onchange=function(){ltState.dsVis[this.dataset.ds]=this.checked;drawLT()});
+  el.querySelectorAll('[data-dn]').forEach(inp=>{inp.onchange=function(){ltState.dsNames[this.dataset.dn]=this.value;drawLT()};inp.onclick=function(e){e.stopPropagation()}});
+}
+
+function maSmooth(arr,w){
+  const r=[];
+  const half=Math.floor(w/2);
+  for(let i=0;i<arr.length;i++){
+    let s=0,c=0;
+    for(let j=Math.max(0,i-half);j<=Math.min(arr.length-1,i+half);j++){s+=arr[j];c++}
+    r.push(s/c);
+  }
+  return r;
+}
+
+function ltBuildDS(){
+  const w=ltState.white;
+  const rlc=w?'rgba(0,0,0,0.2)':'rgba(255,255,255,0.18)';
+  const ds=[];
+  const sm=ltState.smooth;
+  for(const[k,d]of Object.entries(ltRawG)){
+    if(!ltState.dsVis[k]||!d.h.length)continue;
+    const ys=sm>1?maSmooth(d.l,sm):d.l;
+    ds.push({
+      label:ltState.dsNames[k]||S[k]?.l||k,
+      data:d.h.map((h,i)=>({x:h,y:ys[i]})),
+      borderColor:COL[k],
+      backgroundColor:COL[k]+'22',
+      borderWidth:2.5,
+      pointRadius:0,
+      pointHoverRadius:5,
+      tension:0.05,
+      fill:false,
+      order:1,
+    });
+  }
+  for(const lv of LT_LEVELS){
+    ds.push({
+      label:'T'+lv+' ('+lv+'%)',
+      data:[{x:0,y:lv},{x:ltState.xMax,y:lv}],
+      borderColor:rlc,
+      borderDash:[8,4],
+      borderWidth:1,
+      pointRadius:0,
+      fill:false,
+      order:2,
+    });
+  }
+  return ds;
+}
+
+function ltBuildOpts(){
+  const w=ltState.white;
+  const tc=w?'#333':'#7d8590', gc=ltState.gridOn?(w?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.06)'):'transparent', lc=w?'#222':'#e6edf3';
+  return{
+    responsive:true,
+    maintainAspectRatio:false,
+    animation:false,
+    interaction:{mode:'nearest',axis:'x',intersect:false},
+    scales:{
+      x:{
+        type:'linear',
+        display:ltState.xOn,
+        min:0,max:ltState.xMax,
+        title:{display:ltState.xOn,text:'Time (hours)',color:tc,font:{family:'Consolas',size:14,weight:'bold'}},
+        ticks:{display:ltState.xTicks,color:tc,font:{family:'Consolas',size:12}},
+        grid:{color:gc},
+        border:{color:w?'#999':'#30363d'},
+      },
+      y:{
+        display:ltState.yOn,
+        min:ltState.yMin,max:ltState.yMax,
+        title:{display:ltState.yOn,text:'Luminance (%)',color:tc,font:{family:'Consolas',size:14,weight:'bold'}},
+        ticks:{display:ltState.yTicks,color:tc,font:{family:'Consolas',size:12},stepSize:1},
+        grid:{color:gc},
+        border:{color:w?'#999':'#30363d'},
+      },
+    },
+    plugins:{
+      legend:{position:'top',labels:{color:lc,usePointStyle:true,pointStyle:'line',font:{family:'Consolas',size:13},padding:16,filter:item=>!item.text.startsWith('T')}},
+      tooltip:{
+        titleFont:{family:'Consolas',size:13},
+        bodyFont:{family:'Consolas',size:12},
+        backgroundColor:w?'#fff':'#21262d',
+        titleColor:w?'#222':'#e6edf3',
+        bodyColor:w?'#222':'#e6edf3',
+        borderColor:w?'#ccc':'#30363d',
+        borderWidth:1,
+        callbacks:{
+          label:c=>{
+            if(c.dataset.borderDash)return c.dataset.label;
+            return c.dataset.label+': '+c.parsed.y.toFixed(2)+'% @ '+c.parsed.x.toFixed(1)+'hr';
+          }
+        }
+      }
+    }
+  };
+}
+
+function drawLT(){
+  const ds=ltBuildDS(), opts=ltBuildOpts();
+  if(ltCI){
+    ltCI.data.datasets=ds;
+    ltCI.options=opts;
+    ltCI.update('none');
+  }else{
+    ltCI=new Chart($('ltC').getContext('2d'),{type:'line',data:{datasets:ds},options:opts});
+  }
+}
+
+function copyChart(){
+  const cv=$('ltC');
+  cv.toBlob(blob=>{
+    navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(()=>{
+      const b=$('ccpy');if(b){b.textContent='Copied!';b.style.background='#1f6feb';setTimeout(()=>{b.textContent='COPY CHART';b.style.background=''},1500)}
+    }).catch(()=>{
+      const url=cv.toDataURL('image/png');
+      const a=document.createElement('a');a.href=url;a.download='LT_Chart.png';a.click();
+    });
+  });
+}
+
+/* ===== SPECTRUM ===== */
+function renderSpec(ivl){
+  if(spCI){spCI.destroy();spCI=null}
+  const ds=[];
+  for(const[k,d]of Object.entries(ivl)){
+    if(!d?.spec?.length)continue;
+    ds.push({
+      label:S[k]?.l+' (@J='+(d.absJ?.toFixed(1)||'10')+')',
+      data:d.spec,
+      borderColor:COL[k],
+      backgroundColor:COL[k]+'18',
+      borderWidth:1.8,
+      pointRadius:0,
+      tension:0.2,
+      fill:true,
+    });
+  }
+  if(!ds.length)return;
+  const ctx=$('spC').getContext('2d');
+  spCI=new Chart(ctx,{
+    type:'line',data:{datasets:ds},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'nearest',axis:'x',intersect:false},
+      scales:{
+        x:{type:'linear',min:380,max:780,title:{display:true,text:'Wavelength (nm)',color:'#7d8590',font:{family:'Consolas',weight:'bold'}},ticks:{color:'#7d8590'},grid:{color:'rgba(255,255,255,0.06)'}},
+        y:{beginAtZero:true,title:{display:true,text:'Intensity (a.u.)',color:'#7d8590',font:{family:'Consolas',weight:'bold'}},ticks:{color:'#7d8590'},grid:{color:'rgba(255,255,255,0.06)'}},
+      },
+      plugins:{
+        legend:{position:'top',labels:{color:'#e6edf3',usePointStyle:true,pointStyle:'line',font:{family:'Consolas',size:11}}},
+        tooltip:{backgroundColor:'#21262d',titleColor:'#e6edf3',bodyColor:'#e6edf3',borderColor:'#30363d',borderWidth:1,
+          callbacks:{label:c=>c.dataset.label+': '+c.parsed.y.toExponential(4)+' @ '+c.parsed.x+'nm'}}
+      }
+    }
+  });
+}
+
+/* ===== SUMMARY SELECT ===== */
+function autoRecommend(){
+  // IVL: returns {ratios: [pct,...], mwlDiff: number|null} for a block
+  function ivlRatios(b){
+    const d1=lastIvl[b.r1],d2=lastIvl[b.r2]; // d1=REF, d2=SAMPLE
+    if(!d1||!d2)return null;
+    const ratios=[];
+    if(!isNaN(d1.volt)&&!isNaN(d2.volt)&&d2.volt) ratios.push(d1.volt/d2.volt*100);
+    if(!isNaN(d2.eff) &&!isNaN(d1.eff) &&d1.eff)  ratios.push(d2.eff/d1.eff*100);
+    if(!isNaN(d2.eqe) &&!isNaN(d1.eqe)&&d1.eqe)   ratios.push(d2.eqe/d1.eqe*100);
+    if(!isNaN(d2.cx)  &&!isNaN(d1.cx) &&d1.cx)     ratios.push(d2.cx/d1.cx*100);
+    if(!isNaN(d2.cy)  &&!isNaN(d1.cy) &&d1.cy)     ratios.push(d2.cy/d1.cy*100);
+    const w1=parseInt(d1.mwl)||0,w2=parseInt(d2.mwl)||0;
+    const mwlDiff=w1&&w2?Math.abs(w2-w1):null;
+    return {ratios,mwlDiff};
+  }
+
+  let bestIvl=-1;
+  // Step 1: REF1-SAMPLE1 — 반올림 후 98~102% (97.5≤p<102.5) & 파장 ±2nm 이내면 무조건 선택
+  const r0=ivlRatios(BLOCKS_MAIN[0]);
+  if(r0&&r0.ratios.length&&
+     r0.ratios.every(p=>p>=97.5&&p<102.5)&&
+     (r0.mwlDiff===null||r0.mwlDiff<=2)){
+    bestIvl=0;
+  } else {
+    // Step 2: 4개 조합 중 비율 5개 평균편차가 가장 작은 블록 선택
+    let bestScore=Infinity;
+    for(let i=0;i<4;i++){
+      const r=ivlRatios(BLOCKS_MAIN[i]);
+      if(!r||!r.ratios.length)continue;
+      const avgDev=r.ratios.reduce((a,v)=>a+Math.abs(v-100),0)/r.ratios.length;
+      if(avgDev<bestScore){bestScore=avgDev;bestIvl=i;}
+    }
+  }
+  // LT: 가장 높은 유효 LT 레벨(v1,v2 모두 ≥100hr)에서 블록 비교 후 lowest % 선택
+  let bestLt=-1;
+  const curLevels=ltMode==='high'?LT_LEVELS_HIGH:LT_LEVELS;
+  for(const l of curLevels){
+    let lvBest=-1,lvBestPct=Infinity;
+    for(let i=0;i<2;i++){
+      const b=BLOCKS_MAIN[i];
+      const lv1=lastLtLv[b.lt1],lv2=lastLtLv[b.lt2];
+      if(!lv1||!lv2)continue;
+      const v1=lv1[l]?.hr,v2=lv2[l]?.hr;
+      if(v1!=null&&v2!=null&&v1>=100&&v2>=100){
+        const pct=v2/v1*100;
+        if(pct<lvBestPct){lvBestPct=pct;lvBest=i;}
+      }
+    }
+    if(lvBest>=0){bestLt=lvBest;break;}
+  }
+  sumSel.ivlRec=bestIvl;
+  sumSel.ltRec=bestLt;
+  if(sumSel.ivl===-1)sumSel.ivl=bestIvl;
+  if(sumSel.lt===-1)sumSel.lt=bestLt;
+}
+
+function copySummary(){
+  const ivlB=sumSel.ivl>=0?BLOCKS_MAIN[sumSel.ivl]:null;
+  const ltB=sumSel.lt>=0?BLOCKS_MAIN[sumSel.lt]:null;
+  const curLevels=ltMode==='high'?LT_LEVELS_HIGH:LT_LEVELS;
+  // First LT level where BOTH values >= 100hr
+  let ltLvl=null;
+  if(ltB){
+    const lv1=lastLtLv[ltB.lt1],lv2=lastLtLv[ltB.lt2];
+    for(const l of curLevels){
+      const v1=lv1?.[l]?.hr,v2=lv2?.[l]?.hr;
+      if(v1!=null&&v2!=null&&v1>=100&&v2>=100){ltLvl=l;break;}
+    }
+  }
+  const hdr=['Op.V(V)','EL EFF(cd/A)','EQE(%)','CIE(x)','CIE(y)','MAX 파장'];
+  if(ltLvl!=null)hdr.push('LT('+ltLvl+')');
+  // REF row
+  const row1=[];
+  const d1=ivlB?lastIvl[ivlB.r1]:null;
+  if(d1)row1.push(d1.voltR,d1.effR,d1.eqeR,d1.cxR,d1.cyR,d1.mwl||'');
+  else row1.push('','','','','','');
+  if(ltLvl!=null&&ltB){const v=lastLtLv[ltB.lt1]?.[ltLvl]?.hr;row1.push(v!=null?v.toFixed(2):'');}
+  // SAMPLE row
+  const row2=[];
+  const d2=ivlB?lastIvl[ivlB.r2]:null;
+  if(d2)row2.push(d2.voltR,d2.effR,d2.eqeR,d2.cxR,d2.cyR,d2.mwl||'');
+  else row2.push('','','','','','');
+  if(ltLvl!=null&&ltB){const v=lastLtLv[ltB.lt2]?.[ltLvl]?.hr;row2.push(v!=null?v.toFixed(2):'');}
+  const txt=row1.join('\t')+'\n'+row2.join('\t')+'\n';
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.querySelector('.cpb.sum');
+    if(btn){btn.textContent='Copied!';btn.classList.add('done');setTimeout(()=>{btn.textContent='요약';btn.classList.remove('done')},1500)}
+  });
+}
+window.copySummary=copySummary;
+
+/* ===== COPY ===== */
+window.copyTbl=function(id){
+  const tbl=$(id);
+  const rows=tbl.querySelectorAll('tr');
+  let txt='';
+  rows.forEach(r=>{
+    const cells=r.querySelectorAll('th,td');
+    txt+=Array.from(cells).map(c=>c.dataset.raw!=null?c.dataset.raw:c.textContent.trim()).join('\t')+'\n';
+  });
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=tbl.closest('.card').querySelector('.cpb');
+    if(btn){btn.textContent='Copied!';btn.classList.add('done');setTimeout(()=>{btn.textContent='COPY';btn.classList.remove('done')},1500)}
+  });
+};
+
+/* ===== HELP MODAL ===== */
+const helpOverlay=$('helpOverlay');
+$('helpBtn').onclick=()=>helpOverlay.classList.add('show');
+$('helpClose').onclick=()=>helpOverlay.classList.remove('show');
+helpOverlay.onclick=e=>{if(e.target===helpOverlay)helpOverlay.classList.remove('show')};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')helpOverlay.classList.remove('show')});
+
+/* ===== IndexedDB ===== */
+const DB_NAME='IVLAnalyzerDB',DB_VER=1,STORE_NAME='sessions';
+let _db=null;
+function openDB(){
+  return new Promise((ok,ng)=>{
+    if(_db){ok(_db);return;}
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains(STORE_NAME))
+        d.createObjectStore(STORE_NAME,{keyPath:'id'}).createIndex('saved_at','saved_at');
+    };
+    r.onsuccess=e=>{_db=e.target.result;ok(_db)};
+    r.onerror=e=>ng(e.target.error);
+  });
+}
+const MAX_SESSIONS=10;
+async function saveSession(label){
+  const d=await openDB();
+  const sess={
+    id:crypto.randomUUID(),saved_at:Date.now(),label,
+    files:Object.fromEntries(Object.entries(fm).map(([k,f])=>[k,f.name])),
+    ivl:lastIvl,ltLv:lastLtLv,ltMaxHr:lastLtMaxHr,ltRaw:ltRawG,
+    sumSel:{...sumSel},ivlDP,ltMode,
+    ltState:{...ltState,dsVis:{...ltState.dsVis},dsNames:{...ltState.dsNames}}
+  };
+  await new Promise((ok,ng)=>{
+    const tx=d.transaction(STORE_NAME,'readwrite');
+    tx.objectStore(STORE_NAME).add(sess);
+    tx.oncomplete=()=>ok(sess.id);
+    tx.onerror=e=>ng(e.target.error);
+  });
+  // 최대 저장 건수 초과 시 오래된 항목 자동 삭제
+  const all=await listSessions();
+  if(all.length>MAX_SESSIONS){
+    const toDelete=all.slice(MAX_SESSIONS); // saved_at 내림차순 정렬이므로 뒤쪽이 오래된 것
+    await Promise.all(toDelete.map(s=>deleteSession(s.id)));
+  }
+  return sess.id;
+}
+async function listSessions(q=''){
+  const d=await openDB();
+  return new Promise((ok,ng)=>{
+    const tx=d.transaction(STORE_NAME,'readonly');
+    const r=tx.objectStore(STORE_NAME).getAll();
+    r.onsuccess=()=>{
+      let all=r.result.sort((a,b)=>b.saved_at-a.saved_at);
+      if(q){const lq=q.toLowerCase();all=all.filter(s=>(s.label||'').toLowerCase().includes(lq)||new Date(s.saved_at).toLocaleString('ko').includes(lq));}
+      ok(all);
+    };
+    r.onerror=e=>ng(e.target.error);
+  });
+}
+async function getSession(id){
+  const d=await openDB();
+  return new Promise((ok,ng)=>{
+    const tx=d.transaction(STORE_NAME,'readonly');
+    const r=tx.objectStore(STORE_NAME).get(id);
+    r.onsuccess=()=>ok(r.result);
+    r.onerror=e=>ng(e.target.error);
+  });
+}
+async function deleteSession(id){
+  const d=await openDB();
+  return new Promise((ok,ng)=>{
+    const tx=d.transaction(STORE_NAME,'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete=ok;
+    tx.onerror=e=>ng(e.target.error);
+  });
+}
+
+function loadSession(sess){
+  lastIvl=sess.ivl||{};
+  lastLtLv=sess.ltLv||{};
+  lastLtMaxHr=sess.ltMaxHr||{};
+  sumSel={...(sess.sumSel||{ivl:-1,lt:-1,ivlRec:-1,ltRec:-1})};
+  ivlDP=sess.ivlDP??1;
+  ltMode=sess.ltMode||'low';
+  // Restore file display in grid
+  for(const[k,name]of Object.entries(sess.files||{})){
+    if(!$('s-'+k))continue;
+    $('s-'+k).classList.add('ok');
+    $('f-'+k).textContent=name;$('f-'+k).title=name;
+    $('st-'+k).innerHTML='&#9745;';
+  }
+  // Restore mode buttons
+  $('dpWrap').querySelectorAll('.dp-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.dp)===ivlDP));
+  $('ltModeWrap').querySelectorAll('.dp-btn').forEach(b=>b.classList.toggle('active',b.dataset.ltm===ltMode));
+  // Re-render tables
+  autoRecommend();
+  renderTbl('ivlT',BLOCKS_MAIN,lastIvl,lastLtLv);
+  const exHas=renderTbl('ivlT2',BLOCKS_EXTRA,lastIvl,lastLtLv);
+  $('ivlExCard').classList.toggle('hidden',!exHas);
+  // Restore LT chart
+  const hasLT=Object.keys(sess.ltRaw||{}).some(k=>sess.ltRaw[k].h&&sess.ltRaw[k].h.length>0);
+  if(hasLT){
+    ltRawG=sess.ltRaw;ltLvG=sess.ltLv||{};
+    let mx=0;for(const k in ltRawG)if(ltRawG[k].h&&ltRawG[k].h.length)mx=Math.max(mx,...ltRawG[k].h);
+    ltDataMaxHr=Math.max(Math.ceil(mx/10)*10*2,500);
+    if(sess.ltState){Object.assign(ltState,sess.ltState);ltState.dsVis={...sess.ltState.dsVis};ltState.dsNames={...sess.ltState.dsNames};}
+    for(const k in ltRawG)if(!(k in ltState.dsVis))ltState.dsVis[k]=true;
+    if(ltCI){ltCI.destroy();ltCI=null;}
+    buildCtrl();drawLT();
+    $('ltcCard').classList.remove('hidden');
+  }else{
+    $('ltcCard').classList.add('hidden');
+  }
+  // Restore spectrum chart
+  if(spCI){spCI.destroy();spCI=null;}
+  renderSpec(lastIvl);
+  $('spCard').classList.toggle('hidden',!Object.keys(lastIvl).some(k=>lastIvl[k]?.spec?.length));
+  res.classList.remove('hidden');
+  setTimeout(()=>res.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
+/* ===== History UI ===== */
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function renderHistList(q=''){
+  const el=$('histList');
+  el.innerHTML='<div class="hist-empty">불러오는 중...</div>';
+  try{
+    const sessions=await listSessions(q);
+    if(!sessions.length){
+      el.innerHTML='<div class="hist-empty">임시저장된 항목이 없습니다.<br><small>분석 후 "분석결과 임시저장" 버튼을 눌러 저장하세요.</small></div>';
+      return;
+    }
+    el.innerHTML=sessions.map(s=>{
+      const dt=new Date(s.saved_at).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const fc=Object.keys(s.files||{}).length;
+      const hasIvl=Object.keys(s.ivl||{}).length>0;
+      const hasLt=Object.keys(s.ltRaw||{}).some(k=>s.ltRaw[k].h&&s.ltRaw[k].h.length>0);
+      const tags=[hasIvl&&'IVL',hasLt&&'LT'].filter(Boolean).join(' + ');
+      return`<div class="hist-item" data-id="${escH(s.id)}"><div class="hist-item-info"><div class="hist-item-label">${escH(s.label||'(라벨 없음)')}</div><div class="hist-item-meta">${dt}&nbsp;&middot;&nbsp;${fc}파일&nbsp;&middot;&nbsp;${tags}</div></div><button class="hist-item-del" data-id="${escH(s.id)}">삭제</button></div>`;
+    }).join('');
+    el.querySelectorAll('.hist-item').forEach(item=>{
+      item.onclick=async function(){await _clickHistItem(this.dataset.id);};
+      item.querySelector('.hist-item-del').onclick=function(e){e.stopPropagation();_histDel(this.dataset.id);};
+    });
+  }catch(e){el.innerHTML='<div class="hist-empty">오류: '+escH(e.message)+'</div>';}
+}
+async function _clickHistItem(id){
+  try{const sess=await getSession(id);if(!sess)return;closeHist();loadSession(sess);}
+  catch(e){alert('불러오기 실패: '+e.message);}
+}
+async function _histDel(id){
+  if(!confirm('이 임시저장을 삭제하시겠습니까?'))return;
+  try{await deleteSession(id);await renderHistList($('histSearch').value);}
+  catch(e){alert('삭제 실패: '+e.message);}
+}
+function showHist(){
+  $('histOverlay').classList.add('show');
+  renderHistList();
+}
+function closeHist(){$('histOverlay').classList.remove('show');}
+window.showHist=showHist;window.closeHist=closeHist;
+
+function showSaveModal(){
+  if(res.classList.contains('hidden')){alert('분석 결과가 없습니다. 먼저 ANALYZE를 실행하세요.');return;}
+  $('saveOverlay').classList.add('show');
+  const inp=$('saveLabelInp');inp.value='';inp.focus();
+}
+function closeSaveModal(){$('saveOverlay').classList.remove('show');}
+async function confirmSave(){
+  const label=$('saveLabelInp').value.trim()||new Date().toLocaleString('ko-KR');
+  try{
+    await saveSession(label);
+    closeSaveModal();
+    const btn=$('saveBtn');
+    if(btn){btn.textContent='저장됨!';btn.style.background='#238636';
+      setTimeout(()=>{btn.innerHTML='&#128190; 분석결과 임시저장';btn.style.background='#1f6feb';},1800);}
+  }catch(e){alert('저장 실패: '+e.message);}
+}
+window.showSaveModal=showSaveModal;window.closeSaveModal=closeSaveModal;window.confirmSave=confirmSave;
+
+// History modal: search input, close on overlay/Escape
+document.addEventListener('DOMContentLoaded',()=>{
+  const ho=$('histOverlay'),so=$('saveOverlay');
+  const hs=$('histSearch');
+  if(hs)hs.oninput=function(){renderHistList(this.value);};
+  if(ho)ho.onclick=e=>{if(e.target===ho)closeHist();};
+  if(so)so.onclick=e=>{if(e.target===so)closeSaveModal();};
+  const li=$('saveLabelInp');
+  if(li)li.onkeydown=e=>{if(e.key==='Enter')confirmSave();if(e.key==='Escape')closeSaveModal();};
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if($('saveOverlay').classList.contains('show'))closeSaveModal();
+    else if($('histOverlay').classList.contains('show'))closeHist();
+  }
+});
+
+init();
+})();
+</script>
+</body>
+</html>
