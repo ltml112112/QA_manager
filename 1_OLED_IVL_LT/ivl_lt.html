@@ -14,10 +14,7 @@
 }
 body{font-family:Consolas,'Courier New',monospace;background:var(--bg);color:var(--tx);font-size:13px;line-height:1.5}
 .wrap{max-width:1400px;margin:0 auto;padding:1rem}
-header{position:relative;text-align:center;margin-bottom:1rem}
-.ci{position:absolute;left:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.6rem}
-.ci img{height:32px}
-.ci span{color:var(--tx2);font-size:.75rem;font-weight:600;border-left:1px solid var(--bdr);padding-left:.6rem}
+header{text-align:center;margin-bottom:1rem}
 header h1{font-size:1.3rem;color:var(--acc);letter-spacing:1px}
 header p{color:var(--tx2);font-size:.8rem}
 
@@ -219,7 +216,6 @@ footer{text-align:center;padding:1rem 0;color:var(--tx2);font-size:.8rem}
 <body>
 <div class="wrap">
 <header>
-    <div class="ci" onclick="location.reload()" style="cursor:pointer"><img src="LT소재 로고(영문).jpg" alt="LT Materials"><span>품질경영팀</span></div>
     <h1>OLED IVL &amp; LT Analyzer</h1>
     <p>Raw Data CSV Upload &rarr; Auto Analysis &rarr; Chart</p>
     <button class="help-btn" id="histBtn" style="right:85px" onclick="showHist()" title="임시저장 목록">임시저장 목록</button>
