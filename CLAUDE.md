@@ -26,27 +26,13 @@ QA_manager/
 ## 핵심 아키텍처
 
 ### index.html - 포털 허브
-- `ivl_lt.html` 전체를 **base64로 인코딩하여 내장** 후 Blob URL로 iframe에 로드
+- `ivl_lt.html`을 `<iframe src="./1_OLED_IVL_LT/ivl_lt.html">` 상대경로로 직접 로드
+- `HPLC/DSC Report`는 `<iframe src="./3. HPLC_DSC_report-main/index.html">` 상대경로로 직접 로드
 - `LGD_Index.html`은 Google Apps Script 배포 URL을 직접 iframe으로 로드
 - 탭 전환은 CSS `.active` 클래스 토글 방식 (URL 라우팅 없음)
+- **Cloudflare Pages 정적 호스팅** 환경에서 운영 — 상대경로 직접 참조 방식이 가능
 
-> ⚠️ **중요**: `ivl_lt.html`을 수정한 후에는 반드시 base64 재인코딩하여 `index.html`의 `b64` 변수를 업데이트해야 화면에 반영됨
-
-```bash
-# ivl_lt.html 수정 후 index.html 업데이트 방법
-python3 -c "
-import base64, re
-with open('1_OLED_IVL_LT/ivl_lt.html', 'rb') as f:
-    content = f.read()
-new_b64 = base64.b64encode(content).decode('ascii')
-with open('index.html', 'r', encoding='utf-8') as f:
-    html = f.read()
-new_html = re.sub(r'(var b64 = \")[A-Za-z0-9+/=]+(\";)', r'\g<1>' + new_b64 + r'\g<2>', html)
-with open('index.html', 'w', encoding='utf-8') as f:
-    f.write(new_html)
-print('Done')
-"
-```
+> `ivl_lt.html`을 수정한 후에는 파일을 저장하고 배포하면 바로 반영됨 (별도 인코딩 작업 불필요)
 
 ---
 
@@ -182,13 +168,13 @@ function switchTab(id, btn) {
 }
 ```
 - 기본 탭: `ivl` (OLED IVL & LT 분석기)
-- iframe `src`는 JS에서 Blob URL로 동적 주입
+- 각 iframe의 `src`는 HTML에 상대경로로 하드코딩됨 (`./1_OLED_IVL_LT/ivl_lt.html` 등)
 
 ---
 
 ## 개발 시 주의사항
 
-1. **`ivl_lt.html` 수정 후 반드시 base64 재인코딩** → 위 Python 스크립트 사용
+1. **`ivl_lt.html` 수정 후 파일 저장 → 배포**만 하면 바로 반영됨 (base64 재인코딩 불필요)
 2. **로고 이미지 경로**: `index.html`에서는 `LT소재 로고(영문).jpg` (루트 기준), `ivl_lt.html`에서 직접 열 경우 `../LT소재 로고(영문).jpg`
 3. **LGD_Code.gs 수정 시**: Google Apps Script 편집기에서 배포(새 버전)해야 반영됨
 4. **GAS 배포 URL**: `LGD_Index.html`은 `index.html`에서 iframe `src`로 하드코딩됨 — URL 변경 시 `index.html` 수정 필요
