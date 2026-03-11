@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,6 +22,19 @@
   --success: #34d399;
 }
 
+html[data-theme="light"] {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface2: #eef0f7;
+  --border: #d1d5e8;
+  --accent: #4f6ef7;
+  --accent-hover: #3a58e0;
+  --accent-glow: rgba(79,110,247,0.10);
+  --text: #1a1f3e;
+  --text-muted: #6b7280;
+  --success: #10b981;
+}
+
 html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
 .topbar {
@@ -34,6 +47,7 @@ html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; bac
 .brand-logo {
   height: 28px; width: auto; object-fit: contain; flex-shrink: 0;
 }
+html[data-theme="light"] .brand-logo { filter: invert(1) brightness(0.2); }
 .brand-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
 .brand-sub { font-size: 10px; color: var(--text-muted); }
 .divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
@@ -56,7 +70,15 @@ html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; bac
   border-radius: 4px; background: var(--accent); color: #fff; line-height: 1.4;
 }
 
-.status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.theme-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text-muted); font-size: 15px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0; line-height: 1;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: blink 3s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 
@@ -99,6 +121,7 @@ html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; bac
       <span>🧪</span> HPLC/DSC Report 자동생성
     </button>
   </nav>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="다크/라이트 전환">🌙</button>
   <div class="status"><div class="status-dot"></div>가동 중</div>
 </div>
 
@@ -131,19 +154,46 @@ html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; bac
   </div>
 </div>
 
-
 <script>
+function broadcastTheme(theme) {
+  document.querySelectorAll('iframe').forEach(function(f) {
+    try { f.contentWindow.postMessage({ type: 'setTheme', theme: theme }, '*'); } catch(e) {}
+  });
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('qa_theme', theme);
+  document.getElementById('themeBtn').textContent = theme === 'dark' ? '🌙' : '☀️';
+  broadcastTheme(theme);
+}
+
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+}
+
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   document.querySelectorAll('.frame-wrap').forEach(function(w) { w.classList.remove('active'); });
   btn.classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
+  var iframe = document.getElementById('iframe-' + id);
+  if (iframe) {
+    try { iframe.contentWindow.postMessage({ type: 'setTheme', theme: document.documentElement.dataset.theme }, '*'); } catch(e) {}
+  }
 }
 
 function hideLoader(id) {
   var el = document.getElementById('loader-' + id);
   if (el) el.classList.add('hidden');
+  broadcastTheme(document.documentElement.dataset.theme);
 }
+
+// 초기화
+(function() {
+  var saved = localStorage.getItem('qa_theme') || 'dark';
+  applyTheme(saved);
+})();
 </script>
 
 </body>
