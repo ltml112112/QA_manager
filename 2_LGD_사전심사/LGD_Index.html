@@ -532,7 +532,11 @@ function log(type, msg) {
 
 function clearLog() { $('logArea').innerHTML = ''; }
 
-window.addEventListener('DOMContentLoaded', function() { testConn(); });
+window.addEventListener('DOMContentLoaded', function() {
+  testConn();
+  var today = new Date().toISOString().split('T')[0];
+  $('f_작성일').value = today;
+});
 </script>
 
 </body>
