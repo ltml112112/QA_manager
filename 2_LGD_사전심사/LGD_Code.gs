@@ -383,6 +383,30 @@ input::placeholder { color: var(--text-tertiary); }
 <script>
 var $ = function(id) { return document.getElementById(id); };
 
+// ── 버전 설정 (업데이트 시 여기만 수정) ──
+var PRIVATE_SUBSTANCE_VER = '25.8월 Ver';
+
+// ── 파일명 규칙 적용 ──
+function applyFileNameRules(fileName) {
+  var ext = '';
+  var dotIdx = fileName.lastIndexOf('.');
+  if (dotIdx !== -1) {
+    ext = fileName.substring(dotIdx);       // '.pdf' 등
+    fileName = fileName.substring(0, dotIdx);
+  }
+
+  // 구성제품확인서 뒤 숫자 제거 (구성제품확인서1 → 구성제품확인서)
+  fileName = fileName.replace(/(구성제품확인서)\d+$/, '$1');
+
+  // 비공개물질 파일에 버전 suffix
+  if (fileName.indexOf('비공개물질') !== -1) {
+    fileName = fileName + ' (' + PRIVATE_SUBSTANCE_VER + ')';
+  }
+
+  // 모든 파일 앞에 LT소재_ 프리픽스
+  return 'LT소재_' + fileName + ext;
+}
+
 function getFormData() {
   return {
     '작성일': $('f_작성일').value.trim(),
@@ -459,8 +483,9 @@ function downloadAll() {
         }
         var f = files[i];
         if (f.ok) {
-          downloadBase64(f.fileData, f.fileName, f.mimeType);
-          log('ok', f.fileName);
+          var dlName = applyFileNameRules(f.fileName);
+          downloadBase64(f.fileData, dlName, f.mimeType);
+          log('ok', dlName);
         } else {
           log('err', f.label + ' - ' + f.error);
           failCount++;
