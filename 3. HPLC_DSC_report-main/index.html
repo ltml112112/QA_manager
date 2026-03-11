@@ -4,14 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>분석결과 → PPTX 자동변환기</title>
-
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-
 <!-- PptxGenJS: primary CDN -->
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"
         onerror="loadPptxFallback()"></script>
-
 <script>
 function loadPptxFallback() {
   const s = document.createElement('script');
@@ -20,7 +17,6 @@ function loadPptxFallback() {
   document.head.appendChild(s);
 }
 </script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -78,11 +74,6 @@ h1 em{color:var(--accent);font-style:normal}
 .fb-meta{font-size:11px;color:var(--ink2);margin-top:2px}
 .fb-remove{background:none;border:1.5px solid var(--line);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--ink2);cursor:pointer;font-family:var(--mono);transition:all .15s}
 .fb-remove:hover{border-color:var(--red);color:var(--red)}
-
-/* 페이지 감지 배지 */
-.page-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-family:var(--mono);font-size:11px;margin-top:8px;background:var(--surface);color:var(--ink2)}
-.badge-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
-.badge-dot.scanning{background:var(--amber);animation:blink .8s infinite}
 
 /* 설정 */
 .config-box{border:1.5px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
@@ -170,7 +161,7 @@ h1 em{color:var(--accent);font-style:normal}
     <div>
       <h1>HPLC / DSC<br><em>PPTX 변환기</em></h1>
     </div>
-    <div class="header-version">v3.0 · 자동감지</div>
+    <div class="header-version">v2.2 · 텍스트감지 크롭</div>
   </div>
 
   <!-- STEP 1 -->
@@ -195,7 +186,6 @@ h1 em{color:var(--accent);font-style:normal}
       <div class="fb-info">
         <div class="fb-name" id="fbName">—</div>
         <div class="fb-meta" id="fbMeta">—</div>
-        <div id="pageDetect" style="display:none;margin-top:5px;font-family:var(--mono);font-size:11px;color:var(--ink2)"></div>
       </div>
       <button class="fb-remove" id="fbRemove">✕ 제거</button>
     </div>
@@ -209,11 +199,21 @@ h1 em{color:var(--accent);font-style:normal}
       <div class="step-num">02</div>
       <div>
         <div class="step-title">변환 설정</div>
-        <div class="step-desc">페이지 타입은 방향(세로/가로)으로 자동 감지됩니다</div>
+        <div class="step-desc">페이지 범위 및 해상도 설정</div>
       </div>
     </div>
 
     <div class="config-box">
+      <div class="config-row">
+        <div class="cfg">
+          <div class="cfg-label">HPLC 페이지 범위</div>
+          <input type="text" id="cfgHplc" value="1-36" placeholder="예: 1-36">
+        </div>
+        <div class="cfg">
+          <div class="cfg-label">DSC 페이지 범위</div>
+          <input type="text" id="cfgDsc" value="37-45" placeholder="예: 37-45">
+        </div>
+      </div>
       <div class="config-row">
         <div class="cfg">
           <div class="cfg-label">렌더링 해상도</div>
@@ -233,7 +233,7 @@ h1 em{color:var(--accent);font-style:normal}
       </div>
     </div>
 
-    <div class="note">세로 방향 페이지 → HPLC (크로마토 + 피크 테이블) / 가로 방향 페이지 → DSC (그래프 박스 영역만 캡처) · Area% ≥ 1인 피크는 빨간 박스 표시</div>
+    <div class="note">크로마토그래피 영역은 텍스트 감지로 자동 크롭 · HPLC: 차트 + 테이블 / DSC: 그래프 전체 캡처</div>
   </div>
 
   <div class="divider"></div>
@@ -298,7 +298,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 let pdfDoc     = null;
 let pdfFile    = null;
 let resultBlob = null;
-let pageMap    = []; // [{pageNum, type: 'hplc'|'dsc'}]
 
 // ── DOM
 const dropzone   = document.getElementById('dropzone');
@@ -307,7 +306,6 @@ const fileBar    = document.getElementById('fileBar');
 const fbName     = document.getElementById('fbName');
 const fbMeta     = document.getElementById('fbMeta');
 const fbRemove   = document.getElementById('fbRemove');
-const pageDetect = document.getElementById('pageDetect');
 const btnRun     = document.getElementById('btnRun');
 const btnPrev    = document.getElementById('btnPrev');
 const btnTxt     = document.getElementById('btnTxt');
@@ -348,31 +346,17 @@ async function loadPdf(file) {
   logLed.className = 'log-led run';
   logStat.textContent = 'PDF 로딩 중...';
   addLog('info', `파일 로드: ${file.name}`);
-
   try {
     const buf = await file.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
     fbMeta.textContent = `크기: ${(file.size/1024/1024).toFixed(2)} MB · 총 ${pdfDoc.numPages}페이지`;
     addLog('ok', `PDF 로드 완료 — ${pdfDoc.numPages}페이지`);
-
-    // 페이지 타입 스캔
-    addLog('info', '페이지 방향 스캔 중...');
-    pageDetect.style.display = 'block';
-    pageDetect.textContent = '⏳ 페이지 방향 스캔 중...';
-    logLed.className = 'log-led run';
-
-    pageMap = await buildPageMap();
-    const hCount = pageMap.filter(p => p.type === 'hplc').length;
-    const dCount = pageMap.filter(p => p.type === 'dsc').length;
-
-    pageDetect.textContent = `✓ HPLC ${hCount}페이지 (세로) · DSC ${dCount}페이지 (가로)`;
-    addLog('ok', `감지 완료 — HPLC ${hCount}p / DSC ${dCount}p`);
     logLed.className = 'log-led ok';
     logStat.textContent = '준비됨';
     btnRun.disabled  = false;
     btnPrev.disabled = false;
   } catch (err) {
-    addLog('err', `로드 실패: ${err.message}`);
+    addLog('err', `PDF 로드 실패: ${err.message}`);
     logLed.className = 'log-led err';
     logStat.textContent = '오류';
   }
@@ -380,7 +364,6 @@ async function loadPdf(file) {
 
 function reset() {
   pdfDoc = pdfFile = resultBlob = null;
-  pageMap = [];
   fileBar.classList.remove('show');
   logBox.classList.remove('show');
   resultBar.classList.remove('show');
@@ -388,7 +371,6 @@ function reset() {
   progWrap.classList.remove('show');
   logContent.innerHTML = '';
   thumbGrid.innerHTML  = '';
-  pageDetect.style.display = 'none';
   btnRun.disabled  = true;
   btnPrev.disabled = true;
   fileInput.value  = '';
@@ -411,34 +393,9 @@ function setProgress(pct, label) {
   if (label !== undefined) progLabel.textContent = label;
 }
 
-// ════════════════════════════════════════════════
+// ────────────────────────────────────────────────
 // 유틸리티
-// ════════════════════════════════════════════════
-
-/** PDF 텍스트 아이템을 Y좌표 기준으로 같은 줄로 묶기 */
-function groupByLine(items, thresh = 2.5) {
-  const lines = [];
-  for (const item of items) {
-    if (!item.str.trim()) continue;
-    const y = item.transform[5];
-    let found = null;
-    for (const line of lines) {
-      if (Math.abs(line.y - y) <= thresh) { found = line; break; }
-    }
-    if (found) {
-      found.items.push(item);
-    } else {
-      lines.push({ y, items: [item] });
-    }
-  }
-  lines.forEach(l => l.items.sort((a, b) => a.transform[4] - b.transform[4]));
-  return lines.sort((a, b) => b.y - a.y); // 내림차순: 페이지 위→아래
-}
-
-/** PDF Y좌표 → 캔버스 Y좌표 */
-function pdf2cvsY(pdfY, pageH, scale) {
-  return (pageH - pdfY) * scale;
-}
+// ────────────────────────────────────────────────
 
 /** 캔버스 영역 크롭 → base64 PNG */
 function cropB64(canvas, x, y, w, h) {
@@ -464,271 +421,72 @@ async function renderPage(pageNum, scale) {
   return cvs;
 }
 
-// ════════════════════════════════════════════════
-// 페이지 타입 감지 (방향 기반)
-// ════════════════════════════════════════════════
+// ────────────────────────────────────────────────
+// HPLC 크롭 박스 (v2.1 고정 비율 방식 — 차트 하단 수정)
+// 크로마토그래피 하단: 기존 1330 → 1180 (불필요한 메타 텍스트 제거)
+// ────────────────────────────────────────────────
 
-async function getPageType(pageNum) {
-  const page = await pdfDoc.getPage(pageNum);
-  const vp   = page.getViewport({ scale: 1 });
-  return vp.width > vp.height ? 'dsc' : 'hplc';
-}
-
-async function buildPageMap() {
-  const map = [];
-  for (let p = 1; p <= pdfDoc.numPages; p++) {
-    map.push({ pageNum: p, type: await getPageType(p) });
-  }
-  return map;
-}
-
-// ════════════════════════════════════════════════
-// HPLC 처리
-// ════════════════════════════════════════════════
-
-/**
- * HPLC 페이지에서 텍스트 메타데이터 추출
- * 반환: { sampleName, sampleInfo, addInfoPdfY, peakHeaderPdfY, totalsPdfY,
- *         peakRows:[{pdfY, areaPct, areaPdfX, areaItemW}], rowH, pageH, pageW }
- */
-async function extractHplcMeta(page) {
-  const tc    = await page.getTextContent();
-  const vp    = page.getViewport({ scale: 1 });
-  const pageH = vp.height;
-  const pageW = vp.width;
-  const lines = groupByLine(tc.items);
-
-  let sampleName     = '';
-  let sampleInfo     = '';
-  let addInfoPdfY    = null;
-  let peakHeaderPdfY = null;
-  let totalsPdfY     = null;
-  let peakRows       = [];
-  let inTable        = false;
-
-  for (let li = 0; li < lines.length; li++) {
-    const line = lines[li];
-    const text = line.items.map(i => i.str).join(' ').trim();
-    const y    = line.y;
-
-    // Sample Name
-    if (/Sample\s*Name\s*:/i.test(text)) {
-      const val = text.replace(/.*Sample\s*Name\s*:\s*/i, '').trim();
-      if (val) sampleName = val;
-      else if (li + 1 < lines.length) {
-        const next = lines[li + 1].items.map(i => i.str).join(' ').trim();
-        if (next && !/Sample/i.test(next)) sampleName = next;
-      }
-    }
-
-    // Sample Info
-    if (/Sample\s*Info\s*:/i.test(text)) {
-      const val = text.replace(/.*Sample\s*Info\s*:\s*/i, '').trim();
-      if (val) sampleInfo = val;
-      else if (li + 1 < lines.length) {
-        const next = lines[li + 1].items.map(i => i.str).join(' ').trim();
-        if (next && !/Sample/i.test(next)) sampleInfo = next;
-      }
-    }
-
-    // Additional Info (크로마토 위에 나타나는 텍스트)
-    if (/Additional\s*Info/i.test(text)) {
-      addInfoPdfY = y;
-    }
-
-    // Peak 테이블 헤더: "Peak  RetTime ..."
-    if (/Peak\s+RetTime/i.test(text)) {
-      peakHeaderPdfY = y;
-      inTable = true;
-    }
-
-    // Totals 행
-    if (/^Totals?\b/i.test(text) && inTable) {
-      totalsPdfY = y;
-      inTable = false;
-    }
-
-    // 피크 데이터 행 파싱: "  1  12.345  BB  0.0982  12345.678  789.0  25.678"
-    if (inTable && peakHeaderPdfY !== null && totalsPdfY === null) {
-      const cols = text.trim().split(/\s+/);
-      if (
-        cols.length >= 6 &&
-        /^\d+$/.test(cols[0]) &&       // 첫 컬럼: 피크 번호
-        /^[\d.eE+\-]+$/.test(cols[1]) // 두번째: RetTime
-      ) {
-        const areaPct = parseFloat(cols[cols.length - 1]);
-        if (!isNaN(areaPct) && areaPct >= 0 && areaPct <= 100) {
-          // Area% 숫자가 있는 텍스트 아이템의 위치 찾기 (가장 오른쪽 숫자 아이템)
-          let areaItem = null;
-          for (let k = line.items.length - 1; k >= 0; k--) {
-            const v = parseFloat(line.items[k].str.trim());
-            if (!isNaN(v)) { areaItem = line.items[k]; break; }
-          }
-          peakRows.push({
-            pdfY:      y,
-            areaPct,
-            areaPdfX:  areaItem ? areaItem.transform[4] : null,
-            areaItemW: areaItem ? (areaItem.width || 25) : 25,
-          });
-        }
-      }
-    }
-  }
-
-  // 행 높이 추정 (피크 행들의 Y 간격)
-  let rowH = 10;
-  if (peakRows.length >= 2) {
-    const ys    = peakRows.map(p => p.pdfY).sort((a, b) => b - a);
-    const diffs = ys.slice(0, -1).map((y, i) => y - ys[i + 1]).filter(d => d > 0.5);
-    if (diffs.length) rowH = Math.min(...diffs);
-  }
-
-  return { sampleName, sampleInfo, addInfoPdfY, peakHeaderPdfY, totalsPdfY, peakRows, rowH, pageH, pageW };
-}
-
-/**
- * HPLC 페이지 처리:
- * - 캔버스 렌더링
- * - Area% >= 1인 피크에 빨간 박스 그리기
- * - 크로마토 이미지 크롭 (Additional Info 이하, Peak 헤더 이상)
- * - 테이블 이미지 크롭 (Peak 헤더 ~ Totals)
- * 반환: { chartB64, tableB64, sampleName, sampleInfo }
- */
-async function processHplcPage(pageNum, scale) {
-  const page = await pdfDoc.getPage(pageNum);
-  const vp   = page.getViewport({ scale });
-  const cvs  = document.createElement('canvas');
-  cvs.width  = vp.width;
-  cvs.height = vp.height;
-  const ctx  = cvs.getContext('2d');
-  await page.render({ canvasContext: ctx, viewport: vp }).promise;
-
-  const meta = await extractHplcMeta(page);
-  const { sampleName, sampleInfo, addInfoPdfY,
-          peakHeaderPdfY, totalsPdfY, peakRows, rowH, pageH } = meta;
+function hplcBoxes(cvs) {
   const W = cvs.width, H = cvs.height;
-
-  // ── 빨간 박스: Area% >= 1인 피크의 Area% 숫자 셀만 박스 표시
-  const highPeaks = peakRows.filter(p => p.areaPct >= 1);
-  if (highPeaks.length > 0) {
-    const rh  = rowH * scale;
-    const pad = rh * 0.15;
-    ctx.save();
-    ctx.strokeStyle = '#DD0000';
-    ctx.lineWidth   = Math.max(1.5, scale * 0.55);
-    for (const peak of highPeaks) {
-      const cy = pdf2cvsY(peak.pdfY, pageH, scale);
-      if (peak.areaPdfX !== null) {
-        // Area% 숫자 셀만 박스 (X위치는 PDF좌표 → 캔버스, 폭은 아이템 width + 여백)
-        const bx = peak.areaPdfX * scale - 3 * scale;
-        const bw = peak.areaItemW * scale + 6 * scale;
-        ctx.strokeRect(bx, cy - rh + pad, bw, rh);
-      } else {
-        // X좌표 정보 없을 때 행 오른쪽 20% 영역만 박스
-        const bx = W * 0.80;
-        ctx.strokeRect(bx, cy - rh + pad, W - bx - 18 * scale, rh);
-      }
-    }
-    ctx.restore();
-  }
-
-  // ── 크로마토 크롭 경계
-  // 위: Additional Info 텍스트 바로 아래부터 (없으면 기본 비율)
-  const chartTop = addInfoPdfY !== null
-    ? pdf2cvsY(addInfoPdfY, pageH, scale) + 14 * scale
-    : 640 / 2526 * H;
-  // 아래: Peak 헤더 위까지 (없으면 기본 비율)
-  const chartBot = peakHeaderPdfY !== null
-    ? pdf2cvsY(peakHeaderPdfY, pageH, scale) - 30 * scale
-    : 1310 / 2526 * H;
-
-  const chartX = 18 * scale;
-  const chartW = W - 36 * scale;
-  const chartH = Math.max(80, chartBot - chartTop);
-
-  // ── 피크 테이블 크롭 경계
-  // 위: Peak 헤더 행 조금 위부터
-  const tableTop = peakHeaderPdfY !== null
-    ? pdf2cvsY(peakHeaderPdfY, pageH, scale) - 8 * scale
-    : 1360 / 2526 * H;
-  // 아래: Totals 행 아래까지
-  const tableBot = totalsPdfY !== null
-    ? pdf2cvsY(totalsPdfY, pageH, scale) + (rowH + 3) * scale
-    : 2430 / 2526 * H;
-
-  const tableX = 18 * scale;
-  const tableW = W - 36 * scale;
-  const tableH = Math.max(80, tableBot - tableTop);
-
   return {
-    chartB64:   cropB64(cvs, chartX, chartTop, chartW, chartH),
-    tableB64:   cropB64(cvs, tableX, tableTop, tableW, tableH),
-    tableNatW:  tableW,    // 테이블 이미지 원본 픽셀 너비 (비율 계산용)
-    tableNatH:  tableH,    // 테이블 이미지 원본 픽셀 높이 (비율 계산용)
-    sampleName,
-    sampleInfo,
+    // 차트: top=640, bottom=1180 (기존 1330에서 위로 줄여 텍스트 제외)
+    chart: [ 55/1786*W,  640/2526*H,  (1730-55)/1786*W,  (1180-640)/2526*H ],
+    // 테이블: top=1350, bottom=2430 (원본과 동일)
+    table: [ 55/1786*W, 1350/2526*H,  (1730-55)/1786*W,  (2430-1350)/2526*H ],
   };
 }
 
-// ════════════════════════════════════════════════
-// DSC 처리
-// ════════════════════════════════════════════════
-
 /**
- * DSC 페이지에서 박스 영역 크롭 좌표 계산
- * - 페이지 상단 텍스트(파일명, Exo 등) 아래부터
- * - 페이지 하단 텍스트(Mettler 등) 위까지
+ * HPLC 페이지를 렌더하고 크로마토 + 테이블을 각각 크롭
+ * 반환: { chartB64, tableB64, tableNatW, tableNatH }
  */
-async function computeDscCrop(page, scale) {
-  const tc    = await page.getTextContent();
-  const vp    = page.getViewport({ scale: 1 });
-  const pH    = vp.height;
-  const pW    = vp.width;
-  const items = tc.items.filter(i => i.str.trim().length > 0);
+async function processHplcPage(pageNum, scale) {
+  const cvs = await renderPage(pageNum, scale);
+  const W = cvs.width, H = cvs.height;
+  const b = hplcBoxes(cvs);
 
-  // 상단 영역(PDF Y > 80%): 헤더 텍스트 → 최하단 Y를 찾아 거기서 크롭 시작
-  // 하단 영역(PDF Y < 12%): 푸터 텍스트 → 최상단 Y를 찾아 거기서 크롭 종료
-  const TOP_ZONE = pH * 0.80;
-  const BOT_ZONE = pH * 0.13;
+  const chartB64 = cropB64(cvs, b.chart[0], b.chart[1] * H / H, b.chart[2], b.chart[3]);
+  const tableB64 = cropB64(cvs, b.table[0], b.table[1] * H / H, b.table[2], b.table[3]);
 
-  let headerBotY  = null; // 헤더 영역 중 가장 낮은 Y (그래프와 가장 가까운 헤더 라인)
-  let footerTopY  = null; // 푸터 영역 중 가장 높은 Y (그래프와 가장 가까운 푸터 라인)
-
-  for (const item of items) {
-    const y = item.transform[5];
-    if (y >= TOP_ZONE) {
-      headerBotY = (headerBotY === null) ? y : Math.min(headerBotY, y);
-    }
-    if (y <= BOT_ZONE) {
-      footerTopY = (footerTopY === null) ? y : Math.max(footerTopY, y);
-    }
-  }
-
-  // 캔버스 좌표 변환 (scale 적용)
-  const cTop = headerBotY !== null
-    ? pdf2cvsY(headerBotY, pH, scale) - 6 * scale
-    : 55 / 1785 * pH * scale;
-
-  const cBot = footerTopY !== null
-    ? pdf2cvsY(footerTopY, pH, scale) + 22 * scale
-    : 1700 / 1785 * pH * scale;
-
-  const cLeft  = 15 * scale;
-  const cRight = (pW - 15) * scale;
-
-  return [cLeft, cTop, cRight - cLeft, Math.max(50, cBot - cTop)];
+  return {
+    chartB64,
+    tableB64,
+    tableNatW: b.table[2],
+    tableNatH: b.table[3],
+  };
 }
 
-async function processDscPage(pageNum, scale) {
-  const page = await pdfDoc.getPage(pageNum);
-  const box  = await computeDscCrop(page, scale);
-  const cvs  = await renderPage(pageNum, scale);
-  return cropB64(cvs, ...box);
+// ────────────────────────────────────────────────
+// DSC 크롭 (전체 페이지에서 그래프 영역만)
+// ────────────────────────────────────────────────
+
+function dscBox(cvs) {
+  const W = cvs.width, H = cvs.height;
+  return [ 20/1786*W, 55/2526*H, (1765-20)/1786*W, (1700-55)/2526*H ];
 }
 
-// ════════════════════════════════════════════════
+// ────────────────────────────────────────────────
+// 페이지 범위 파싱
+// ────────────────────────────────────────────────
+
+function parseRange(str, max) {
+  const out = new Set();
+  str.split(',').forEach(seg => {
+    seg = seg.trim();
+    if (seg.includes('-')) {
+      let [a, b] = seg.split('-').map(Number);
+      for (let i = a; i <= Math.min(b, max); i++) out.add(i);
+    } else {
+      const n = parseInt(seg);
+      if (n >= 1 && n <= max) out.add(n);
+    }
+  });
+  return [...out].sort((a, b) => a - b);
+}
+
+// ────────────────────────────────────────────────
 // PPTX 빌드
-// ════════════════════════════════════════════════
+// ────────────────────────────────────────────────
 
 async function buildPptx() {
   if (typeof PptxGenJS === 'undefined') {
@@ -737,13 +495,12 @@ async function buildPptx() {
 
   const scale    = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
-
-  // pageMap은 loadPdf에서 이미 빌드됨
-  const hplcPages = pageMap.filter(p => p.type === 'hplc').map(p => p.pageNum);
-  const dscPages  = pageMap.filter(p => p.type === 'dsc').map(p => p.pageNum);
+  const total    = pdfDoc.numPages;
+  const hplcPages = parseRange(document.getElementById('cfgHplc').value, total);
+  const dscPages  = parseRange(document.getElementById('cfgDsc').value, total);
 
   if (hplcPages.length === 0 && dscPages.length === 0) {
-    throw new Error('처리할 페이지가 없습니다.');
+    throw new Error('처리할 페이지가 없습니다. 페이지 범위를 확인하세요.');
   }
 
   const W = 10, H = 5.625;
@@ -754,7 +511,7 @@ async function buildPptx() {
   let done = 0;
 
   // ── HPLC 슬라이드
-  addLog('info', `HPLC 처리 — ${hplcPages.length}페이지`);
+  addLog('info', `HPLC 처리 — ${hplcPages.length}페이지 (텍스트 감지 크롭)`);
 
   for (let i = 0; i < hplcPages.length; i += pairMode) {
     const p1 = hplcPages[i];
@@ -767,57 +524,30 @@ async function buildPptx() {
     slide.background = { color: 'FFFFFF' };
 
     if (r2) {
-      // ── 2컬럼 레이아웃
-      const PW   = W / 2;   // 5.0 in
-      const PH   = H / 2;   // 2.8125 in
-      const TXT  = 0.28;    // 텍스트 헤더 높이
+      // 좌 / 우 2컬럼
+      const PW = W / 2;   // 5.0
+      const PH = H / 2;   // 2.8125
 
-      // 좌측 컬럼
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) {
-        slide.addText(lbl1, {
-          x: 0, y: 0, w: PW, h: TXT,
-          fontSize: 7, color: '333333', valign: 'middle',
-          margin: [0, 4, 0, 4], fontFace: 'Arial'
-        });
-      }
-      slide.addImage({ data: r1.chartB64, x: 0,  y: TXT,      w: PW, h: PH - TXT });
+      // 좌측: 차트 위 / 테이블 아래
+      slide.addImage({ data: r1.chartB64, x: 0,  y: 0,  w: PW, h: PH });
       const tH1 = PW * (r1.tableNatH / r1.tableNatW);
-      slide.addImage({ data: r1.tableB64, x: 0,  y: PH,        w: PW, h: tH1 });
+      slide.addImage({ data: r1.tableB64, x: 0,  y: PH, w: PW, h: tH1 });
 
-      // 우측 컬럼
-      const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl2) {
-        slide.addText(lbl2, {
-          x: PW, y: 0, w: PW, h: TXT,
-          fontSize: 7, color: '333333', valign: 'middle',
-          margin: [0, 4, 0, 4], fontFace: 'Arial'
-        });
-      }
-      slide.addImage({ data: r2.chartB64, x: PW, y: TXT,      w: PW, h: PH - TXT });
+      // 우측
+      slide.addImage({ data: r2.chartB64, x: PW, y: 0,  w: PW, h: PH });
       const tH2 = PW * (r2.tableNatH / r2.tableNatW);
-      slide.addImage({ data: r2.tableB64, x: PW, y: PH,        w: PW, h: tH2 });
-
+      slide.addImage({ data: r2.tableB64, x: PW, y: PH, w: PW, h: tH2 });
     } else {
-      // ── 1컬럼 레이아웃
-      const TXT = 0.35;
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) {
-        slide.addText(lbl1, {
-          x: 0, y: 0, w: W, h: TXT,
-          fontSize: 9, color: '333333', valign: 'middle',
-          margin: [0, 6, 0, 6], fontFace: 'Arial'
-        });
-      }
-      const chartH = (H - TXT) * 0.48;
-      const tH1    = W * (r1.tableNatH / r1.tableNatW);
-      slide.addImage({ data: r1.chartB64, x: 0, y: TXT,          w: W, h: chartH });
-      slide.addImage({ data: r1.tableB64, x: 0, y: TXT + chartH, w: W, h: tH1 });
+      // 단독 — 위(차트) / 아래(테이블)
+      const chartSlideH = H * 0.5;
+      const tH1 = W * (r1.tableNatH / r1.tableNatW);
+      slide.addImage({ data: r1.chartB64, x: 0, y: 0,          w: W, h: chartSlideH });
+      slide.addImage({ data: r1.tableB64, x: 0, y: chartSlideH, w: W, h: tH1 });
     }
 
     done++;
     setProgress(done / totalWork * 100, `HPLC (${Math.min(i + pairMode, hplcPages.length)}/${hplcPages.length})`);
-    addLog('ok', `HPLC p${p1}${p2 ? ' + p'+p2 : ''}${r1.sampleName ? ' — ' + r1.sampleName : ''}`);
+    addLog('ok', `HPLC p${p1}${p2 ? ' + p' + p2 : ''}`);
     await new Promise(r => setTimeout(r, 0));
   }
 
@@ -826,14 +556,16 @@ async function buildPptx() {
 
   for (let i = 0; i < dscPages.length; i++) {
     const p   = dscPages[i];
-    const img = await processDscPage(p, scale);
+    const cvs = await renderPage(p, scale);
+    const box = dscBox(cvs);
+    const img = cropB64(cvs, ...box);
 
     const slide = pres.addSlide();
     slide.background = { color: 'FFFFFF' };
     slide.addImage({ data: img, x: 0, y: 0, w: W, h: H, sizing: { type: 'contain', w: W, h: H } });
 
     done++;
-    setProgress(done / totalWork * 100, `DSC (${i+1}/${dscPages.length})`);
+    setProgress(done / totalWork * 100, `DSC (${i + 1}/${dscPages.length})`);
     addLog('ok', `DSC p${p}`);
     await new Promise(r => setTimeout(r, 0));
   }
@@ -865,14 +597,14 @@ btnRun.addEventListener('click', async () => {
     setProgress(100, '완료!');
     logLed.className = 'log-led ok';
     logStat.textContent = '변환 완료';
-    addLog('ok', `완료 — ${(blob.size/1024).toFixed(0)} KB`);
+    addLog('ok', `완료 — ${(blob.size / 1024).toFixed(0)} KB`);
 
-    const hCount  = pageMap.filter(p => p.type === 'hplc').length;
-    const dCount  = pageMap.filter(p => p.type === 'dsc').length;
-    const pairMode = parseInt(document.getElementById('cfgPair').value);
-    const slides  = Math.ceil(hCount / pairMode) + dCount;
+    const hplcPages = parseRange(document.getElementById('cfgHplc').value, pdfDoc.numPages);
+    const dscPages  = parseRange(document.getElementById('cfgDsc').value, pdfDoc.numPages);
+    const pairMode  = parseInt(document.getElementById('cfgPair').value);
+    const slides    = Math.ceil(hplcPages.length / pairMode) + dscPages.length;
 
-    resultSub.textContent = `슬라이드 ${slides}장  ·  HPLC ${hCount}페이지  ·  DSC ${dCount}페이지  ·  ${(blob.size/1024).toFixed(0)} KB`;
+    resultSub.textContent = `슬라이드 ${slides}장  ·  HPLC ${hplcPages.length}페이지  ·  DSC ${dscPages.length}페이지  ·  ${(blob.size / 1024).toFixed(0)} KB`;
     resultBar.classList.add('show');
     resultBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
@@ -895,8 +627,9 @@ btnPrev.addEventListener('click', async () => {
   prevArea.classList.add('show');
   thumbGrid.innerHTML = '';
 
-  const hSet = new Set(pageMap.filter(p => p.type === 'hplc').map(p => p.pageNum));
-  const dSet = new Set(pageMap.filter(p => p.type === 'dsc').map(p => p.pageNum));
+  const hplcPages = parseRange(document.getElementById('cfgHplc').value, pdfDoc.numPages);
+  const dscPages  = parseRange(document.getElementById('cfgDsc').value, pdfDoc.numPages);
+  const hSet = new Set(hplcPages), dSet = new Set(dscPages);
 
   for (let p = 1; p <= pdfDoc.numPages; p++) {
     const cvs  = await renderPage(p, 0.35);
