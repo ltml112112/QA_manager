@@ -96,6 +96,20 @@ body {
 
 .conn-badge:hover { border-color: var(--border-hover); }
 
+.btn-sheet {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(0,184,148,.4);
+  background: var(--success-bg);
+  color: var(--success);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .15s;
+}
+.btn-sheet:hover { background: #d0f5ed; border-color: var(--success); }
+
 .conn-badge .dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--text-tertiary);
@@ -300,9 +314,15 @@ input::placeholder { color: var(--text-tertiary); }
         <div class="desc">정보 입력 후 PDF / 엑셀 일괄 다운로드</div>
       </div>
     </div>
-    <div class="conn-badge loading" id="connBadge" onclick="testConn()">
-      <span class="dot"></span>
-      <span id="connText">확인 중</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a class="btn-sheet" id="btnSheet" href="https://docs.google.com/spreadsheets/d/1kh2oBZYKXaadIJoZQJ5OPYZHlwZftiFpuIT45v2SjTk/edit" target="_blank">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 9v12" stroke="currentColor" stroke-width="2"/></svg>
+        구글시트 열기
+      </a>
+      <div class="conn-badge loading" id="connBadge" onclick="testConn()">
+        <span class="dot"></span>
+        <span id="connText">확인 중</span>
+      </div>
     </div>
   </div>
 
