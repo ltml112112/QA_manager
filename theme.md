@@ -143,3 +143,21 @@ function applyTheme(theme) {
 | REF_IVL2 | `#a855f7` |
 | SAMPLE_IVL1 | `#ef4444` |
 | SAMPLE_IVL2 | `#f59e0b` |
+
+---
+
+## TODO (수정 필요 항목)
+
+### [BUG] ivl_lt.html — CSS 렌더링 깨짐
+- **증상**: `@import url(...)` 이 화면에 텍스트로 그대로 출력됨. `<style>` 태그 내부에 `@import`가 제대로 삽입되지 않고 태그 밖으로 빠져나온 것으로 추정
+- **원인**: Python 문자열 치환 시 `<style>` 태그와 `:root{` 사이에 `@import` 삽입 로직 오류
+- **수정 방법**: `ivl_lt.html`의 `<style>` 태그 바로 다음 줄에 `@import url(...)` 이 위치하는지 확인 후 올바른 위치로 이동
+
+### [BUG] index.html — 테마 토글 시 상단 탭바도 같이 바뀌는 문제
+- **증상**: 다크/라이트 전환 시 `<html data-theme>` 변경으로 인해 상단 탭바(topbar)도 색상이 바뀜
+- **요구사항**: 탭바는 항상 다크 유지, **iframe 내 콘텐츠만** 라이트/다크 전환
+- **수정 방법**:
+  - `index.html`에서 `html[data-theme]` 대신 `.frame-area` 또는 각 iframe에만 테마 적용
+  - `applyTheme()`에서 `document.documentElement.dataset.theme` 변경 제거
+  - 대신 postMessage로 iframe에만 테마 전달하고, localStorage에만 저장
+  - 토글 버튼 아이콘(🌙/☀️)은 유지
