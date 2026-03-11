@@ -296,7 +296,7 @@ input::placeholder { color: var(--text-tertiary); }
     <div class="header-left">
       <div class="logo">L</div>
       <div>
-        <h1>사전심사자료 자동화</h1>
+        <h1>LGD 사전심사자료 자동화</h1>
         <div class="desc">정보 입력 후 PDF / 엑셀 일괄 다운로드</div>
       </div>
     </div>
@@ -318,11 +318,11 @@ input::placeholder { color: var(--text-tertiary); }
       </div>
       <div class="field">
         <label>제품명 <span class="req">*</span></label>
-        <input type="text" id="f_제품명" placeholder="ABC-1234">
+        <input type="text" id="f_제품명" placeholder="LT-PHM248">
       </div>
       <div class="field">
         <label>색상</label>
-        <input type="text" id="f_색상" placeholder="Black">
+        <input type="text" id="f_색상" placeholder="노란색 분말">
       </div>
     </div>
   </div>
@@ -335,7 +335,7 @@ input::placeholder { color: var(--text-tertiary); }
     <div class="form-row">
       <div class="field">
         <label>상품명1 <span class="req">*</span></label>
-        <input type="text" id="f_상품명1" placeholder="Product-A">
+        <input type="text" id="f_상품명1" placeholder="LT-123">
       </div>
       <div class="field">
         <label>상품명2 <span class="opt">선택</span></label>
@@ -382,6 +382,27 @@ input::placeholder { color: var(--text-tertiary); }
 
 <script>
 var $ = function(id) { return document.getElementById(id); };
+
+// ── 버전 설정 (업데이트 시 여기만 수정) ──
+var PRIVATE_SUBSTANCE_VER = '25.8월 Ver';
+
+// ── 파일명 규칙 적용 ──
+function applyFileNameRules(fileName) {
+  var ext = '';
+  var dotIdx = fileName.lastIndexOf('.');
+  if (dotIdx !== -1) {
+    ext = fileName.substring(dotIdx);
+    fileName = fileName.substring(0, dotIdx);
+  }
+  // 구성제품확인서 뒤 숫자 제거 (구성제품확인서1 → 구성제품확인서)
+  fileName = fileName.replace(/(구성제품확인서)\d+$/, '$1');
+  // 비공개물질 파일에 버전 suffix
+  if (fileName.indexOf('비공개물질') !== -1) {
+    fileName = fileName + ' (' + PRIVATE_SUBSTANCE_VER + ')';
+  }
+  // 모든 파일 앞에 LT소재_ 프리픽스
+  return 'LT소재_' + fileName + ext;
+}
 
 function getFormData() {
   return {
@@ -459,8 +480,9 @@ function downloadAll() {
         }
         var f = files[i];
         if (f.ok) {
-          downloadBase64(f.fileData, f.fileName, f.mimeType);
-          log('ok', f.fileName);
+          var dlName = applyFileNameRules(f.fileName);
+          downloadBase64(f.fileData, dlName, f.mimeType);
+          log('ok', dlName);
         } else {
           log('err', f.label + ' - ' + f.error);
           failCount++;
