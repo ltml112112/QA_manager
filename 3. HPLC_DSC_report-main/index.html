@@ -3,20 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>분석결과 → PPTX 자동변환기</title>
+<title>분석결과 → PPTX 자동변환기 (Desktop Pro)</title>
+
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<!-- PptxGenJS: primary CDN -->
+
+<!-- PptxGenJS -->
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"
         onerror="loadPptxFallback()"></script>
+
 <script>
 function loadPptxFallback() {
   const s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js';
-  s.onerror = () => alert('PptxGenJS 라이브러리 로드 실패. 인터넷 연결을 확인하세요.');
+  s.onerror = () => alert('PptxGenJS 로드 실패. 인터넷을 확인하세요.');
   document.head.appendChild(s);
 }
 </script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -29,39 +33,60 @@ function loadPptxFallback() {
   --surface:#1a1f2e; --accent:#4f6ef7;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);min-height:100vh;overflow-x:hidden}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);height:100vh;overflow:hidden;}
 
-.wrap{max-width:900px;margin:0 auto;padding:0 24px 100px}
+/* 레이아웃 분할 */
+.app-container {
+  display:flex;
+  height:100vh;
+  max-width:1800px;
+  margin:0 auto;
+}
+.left-panel {
+  width:460px;
+  min-width:460px;
+  height:100%;
+  overflow-y:auto;
+  border-right:1px solid var(--line);
+  padding:32px 28px 100px;
+  background:var(--bg);
+  position:relative;
+  z-index:10;
+}
+.right-panel {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  background:#090c10;
+  height:100%;
+}
+.left-panel::-webkit-scrollbar, .right-content::-webkit-scrollbar { width:6px; }
+.left-panel::-webkit-scrollbar-thumb, .right-content::-webkit-scrollbar-thumb { background:var(--line); border-radius:3px; }
 
 /* 헤더 */
-.site-header{
-  padding:36px 0 28px;
-  display:flex;align-items:flex-end;justify-content:space-between;
-  border-bottom:3px solid var(--accent);margin-bottom:40px;
-}
-h1{font-size:clamp(28px,4vw,48px);line-height:.95;font-weight:900}
-h1 em{color:var(--accent);font-style:normal}
-.header-version{font-family:var(--mono);font-size:10px;color:var(--ink2);border:1px solid var(--line);border-radius:3px;padding:4px 10px;background:var(--surface)}
+.site-header { margin-bottom:40px; }
+h1 { font-size:32px; line-height:1.1; font-weight:900; margin-bottom:8px; }
+h1 em { color:var(--accent); font-style:normal; }
+.header-version { font-family:var(--mono); font-size:11px; color:var(--ink2); border:1px solid var(--line); border-radius:4px; padding:4px 10px; background:var(--surface); display:inline-block;}
 
 /* 스텝 */
 .step{margin-bottom:32px}
 .step-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.step-num{font-size:38px;font-weight:900;color:var(--accent);line-height:1;border-right:2px solid var(--line);padding-right:12px}
-.step-title{font-weight:700;font-size:15px;color:var(--ink)}
+.step-num{font-size:32px;font-weight:900;color:var(--accent);line-height:1;border-right:2px solid var(--line);padding-right:12px}
+.step-title{font-weight:700;font-size:16px;color:var(--ink)}
 .step-desc{font-size:12px;color:var(--ink2);margin-top:2px}
 
 /* 드롭존 */
 .dropzone{
   border:2px dashed var(--line);border-radius:8px;
-  padding:48px 24px;text-align:center;cursor:pointer;
+  padding:36px 20px;text-align:center;cursor:pointer;
   background:var(--panel);transition:all .2s;
 }
 .dropzone.active{border-color:var(--accent);background:rgba(79,110,247,.06)}
 .dropzone:hover{border-color:var(--accent)}
 .dz-icon{font-size:34px;display:block;margin-bottom:12px;opacity:.5}
-.dz-main{font-weight:700;font-size:15px;margin-bottom:4px}
-.dz-sub{font-size:12px;color:var(--ink2)}
+.dz-main{font-weight:700;font-size:14px;margin-bottom:4px}
+.dz-sub{font-size:11px;color:var(--ink2)}
 .dz-sub b{color:var(--ink)}
 #fileInput{display:none}
 
@@ -69,30 +94,38 @@ h1 em{color:var(--accent);font-style:normal}
 .file-bar{display:none;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:8px;padding:12px 16px;background:var(--surface);margin-top:10px}
 .file-bar.show{display:flex}
 .fb-icon{font-size:20px}
-.fb-info{flex:1}
-.fb-name{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink)}
+.fb-info{flex:1; overflow:hidden;}
+.fb-name{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fb-meta{font-size:11px;color:var(--ink2);margin-top:2px}
-.fb-remove{background:none;border:1.5px solid var(--line);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--ink2);cursor:pointer;font-family:var(--mono);transition:all .15s}
+.fb-remove{background:none;border:1.5px solid var(--line);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--ink2);cursor:pointer;font-family:var(--mono);transition:all .15s;flex-shrink:0;}
 .fb-remove:hover{border-color:var(--red);color:var(--red)}
 
-/* 설정 */
-.config-box{border:1.5px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+/* 설정 박스 */
+.config-box{border:1.5px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden;margin-bottom:12px;}
 .config-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
 .config-row:last-child{border-bottom:none}
-.cfg{padding:14px 18px;border-right:1px solid var(--line)}
+.cfg{padding:12px 16px;border-right:1px solid var(--line)}
 .cfg:last-child{border-right:none}
-.cfg-label{font-family:var(--mono);font-size:10px;color:var(--ink2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
-.cfg input,.cfg select{width:100%;background:transparent;border:none;border-bottom:1.5px solid var(--line);padding:5px 0;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;transition:border-color .15s}
+.cfg-label{font-family:var(--mono);font-size:10px;color:var(--ink2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.cfg input[type="text"],.cfg select{width:100%;background:transparent;border:none;border-bottom:1.5px solid var(--line);padding:4px 0;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;transition:border-color .15s}
 .cfg input:focus,.cfg select:focus{border-bottom-color:var(--accent)}
 .cfg select option{background:var(--panel);color:var(--ink)}
 
+/* 오프셋(여백) 조절 UI */
+.offset-wrap { display:flex; gap:8px; align-items:center; }
+.offset-group { display:flex; flex:1; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:2px 6px; }
+.offset-lbl { font-size:10px; color:var(--ink2); margin-right:4px; font-family:var(--mono); }
+.offset-group input[type="number"] { width:100%; min-width:30px; background:transparent; border:none; color:var(--ink); font-family:var(--mono); font-size:12px; text-align:center; outline:none; }
+.cfg-header { padding:10px 16px; border-bottom:1px solid var(--line); font-size:11px; color:var(--ink); font-weight:700; background:rgba(255,255,255,0.03); display:flex; justify-content:space-between; align-items:center; }
+.cfg-desc { font-weight:normal; font-size:10px; color:var(--ink2); font-family:var(--mono); }
+
 /* 버튼 */
-.action-row{display:flex;gap:10px;margin-top:0}
-.btn{flex:1;padding:16px 20px;border:none;cursor:pointer;font-weight:700;font-size:15px;border-radius:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.action-row{display:flex;gap:10px;margin-top:20px}
+.btn{flex:1;padding:16px 20px;border:none;cursor:pointer;font-weight:700;font-size:14px;border-radius:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-run{background:var(--accent);color:#fff}
 .btn-run:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
 .btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn-preview{background:transparent;color:var(--ink);border:1.5px solid var(--line);flex:0 0 auto;padding:16px 18px;font-size:13px;border-radius:8px}
+.btn-preview{background:transparent;color:var(--ink);border:1.5px solid var(--line);flex:0 0 auto;padding:16px 18px;border-radius:8px}
 .btn-preview:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
 .btn-preview:disabled{opacity:.4;cursor:not-allowed}
 
@@ -101,14 +134,12 @@ h1 em{color:var(--accent);font-style:normal}
 .spin.on{display:block}
 @keyframes rot{to{transform:rotate(360deg)}}
 
-/* 진행 */
+/* 진행 및 로그 */
 .progress-wrap{display:none;margin-top:14px}
 .progress-wrap.show{display:block}
 .prog-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink2);margin-bottom:6px}
 .prog-track{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
 .prog-fill{height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width .3s ease}
-
-/* 로그 */
 .log-box{display:none;border:1.5px solid var(--line);border-radius:8px;margin-top:12px;overflow:hidden;background:var(--surface)}
 .log-box.show{display:block}
 .log-top{padding:8px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--ink2);display:flex;align-items:center;gap:8px}
@@ -117,195 +148,258 @@ h1 em{color:var(--accent);font-style:normal}
 .log-led.ok{background:var(--green);animation:none}
 .log-led.err{background:var(--red);animation:none}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.log-content{padding:10px 14px;max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:11.5px;line-height:1.85}
-.log-content::-webkit-scrollbar{width:3px}
-.log-content::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.log-content{padding:10px 14px;height:140px;overflow-y:auto;font-family:var(--mono);font-size:11px;line-height:1.8}
 .ll{color:var(--ink2)}
 .ll.ok{color:var(--green)}
 .ll.err{color:var(--red)}
 .ll.info{color:var(--accent)}
-.ll.warn{color:var(--amber)}
 
-/* 미리보기 */
-.preview-area{display:none;margin-top:28px}
-.preview-area.show{display:block}
-.section-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.section-label::after{content:'';flex:1;height:1px;background:var(--line)}
-.thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
-.thumb{border:1.5px solid var(--line);border-radius:6px;overflow:hidden;cursor:pointer;transition:border-color .15s;background:var(--surface)}
-.thumb:hover{border-color:var(--accent)}
-.thumb canvas{width:100%;display:block}
-.thumb-lbl{padding:4px 7px;font-family:var(--mono);font-size:9px;color:var(--ink2);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--panel)}
-.thumb-type{display:inline-block;background:var(--accent);color:#fff;font-size:8px;padding:1px 5px;border-radius:3px;margin-right:4px}
-.thumb-type.dsc{background:#7c3aed}
-
-/* 결과 */
-.result-bar{display:none;margin-top:18px;border:2.5px solid var(--green);border-radius:8px;padding:22px 26px;background:rgba(52,211,153,.06);animation:slideUp .35s ease}
-.result-bar.show{display:flex;align-items:center;gap:18px}
+/* 결과 표시바 */
+.result-bar{display:none;margin-top:18px;border:2.5px solid var(--green);border-radius:8px;padding:20px;background:rgba(52,211,153,.06);animation:slideUp .35s ease}
+.result-bar.show{display:flex;align-items:center;gap:14px}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.result-icon{font-size:36px;flex-shrink:0}
-.result-title{font-size:22px;font-weight:900;color:var(--green)}
+.result-title{font-size:18px;font-weight:900;color:var(--green)}
 .result-sub{font-size:11px;color:var(--ink2);margin-top:3px;font-family:var(--mono)}
-.btn-dl{margin-left:auto;flex-shrink:0;background:var(--green);color:#0d1117;border:none;border-radius:8px;padding:13px 22px;cursor:pointer;font-weight:700;font-size:14px;transition:all .15s;display:flex;align-items:center;gap:7px}
+.btn-dl{margin-left:auto;flex-shrink:0;background:var(--green);color:#0d1117;border:none;border-radius:8px;padding:12px 18px;cursor:pointer;font-weight:700;font-size:13px;transition:all .15s;display:flex;align-items:center;gap:6px}
 .btn-dl:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 14px rgba(52,211,153,.3)}
 
-.divider{height:1px;background:var(--line);margin:36px 0}
-.note{font-size:11px;color:var(--ink2);font-family:var(--mono);background:rgba(79,110,247,.06);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-top:10px;line-height:1.6}
-.note::before{content:'ℹ  ';color:var(--accent)}
+.divider{height:1px;background:var(--line);margin:32px 0}
+.note{font-size:11px;color:var(--ink2);font-family:var(--mono);background:rgba(79,110,247,.06);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:10px;line-height:1.5}
+
+/* 오른쪽 프리뷰 영역 */
+.right-header {
+  padding:16px 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.right-header-title { font-weight:700; font-size:15px; color:var(--ink); display:flex; align-items:center; gap:8px;}
+.right-header-title::before { content:''; display:block; width:12px; height:12px; border-radius:3px; background:var(--accent); }
+.right-header-status { font-family:var(--mono); font-size:11px; color:var(--ink2); }
+
+.right-content {
+  flex:1;
+  padding:28px;
+  overflow-y:auto;
+  position:relative;
+}
+
+/* 4열 그리드 */
+.thumb-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:20px; align-items:start;}
+.thumb-grid:empty::before {
+  content:'왼쪽 창에서 PDF를 업로드하고 [크롭 미리보기]를 실행하세요.';
+  grid-column: 1 / -1;
+  text-align:center;
+  color:var(--ink2);
+  margin-top:100px;
+  font-family:var(--body);
+}
+
+.thumb{border:1.5px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,0.2); transition:border-color .2s; position:relative;}
+.thumb:hover{border-color:var(--accent);}
+.thumb canvas{width:100%;display:block; background:#fff;}
+.thumb-lbl{padding:8px 12px;font-family:var(--mono);font-size:11px;color:var(--ink);border-top:1px solid var(--line);background:var(--panel);display:flex;justify-content:space-between;align-items:center;}
+.thumb-type{display:inline-block;background:var(--accent);color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;}
+.thumb-type.dsc{background:#7c3aed}
+.thumb-type.hplc{background:#34d399; color:#0d1117;}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="site-header">
-    <div>
-      <h1>HPLC / DSC<br><em>PPTX 변환기</em></h1>
-    </div>
-    <div class="header-version">v2.2 · 텍스트감지 크롭</div>
-  </div>
+<div class="app-container">
 
-  <!-- STEP 1 -->
-  <div class="step">
-    <div class="step-head">
-      <div class="step-num">01</div>
-      <div>
-        <div class="step-title">분석 보고서 PDF 업로드</div>
-        <div class="step-desc">HPLC + DSC가 포함된 PDF 파일을 드래그하거나 클릭하여 선택</div>
-      </div>
+  <!-- 왼쪽 설정 패널 -->
+  <div class="left-panel">
+    <div class="site-header">
+      <h1>HPLC/DSC<br><em>PPTX 변환기</em></h1>
+      <div class="header-version">v4.0 Desktop Pro · 4열 미리보기 지원</div>
     </div>
 
-    <div class="dropzone" id="dropzone">
-      <span class="dz-icon">📂</span>
-      <div class="dz-main">PDF 파일을 여기에 드래그 또는 클릭하여 업로드</div>
-      <div class="dz-sub">분석 결과 보고서 PDF · <b>최대 200MB</b></div>
-      <input type="file" id="fileInput" accept=".pdf">
-    </div>
-
-    <div class="file-bar" id="fileBar">
-      <div class="fb-icon">📋</div>
-      <div class="fb-info">
-        <div class="fb-name" id="fbName">—</div>
-        <div class="fb-meta" id="fbMeta">—</div>
-      </div>
-      <button class="fb-remove" id="fbRemove">✕ 제거</button>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- STEP 2 -->
-  <div class="step">
-    <div class="step-head">
-      <div class="step-num">02</div>
-      <div>
-        <div class="step-title">변환 설정</div>
-        <div class="step-desc">페이지 범위 및 해상도 설정</div>
-      </div>
-    </div>
-
-    <div class="config-box">
-      <div class="config-row">
-        <div class="cfg">
-          <div class="cfg-label">HPLC 페이지 범위</div>
-          <input type="text" id="cfgHplc" value="1-36" placeholder="예: 1-36">
-        </div>
-        <div class="cfg">
-          <div class="cfg-label">DSC 페이지 범위</div>
-          <input type="text" id="cfgDsc" value="37-45" placeholder="예: 37-45">
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">01</div>
+        <div>
+          <div class="step-title">분석 보고서 PDF 업로드</div>
+          <div class="step-desc">HPLC + DSC 통합 PDF 파일 선택</div>
         </div>
       </div>
-      <div class="config-row">
-        <div class="cfg">
-          <div class="cfg-label">렌더링 해상도</div>
-          <select id="cfgScale">
-            <option value="2">2× — 빠름</option>
-            <option value="3" selected>3× — 표준 (권장)</option>
-            <option value="4">4× — 고품질 (느림)</option>
-          </select>
+
+      <div class="dropzone" id="dropzone">
+        <span class="dz-icon">📂</span>
+        <div class="dz-main">PDF 드래그 앤 드롭 또는 클릭</div>
+        <div class="dz-sub">최대 200MB 지원</div>
+        <input type="file" id="fileInput" accept=".pdf">
+      </div>
+
+      <div class="file-bar" id="fileBar">
+        <div class="fb-icon">📋</div>
+        <div class="fb-info">
+          <div class="fb-name" id="fbName">—</div>
+          <div class="fb-meta" id="fbMeta">—</div>
+          <div id="pageDetect" style="display:none;margin-top:5px;font-family:var(--mono);font-size:11px;color:var(--ink2)"></div>
         </div>
-        <div class="cfg">
-          <div class="cfg-label">HPLC 슬라이드 묶음</div>
-          <select id="cfgPair">
-            <option value="2" selected>2페이지씩 (좌/우)</option>
-            <option value="1">1페이지씩 (단독)</option>
-          </select>
-        </div>
+        <button class="fb-remove" id="fbRemove">✕</button>
       </div>
     </div>
 
-    <div class="note">크로마토그래피 영역은 텍스트 감지로 자동 크롭 · HPLC: 차트 + 테이블 / DSC: 그래프 전체 캡처</div>
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">02</div>
+        <div>
+          <div class="step-title">옵션 및 영역 미세조정</div>
+          <div class="step-desc">해상도 및 자동 감지된 크롭 영역 수정</div>
+        </div>
+      </div>
+
+      <div class="config-box">
+        <div class="config-row">
+          <div class="cfg">
+            <div class="cfg-label">렌더링 해상도</div>
+            <select id="cfgScale">
+              <option value="2">2× (빠름)</option>
+              <option value="3" selected>3× (표준)</option>
+              <option value="4">4× (고품질)</option>
+            </select>
+          </div>
+          <div class="cfg">
+            <div class="cfg-label">HPLC 슬라이드 배치</div>
+            <select id="cfgPair">
+              <option value="2" selected>2페이지씩 (좌/우)</option>
+              <option value="1">1페이지씩 (단독)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 미세조정 UI -->
+      <div class="config-box">
+        <div class="cfg-header">
+          <span>크롭 영역 미세조정</span>
+          <span class="cfg-desc">+아래로 / -위로 (단위:px)</span>
+        </div>
+        
+        <div class="config-row">
+          <div class="cfg">
+            <div class="cfg-label">HPLC 차트 조절</div>
+            <div class="offset-wrap">
+              <div class="offset-group" title="차트 윗부분 자르기 선 이동">
+                <span class="offset-lbl">상</span><input type="number" id="cfgHcTop" value="0">
+              </div>
+              <div class="offset-group" title="차트 아랫부분 자르기 선 이동">
+                <span class="offset-lbl">하</span><input type="number" id="cfgHcBot" value="-150">
+              </div>
+            </div>
+          </div>
+          <div class="cfg">
+            <div class="cfg-label">HPLC 데이터표 조절</div>
+            <div class="offset-wrap">
+              <div class="offset-group" title="표 윗부분 자르기 선 이동">
+                <span class="offset-lbl">상</span><input type="number" id="cfgHtTop" value="0">
+              </div>
+              <div class="offset-group" title="표 아랫부분 자르기 선 이동">
+                <span class="offset-lbl">하</span><input type="number" id="cfgHtBot" value="0">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-row">
+          <div class="cfg" style="border-right:none; width:50%;">
+            <div class="cfg-label">DSC 박스 조절</div>
+            <div class="offset-wrap">
+              <div class="offset-group">
+                <span class="offset-lbl">상</span><input type="number" id="cfgDscTop" value="100">
+              </div>
+              <div class="offset-group">
+                <span class="offset-lbl">하</span><input type="number" id="cfgDscBot" value="-90">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="note">미세조정 숫자를 변경한 후 <b>[🔍 크롭 미리보기]</b>를 다시 누르면 오른쪽 화면에 즉시 반영됩니다.</div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step">
+      <div class="step-head">
+        <div class="step-num">03</div>
+        <div>
+          <div class="step-title">실행 및 결과 확인</div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-run" id="btnRun" disabled>
+          <div class="spin" id="spin"></div>
+          <span id="btnTxt">▶ PPTX 변환 시작</span>
+        </button>
+        <button class="btn btn-preview" id="btnPrev" disabled>🔍 크롭 미리보기</button>
+      </div>
+
+      <div class="progress-wrap" id="progWrap">
+        <div class="prog-meta">
+          <span id="progLabel">처리 중...</span>
+          <span id="progPct">0%</span>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+      </div>
+
+      <div class="log-box" id="logBox">
+        <div class="log-top">
+          <div class="log-led" id="logLed"></div>
+          <span id="logStat">대기 중</span>
+        </div>
+        <div class="log-content" id="logContent"></div>
+      </div>
+
+      <div class="result-bar" id="resultBar">
+        <div class="result-icon">✅</div>
+        <div>
+          <div class="result-title">완료됨</div>
+          <div class="result-sub" id="resultSub">—</div>
+        </div>
+        <button class="btn-dl" id="btnDl">⬇ 다운로드</button>
+      </div>
+    </div>
   </div>
 
-  <div class="divider"></div>
-
-  <!-- STEP 3 -->
-  <div class="step">
-    <div class="step-head">
-      <div class="step-num">03</div>
-      <div>
-        <div class="step-title">변환 실행 &amp; 다운로드</div>
-        <div class="step-desc">브라우저 내에서 완전 처리 — 외부 전송 없음</div>
-      </div>
+  <!-- 오른쪽 미리보기 패널 -->
+  <div class="right-panel">
+    <div class="right-header">
+      <div class="right-header-title">스포트라이트 미리보기 영역</div>
+      <div class="right-header-status" id="prevStatus">대기 중</div>
     </div>
-
-    <div class="action-row">
-      <button class="btn btn-run" id="btnRun" disabled>
-        <div class="spin" id="spin"></div>
-        <span id="btnTxt">▶  PPTX 변환 시작</span>
-      </button>
-      <button class="btn btn-preview" id="btnPrev" disabled>🔍 미리보기</button>
+    <div class="right-content" id="prevContent">
+      <div class="thumb-grid" id="thumbGrid"></div>
     </div>
-
-    <div class="progress-wrap" id="progWrap">
-      <div class="prog-meta">
-        <span id="progLabel">처리 중...</span>
-        <span id="progPct">0%</span>
-      </div>
-      <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
-    </div>
-
-    <div class="log-box" id="logBox">
-      <div class="log-top">
-        <div class="log-led" id="logLed"></div>
-        <span id="logStat">대기 중</span>
-      </div>
-      <div class="log-content" id="logContent"></div>
-    </div>
-
-    <div class="result-bar" id="resultBar">
-      <div class="result-icon">✅</div>
-      <div>
-        <div class="result-title">변환 완료</div>
-        <div class="result-sub" id="resultSub">—</div>
-      </div>
-      <button class="btn-dl" id="btnDl">⬇ PPTX 다운로드</button>
-    </div>
-  </div>
-
-  <div class="preview-area" id="prevArea">
-    <div class="section-label">페이지 썸네일 미리보기</div>
-    <div class="thumb-grid" id="thumbGrid"></div>
   </div>
 
 </div>
 
 <script>
 // ── PDF.js 워커
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── 상태
+// ── 상태 변수
 let pdfDoc     = null;
 let pdfFile    = null;
 let resultBlob = null;
+let pageMap    = []; 
 
-// ── DOM
+// ── DOM 요소
 const dropzone   = document.getElementById('dropzone');
 const fileInput  = document.getElementById('fileInput');
 const fileBar    = document.getElementById('fileBar');
 const fbName     = document.getElementById('fbName');
 const fbMeta     = document.getElementById('fbMeta');
 const fbRemove   = document.getElementById('fbRemove');
+const pageDetect = document.getElementById('pageDetect');
 const btnRun     = document.getElementById('btnRun');
 const btnPrev    = document.getElementById('btnPrev');
 const btnTxt     = document.getElementById('btnTxt');
@@ -321,10 +415,10 @@ const progPct    = document.getElementById('progPct');
 const resultBar  = document.getElementById('resultBar');
 const resultSub  = document.getElementById('resultSub');
 const btnDl      = document.getElementById('btnDl');
-const prevArea   = document.getElementById('prevArea');
 const thumbGrid  = document.getElementById('thumbGrid');
+const prevStatus = document.getElementById('prevStatus');
 
-// ── 드롭존
+// ── 드롭존 이벤트
 dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('active'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'));
 dropzone.addEventListener('drop', e => {
@@ -346,17 +440,30 @@ async function loadPdf(file) {
   logLed.className = 'log-led run';
   logStat.textContent = 'PDF 로딩 중...';
   addLog('info', `파일 로드: ${file.name}`);
+
   try {
     const buf = await file.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
     fbMeta.textContent = `크기: ${(file.size/1024/1024).toFixed(2)} MB · 총 ${pdfDoc.numPages}페이지`;
     addLog('ok', `PDF 로드 완료 — ${pdfDoc.numPages}페이지`);
+
+    addLog('info', '페이지 방향 스캔 중...');
+    pageDetect.style.display = 'block';
+    pageDetect.textContent = '⏳ 스캔 중...';
+    
+    pageMap = await buildPageMap();
+    const hCount = pageMap.filter(p => p.type === 'hplc').length;
+    const dCount = pageMap.filter(p => p.type === 'dsc').length;
+
+    pageDetect.textContent = `✓ HPLC ${hCount}p (세로) · DSC ${dCount}p (가로)`;
+    addLog('ok', `감지 완료 — HPLC ${hCount} / DSC ${dCount}`);
     logLed.className = 'log-led ok';
-    logStat.textContent = '준비됨';
+    logStat.textContent = '준비 완료';
     btnRun.disabled  = false;
     btnPrev.disabled = false;
+    prevStatus.textContent = '미리보기를 생성할 수 있습니다.';
   } catch (err) {
-    addLog('err', `PDF 로드 실패: ${err.message}`);
+    addLog('err', `로드 실패: ${err.message}`);
     logLed.className = 'log-led err';
     logStat.textContent = '오류';
   }
@@ -364,22 +471,23 @@ async function loadPdf(file) {
 
 function reset() {
   pdfDoc = pdfFile = resultBlob = null;
+  pageMap = [];
   fileBar.classList.remove('show');
   logBox.classList.remove('show');
   resultBar.classList.remove('show');
-  prevArea.classList.remove('show');
   progWrap.classList.remove('show');
   logContent.innerHTML = '';
   thumbGrid.innerHTML  = '';
+  pageDetect.style.display = 'none';
   btnRun.disabled  = true;
   btnPrev.disabled = true;
   fileInput.value  = '';
+  prevStatus.textContent = '대기 중';
   setProgress(0, '');
 }
 
-// ── 로그 & 진행률
 function addLog(type, msg) {
-  const icon = { ok:'✓', err:'✗', info:'→', warn:'⚠' };
+  const icon = { ok:'✓', err:'✗', info:'→' };
   const div = document.createElement('div');
   div.className = `ll ${type}`;
   div.textContent = `${icon[type]||'·'}  ${msg}`;
@@ -393,24 +501,46 @@ function setProgress(pct, label) {
   if (label !== undefined) progLabel.textContent = label;
 }
 
-// ────────────────────────────────────────────────
-// 유틸리티
-// ────────────────────────────────────────────────
+// ── 유틸리티 및 오프셋 가져오기
+function getOffsets() {
+  return {
+    hcTop: parseInt(document.getElementById('cfgHcTop').value) || 0,
+    hcBot: parseInt(document.getElementById('cfgHcBot').value) || 0,
+    htTop: parseInt(document.getElementById('cfgHtTop').value) || 0,
+    htBot: parseInt(document.getElementById('cfgHtBot').value) || 0,
+    dscTop: parseInt(document.getElementById('cfgDscTop').value) || 0,
+    dscBot: parseInt(document.getElementById('cfgDscBot').value) || 0,
+  };
+}
 
-/** 캔버스 영역 크롭 → base64 PNG */
+function groupByLine(items, thresh = 2.5) {
+  const lines = [];
+  for (const item of items) {
+    if (!item.str.trim()) continue;
+    const y = item.transform[5];
+    let found = null;
+    for (const line of lines) {
+      if (Math.abs(line.y - y) <= thresh) { found = line; break; }
+    }
+    if (found) found.items.push(item);
+    else lines.push({ y, items: [item] });
+  }
+  lines.forEach(l => l.items.sort((a, b) => a.transform[4] - b.transform[4]));
+  return lines.sort((a, b) => b.y - a.y);
+}
+
+function pdf2cvsY(pdfY, pageH, scale) {
+  return (pageH - pdfY) * scale;
+}
+
 function cropB64(canvas, x, y, w, h) {
   const tmp = document.createElement('canvas');
   tmp.width  = Math.max(1, Math.round(w));
   tmp.height = Math.max(1, Math.round(h));
-  tmp.getContext('2d').drawImage(
-    canvas,
-    Math.round(x), Math.round(y), Math.round(w), Math.round(h),
-    0, 0, tmp.width, tmp.height
-  );
+  tmp.getContext('2d').drawImage(canvas, Math.round(x), Math.round(y), Math.round(w), Math.round(h), 0, 0, tmp.width, tmp.height);
   return tmp.toDataURL('image/png');
 }
 
-/** 페이지 렌더 → Canvas */
 async function renderPage(pageNum, scale) {
   const page = await pdfDoc.getPage(pageNum);
   const vp   = page.getViewport({ scale });
@@ -421,87 +551,207 @@ async function renderPage(pageNum, scale) {
   return cvs;
 }
 
-// ────────────────────────────────────────────────
-// HPLC 크롭 박스 (v2.1 고정 비율 방식 — 차트 하단 수정)
-// 크로마토그래피 하단: 기존 1330 → 1180 (불필요한 메타 텍스트 제거)
-// ────────────────────────────────────────────────
-
-function hplcBoxes(cvs) {
-  const W = cvs.width, H = cvs.height;
-  return {
-    // 차트: top=640, bottom=1180 (기존 1330에서 위로 줄여 텍스트 제외)
-    chart: [ 55/1786*W,  640/2526*H,  (1730-55)/1786*W,  (1180-640)/2526*H ],
-    // 테이블: top=1350, bottom=2430 (원본과 동일)
-    table: [ 55/1786*W, 1350/2526*H,  (1730-55)/1786*W,  (2430-1350)/2526*H ],
-  };
+async function getPageType(pageNum) {
+  const page = await pdfDoc.getPage(pageNum);
+  const vp   = page.getViewport({ scale: 1 });
+  return vp.width > vp.height ? 'dsc' : 'hplc';
 }
 
-/**
- * HPLC 페이지를 렌더하고 크로마토 + 테이블을 각각 크롭
- * 반환: { chartB64, tableB64, tableNatW, tableNatH }
- */
-async function processHplcPage(pageNum, scale) {
-  const cvs = await renderPage(pageNum, scale);
-  const W = cvs.width, H = cvs.height;
-  const b = hplcBoxes(cvs);
-
-  const chartB64 = cropB64(cvs, b.chart[0], b.chart[1] * H / H, b.chart[2], b.chart[3]);
-  const tableB64 = cropB64(cvs, b.table[0], b.table[1] * H / H, b.table[2], b.table[3]);
-
-  return {
-    chartB64,
-    tableB64,
-    tableNatW: b.table[2],
-    tableNatH: b.table[3],
-  };
+async function buildPageMap() {
+  const map = [];
+  for (let p = 1; p <= pdfDoc.numPages; p++) map.push({ pageNum: p, type: await getPageType(p) });
+  return map;
 }
 
-// ────────────────────────────────────────────────
-// DSC 크롭 (전체 페이지에서 그래프 영역만)
-// ────────────────────────────────────────────────
+// ── HPLC 크롭 연산
+async function extractHplcMeta(page) {
+  const tc    = await page.getTextContent();
+  const vp    = page.getViewport({ scale: 1 });
+  const pageH = vp.height;
+  const lines = groupByLine(tc.items);
 
-function dscBox(cvs) {
-  const W = cvs.width, H = cvs.height;
-  return [ 20/1786*W, 55/2526*H, (1765-20)/1786*W, (1700-55)/2526*H ];
-}
+  let sampleName = '', sampleInfo = '', addInfoPdfY = null, peakHeaderPdfY = null, totalsPdfY = null;
+  let peakRows = [], inTable = false;
 
-// ────────────────────────────────────────────────
-// 페이지 범위 파싱
-// ────────────────────────────────────────────────
+  for (let li = 0; li < lines.length; li++) {
+    const text = lines[li].items.map(i => i.str).join(' ').trim();
+    const y    = lines[li].y;
 
-function parseRange(str, max) {
-  const out = new Set();
-  str.split(',').forEach(seg => {
-    seg = seg.trim();
-    if (seg.includes('-')) {
-      let [a, b] = seg.split('-').map(Number);
-      for (let i = a; i <= Math.min(b, max); i++) out.add(i);
-    } else {
-      const n = parseInt(seg);
-      if (n >= 1 && n <= max) out.add(n);
+    if (/Sample\s*Name\s*:/i.test(text)) sampleName = text.replace(/.*Sample\s*Name\s*:\s*/i, '').trim() || (lines[li+1] ? lines[li+1].items.map(i=>i.str).join(' ').trim() : '');
+    if (/Sample\s*Info\s*:/i.test(text)) sampleInfo = text.replace(/.*Sample\s*Info\s*:\s*/i, '').trim() || (lines[li+1] ? lines[li+1].items.map(i=>i.str).join(' ').trim() : '');
+    if (/Additional\s*Info/i.test(text)) addInfoPdfY = y;
+    if (/Peak\s+RetTime/i.test(text)) { peakHeaderPdfY = y; inTable = true; }
+    if (/^Totals?\b/i.test(text) && inTable) { totalsPdfY = y; inTable = false; }
+
+    if (inTable && peakHeaderPdfY !== null && totalsPdfY === null) {
+      const cols = text.trim().split(/\s+/);
+      if (cols.length >= 6 && /^\d+$/.test(cols[0]) && /^[\d.eE+\-]+$/.test(cols[1])) {
+        const areaPct = parseFloat(cols[cols.length - 1]);
+        if (!isNaN(areaPct) && areaPct >= 0 && areaPct <= 100) {
+          let areaItem = null;
+          for (let k = lines[li].items.length - 1; k >= 0; k--) {
+            if (!isNaN(parseFloat(lines[li].items[k].str.trim()))) { areaItem = lines[li].items[k]; break; }
+          }
+          peakRows.push({ pdfY: y, areaPct, areaPdfX: areaItem ? areaItem.transform[4] : null, areaItemW: areaItem ? (areaItem.width || 25) : 25 });
+        }
+      }
     }
-  });
-  return [...out].sort((a, b) => a - b);
+  }
+
+  let rowH = 10;
+  if (peakRows.length >= 2) {
+    const ys = peakRows.map(p => p.pdfY).sort((a,b)=>b-a);
+    const diffs = ys.slice(0, -1).map((y, i) => y - ys[i+1]).filter(d => d > 0.5);
+    if (diffs.length) rowH = Math.min(...diffs);
+  }
+  return { sampleName, sampleInfo, addInfoPdfY, peakHeaderPdfY, totalsPdfY, peakRows, rowH, pageH };
 }
 
-// ────────────────────────────────────────────────
-// PPTX 빌드
-// ────────────────────────────────────────────────
+function computeHplcCropBox(meta, W, H, scale) {
+  const os = getOffsets();
+  
+  // 차트 영역 (오프셋 적용)
+  const chartTop = (meta.addInfoPdfY !== null ? pdf2cvsY(meta.addInfoPdfY, meta.pageH, scale) + 14 * scale : 640/2526 * H) + (os.hcTop * scale);
+  const chartBot = (meta.peakHeaderPdfY !== null ? pdf2cvsY(meta.peakHeaderPdfY, meta.pageH, scale) - 30 * scale : 1310/2526 * H) + (os.hcBot * scale);
+  const chartX = 18 * scale, chartW = W - 36 * scale, chartH = Math.max(10, chartBot - chartTop);
 
+  // 테이블 영역 (오프셋 적용)
+  const tableTop = (meta.peakHeaderPdfY !== null ? pdf2cvsY(meta.peakHeaderPdfY, meta.pageH, scale) - 8 * scale : 1360/2526 * H) + (os.htTop * scale);
+  const tableBot = (meta.totalsPdfY !== null ? pdf2cvsY(meta.totalsPdfY, meta.pageH, scale) + (meta.rowH + 3) * scale : 2430/2526 * H) + (os.htBot * scale);
+  const tableX = 18 * scale, tableW = W - 36 * scale, tableH = Math.max(10, tableBot - tableTop);
+
+  return { chart: [chartX, chartTop, chartW, chartH], table: [tableX, tableTop, tableW, tableH] };
+}
+
+async function processHplcPage(pageNum, scale) {
+  const page = await pdfDoc.getPage(pageNum);
+  const cvs = await renderPage(pageNum, scale);
+  const ctx = cvs.getContext('2d');
+  const meta = await extractHplcMeta(page);
+  const cropBox = computeHplcCropBox(meta, cvs.width, cvs.height, scale);
+
+  // 빨간 박스
+  const highPeaks = meta.peakRows.filter(p => p.areaPct >= 1);
+  if (highPeaks.length > 0) {
+    const rh = meta.rowH * scale, pad = rh * 0.15;
+    ctx.save(); ctx.strokeStyle = '#DD0000'; ctx.lineWidth = Math.max(1.5, scale * 0.55);
+    for (const p of highPeaks) {
+      const cy = pdf2cvsY(p.pdfY, meta.pageH, scale);
+      if (p.areaPdfX !== null) ctx.strokeRect(p.areaPdfX * scale - 3 * scale, cy - rh + pad, p.areaItemW * scale + 6 * scale, rh);
+      else ctx.strokeRect(cvs.width * 0.80, cy - rh + pad, cvs.width * 0.20 - 18 * scale, rh);
+    }
+    ctx.restore();
+  }
+
+  return {
+    chartB64: cropB64(cvs, ...cropBox.chart),
+    tableB64: cropB64(cvs, ...cropBox.table),
+    tableNatW: cropBox.table[2], tableNatH: cropBox.table[3],
+    sampleName: meta.sampleName, sampleInfo: meta.sampleInfo,
+  };
+}
+
+// ── DSC 크롭 연산
+async function computeDscCrop(page, scale) {
+  const tc = await page.getTextContent();
+  const vp = page.getViewport({ scale: 1 });
+  const pH = vp.height, pW = vp.width;
+  const items = tc.items.filter(i => i.str.trim().length > 0);
+  const os = getOffsets();
+
+  let headerBotY = null, footerTopY = null;
+  for (const item of items) {
+    const y = item.transform[5];
+    if (y >= pH * 0.80) headerBotY = headerBotY === null ? y : Math.min(headerBotY, y);
+    if (y <= pH * 0.13) footerTopY = footerTopY === null ? y : Math.max(footerTopY, y);
+  }
+
+  const cTop = (headerBotY !== null ? pdf2cvsY(headerBotY, pH, scale) - 6 * scale : 55/1785 * pH * scale) + (os.dscTop * scale);
+  const cBot = (footerTopY !== null ? pdf2cvsY(footerTopY, pH, scale) + 22 * scale : 1700/1785 * pH * scale) + (os.dscBot * scale);
+  const cLeft = 15 * scale, cRight = (pW - 15) * scale;
+  return [cLeft, cTop, cRight - cLeft, Math.max(50, cBot - cTop)];
+}
+
+async function processDscPage(pageNum, scale) {
+  const page = await pdfDoc.getPage(pageNum);
+  const box  = await computeDscCrop(page, scale);
+  const cvs  = await renderPage(pageNum, scale);
+  return {
+    data: cropB64(cvs, ...box),
+    cropW: box[2],
+    cropH: box[3]
+  };
+}
+
+// ── 미리보기 버튼 (스포트라이트 4열)
+btnPrev.addEventListener('click', async () => {
+  if (!pdfDoc) return;
+  
+  btnPrev.disabled = true; btnRun.disabled = true;
+  prevStatus.textContent = '썸네일 생성 중... (해상도 최적화)';
+  thumbGrid.innerHTML = '';
+
+  // 미리보기 렌더 스케일 조절 (선명도를 위해 0.55 사용)
+  const scale = 0.55; 
+
+  for (let p = 1; p <= pdfDoc.numPages; p++) {
+    const type = pageMap.find(m => m.pageNum === p)?.type;
+    const page = await pdfDoc.getPage(p);
+    const cvs = await renderPage(p, scale);
+    const ctx = cvs.getContext('2d');
+    
+    // 전체 어둡게 가림 (기존보다 밝게 처리하여 주변 글씨 식별가능)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    if (type === 'hplc') {
+      const meta = await extractHplcMeta(page);
+      const crop = computeHplcCropBox(meta, cvs.width, cvs.height, scale);
+      
+      // 크롭 영역 뚫기
+      ctx.clearRect(...crop.chart);
+      ctx.clearRect(...crop.table);
+      
+      // 테두리
+      ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3;
+      ctx.strokeRect(...crop.chart); ctx.strokeRect(...crop.table);
+    } else if (type === 'dsc') {
+      const box = await computeDscCrop(page, scale);
+      ctx.clearRect(...box);
+      ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 3;
+      ctx.strokeRect(...box);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'thumb';
+    const c2 = document.createElement('canvas');
+    c2.width = cvs.width; c2.height = cvs.height;
+    c2.getContext('2d').drawImage(cvs, 0, 0);
+    
+    const lbl = document.createElement('div');
+    lbl.className = 'thumb-lbl';
+    const tag = document.createElement('span');
+    tag.className = `thumb-type ${type}`;
+    tag.textContent = type === 'dsc' ? 'DSC' : (type === 'hplc' ? 'HPLC' : '—');
+    
+    lbl.appendChild(tag);
+    lbl.appendChild(document.createTextNode(`Page ${p}`));
+    item.appendChild(c2); item.appendChild(lbl);
+    thumbGrid.appendChild(item);
+    
+    await new Promise(r => setTimeout(r, 0));
+  }
+  
+  btnPrev.disabled = false; btnRun.disabled = false;
+  prevStatus.textContent = '생성 완료';
+});
+
+// ── PPTX 빌드 및 실행 버튼
 async function buildPptx() {
-  if (typeof PptxGenJS === 'undefined') {
-    throw new Error('PptxGenJS 라이브러리가 로드되지 않았습니다. 인터넷 연결 후 새로고침하세요.');
-  }
-
-  const scale    = parseInt(document.getElementById('cfgScale').value);
+  const scale = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
-  const total    = pdfDoc.numPages;
-  const hplcPages = parseRange(document.getElementById('cfgHplc').value, total);
-  const dscPages  = parseRange(document.getElementById('cfgDsc').value, total);
-
-  if (hplcPages.length === 0 && dscPages.length === 0) {
-    throw new Error('처리할 페이지가 없습니다. 페이지 범위를 확인하세요.');
-  }
+  const hplcPages = pageMap.filter(p => p.type === 'hplc').map(p => p.pageNum);
+  const dscPages  = pageMap.filter(p => p.type === 'dsc').map(p => p.pageNum);
 
   const W = 10, H = 5.625;
   const pres = new PptxGenJS();
@@ -510,13 +760,9 @@ async function buildPptx() {
   const totalWork = Math.ceil(hplcPages.length / pairMode) + dscPages.length;
   let done = 0;
 
-  // ── HPLC 슬라이드
-  addLog('info', `HPLC 처리 — ${hplcPages.length}페이지 (텍스트 감지 크롭)`);
-
+  addLog('info', `HPLC 처리 중...`);
   for (let i = 0; i < hplcPages.length; i += pairMode) {
-    const p1 = hplcPages[i];
-    const p2 = (pairMode === 2 && i + 1 < hplcPages.length) ? hplcPages[i + 1] : null;
-
+    const p1 = hplcPages[i], p2 = (pairMode === 2 && i+1 < hplcPages.length) ? hplcPages[i+1] : null;
     const r1 = await processHplcPage(p1, scale);
     const r2 = p2 ? await processHplcPage(p2, scale) : null;
 
@@ -524,143 +770,86 @@ async function buildPptx() {
     slide.background = { color: 'FFFFFF' };
 
     if (r2) {
-      // 좌 / 우 2컬럼
-      const PW = W / 2;   // 5.0
-      const PH = H / 2;   // 2.8125
+      const PW = W/2, PH = H/2, TXT = 0.28;
+      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
+      if (lbl1) slide.addText(lbl1, { x: 0, y: 0, w: PW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      slide.addImage({ data: r1.chartB64, x: 0, y: TXT, w: PW, h: PH - TXT });
+      slide.addImage({ data: r1.tableB64, x: 0, y: PH, w: PW, h: PW * (r1.tableNatH/r1.tableNatW) });
 
-      // 좌측: 차트 위 / 테이블 아래
-      slide.addImage({ data: r1.chartB64, x: 0,  y: 0,  w: PW, h: PH });
-      const tH1 = PW * (r1.tableNatH / r1.tableNatW);
-      slide.addImage({ data: r1.tableB64, x: 0,  y: PH, w: PW, h: tH1 });
-
-      // 우측
-      slide.addImage({ data: r2.chartB64, x: PW, y: 0,  w: PW, h: PH });
-      const tH2 = PW * (r2.tableNatH / r2.tableNatW);
-      slide.addImage({ data: r2.tableB64, x: PW, y: PH, w: PW, h: tH2 });
+      const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
+      if (lbl2) slide.addText(lbl2, { x: PW, y: 0, w: PW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      slide.addImage({ data: r2.chartB64, x: PW, y: TXT, w: PW, h: PH - TXT });
+      slide.addImage({ data: r2.tableB64, x: PW, y: PH, w: PW, h: PW * (r2.tableNatH/r2.tableNatW) });
     } else {
-      // 단독 — 위(차트) / 아래(테이블)
-      const chartSlideH = H * 0.5;
-      const tH1 = W * (r1.tableNatH / r1.tableNatW);
-      slide.addImage({ data: r1.chartB64, x: 0, y: 0,          w: W, h: chartSlideH });
-      slide.addImage({ data: r1.tableB64, x: 0, y: chartSlideH, w: W, h: tH1 });
+      const TXT = 0.35;
+      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
+      if (lbl1) slide.addText(lbl1, { x: 0, y: 0, w: W, h: TXT, fontSize: 9, color: '333333', valign: 'middle', margin: [0,6,0,6] });
+      const chartH = (H - TXT) * 0.48;
+      slide.addImage({ data: r1.chartB64, x: 0, y: TXT, w: W, h: chartH });
+      slide.addImage({ data: r1.tableB64, x: 0, y: TXT + chartH, w: W, h: W * (r1.tableNatH/r1.tableNatW) });
     }
-
-    done++;
-    setProgress(done / totalWork * 100, `HPLC (${Math.min(i + pairMode, hplcPages.length)}/${hplcPages.length})`);
-    addLog('ok', `HPLC p${p1}${p2 ? ' + p' + p2 : ''}`);
+    done++; setProgress(done/totalWork*100, `HPLC 처리 중...`);
+    addLog('ok', `HPLC p${p1}${p2?' + p'+p2:''}`);
     await new Promise(r => setTimeout(r, 0));
   }
 
-  // ── DSC 슬라이드
-  addLog('info', `DSC 처리 — ${dscPages.length}페이지`);
-
+  addLog('info', `DSC 처리 중...`);
   for (let i = 0; i < dscPages.length; i++) {
-    const p   = dscPages[i];
-    const cvs = await renderPage(p, scale);
-    const box = dscBox(cvs);
-    const img = cropB64(cvs, ...box);
-
+    const dscData = await processDscPage(dscPages[i], scale);
     const slide = pres.addSlide();
     slide.background = { color: 'FFFFFF' };
-    slide.addImage({ data: img, x: 0, y: 0, w: W, h: H, sizing: { type: 'contain', w: W, h: H } });
+    
+    // 비율 왜곡 없이 슬라이드 가로폭(W)에 맞추고, 세로폭은 비율에 맞춰 자동 계산 후 중앙 정렬
+    const imgRatio = dscData.cropH / dscData.cropW;
+    const targetW = W;
+    const targetH = W * imgRatio;
+    const targetY = (H - targetH) / 2; // 세로 중앙 정렬
 
-    done++;
-    setProgress(done / totalWork * 100, `DSC (${i + 1}/${dscPages.length})`);
-    addLog('ok', `DSC p${p}`);
+    slide.addImage({ data: dscData.data, x: 0, y: targetY, w: targetW, h: targetH });
+    
+    done++; setProgress(done/totalWork*100, `DSC 처리 중...`);
+    addLog('ok', `DSC p${dscPages[i]}`);
     await new Promise(r => setTimeout(r, 0));
   }
 
-  addLog('info', 'PPTX 파일 생성 중...');
+  addLog('info', '파일 압축 중...');
   return await pres.write({ outputType: 'blob' });
 }
 
-// ── 변환 버튼
 btnRun.addEventListener('click', async () => {
   if (!pdfDoc) return;
-
-  btnRun.disabled  = true;
-  btnPrev.disabled = true;
-  spin.classList.add('on');
-  btnTxt.textContent = '변환 중...';
-  logBox.classList.add('show');
-  logContent.innerHTML = '';
-  progWrap.classList.add('show');
-  resultBar.classList.remove('show');
-  logLed.className = 'log-led run';
-  logStat.textContent = '처리 중...';
-  setProgress(0, '시작 중...');
+  btnRun.disabled = btnPrev.disabled = true;
+  spin.classList.add('on'); btnTxt.textContent = '변환 중...';
+  logBox.classList.add('show'); logContent.innerHTML = '';
+  progWrap.classList.add('show'); resultBar.classList.remove('show');
+  logLed.className = 'log-led run'; logStat.textContent = '처리 중...'; setProgress(0, '시작 중...');
 
   try {
-    const blob = await buildPptx();
-    resultBlob = blob;
-
+    resultBlob = await buildPptx();
     setProgress(100, '완료!');
-    logLed.className = 'log-led ok';
-    logStat.textContent = '변환 완료';
-    addLog('ok', `완료 — ${(blob.size / 1024).toFixed(0)} KB`);
+    logLed.className = 'log-led ok'; logStat.textContent = '완료';
+    addLog('ok', `PPTX 생성 완료 (${(resultBlob.size/1024).toFixed(0)} KB)`);
 
-    const hplcPages = parseRange(document.getElementById('cfgHplc').value, pdfDoc.numPages);
-    const dscPages  = parseRange(document.getElementById('cfgDsc').value, pdfDoc.numPages);
-    const pairMode  = parseInt(document.getElementById('cfgPair').value);
-    const slides    = Math.ceil(hplcPages.length / pairMode) + dscPages.length;
-
-    resultSub.textContent = `슬라이드 ${slides}장  ·  HPLC ${hplcPages.length}페이지  ·  DSC ${dscPages.length}페이지  ·  ${(blob.size / 1024).toFixed(0)} KB`;
+    const hc = pageMap.filter(p => p.type === 'hplc').length;
+    const dc = pageMap.filter(p => p.type === 'dsc').length;
+    const pm = parseInt(document.getElementById('cfgPair').value);
+    
+    resultSub.textContent = `총 슬라이드 ${Math.ceil(hc/pm) + dc}장 · ${(resultBlob.size/1024).toFixed(0)} KB`;
     resultBar.classList.add('show');
-    resultBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
   } catch (err) {
-    logLed.className = 'log-led err';
-    logStat.textContent = '오류 발생';
+    logLed.className = 'log-led err'; logStat.textContent = '오류';
     addLog('err', `오류: ${err.message}`);
-    console.error(err);
   } finally {
-    btnRun.disabled  = false;
-    btnPrev.disabled = false;
-    spin.classList.remove('on');
-    btnTxt.textContent = '▶  PPTX 변환 시작';
+    btnRun.disabled = btnPrev.disabled = false;
+    spin.classList.remove('on'); btnTxt.textContent = '▶ PPTX 변환 시작';
   }
 });
 
-// ── 미리보기 버튼
-btnPrev.addEventListener('click', async () => {
-  if (!pdfDoc) return;
-  prevArea.classList.add('show');
-  thumbGrid.innerHTML = '';
-
-  const hplcPages = parseRange(document.getElementById('cfgHplc').value, pdfDoc.numPages);
-  const dscPages  = parseRange(document.getElementById('cfgDsc').value, pdfDoc.numPages);
-  const hSet = new Set(hplcPages), dSet = new Set(dscPages);
-
-  for (let p = 1; p <= pdfDoc.numPages; p++) {
-    const cvs  = await renderPage(p, 0.35);
-    const item = document.createElement('div');
-    item.className = 'thumb';
-    const c2 = document.createElement('canvas');
-    c2.width = cvs.width; c2.height = cvs.height;
-    c2.getContext('2d').drawImage(cvs, 0, 0);
-    const lbl = document.createElement('div');
-    lbl.className = 'thumb-lbl';
-    const tag = document.createElement('span');
-    tag.className = `thumb-type${dSet.has(p) ? ' dsc' : ''}`;
-    tag.textContent = dSet.has(p) ? 'DSC' : hSet.has(p) ? 'HPLC' : '—';
-    lbl.appendChild(tag);
-    lbl.appendChild(document.createTextNode(`p${p}`));
-    item.appendChild(c2);
-    item.appendChild(lbl);
-    thumbGrid.appendChild(item);
-    await new Promise(r => setTimeout(r, 0));
-  }
-  prevArea.scrollIntoView({ behavior: 'smooth' });
-});
-
-// ── 다운로드 버튼
 btnDl.addEventListener('click', () => {
   if (!resultBlob) return;
   const url = URL.createObjectURL(resultBlob);
-  const a   = document.createElement('a');
-  a.href     = url;
-  a.download = `HPLC_DSC_분석결과.pptx`;
-  a.click();
+  const a = document.createElement('a');
+  a.href = url; a.download = `HPLC_DSC_Report.pptx`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 });
 </script>
