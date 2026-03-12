@@ -22,18 +22,6 @@
   --success: #34d399;
 }
 
-html[data-theme="light"] {
-  --bg: #f4f6fb;
-  --surface: #ffffff;
-  --surface2: #eef0f7;
-  --border: #d1d5e8;
-  --accent: #4f6ef7;
-  --accent-hover: #3a58e0;
-  --accent-glow: rgba(79,110,247,0.10);
-  --text: #1a1f3e;
-  --text-muted: #6b7280;
-  --success: #10b981;
-}
 
 html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
 
@@ -47,7 +35,7 @@ html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; bac
 .brand-logo {
   height: 28px; width: auto; object-fit: contain; flex-shrink: 0;
 }
-html[data-theme="light"] .brand-logo { filter: invert(1) brightness(0.2); }
+
 .brand-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
 .brand-sub { font-size: 10px; color: var(--text-muted); }
 .divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
