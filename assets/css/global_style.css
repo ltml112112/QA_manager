@@ -251,25 +251,27 @@ html, body {
 
 .brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
 }
 
 .brand-logo {
-  height: 28px;
+  height: 24px;
   width: auto;
   object-fit: contain;
-  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .brand-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3;
   color: var(--portal-text);
+  word-break: keep-all;
 }
 
 .brand-sub {
