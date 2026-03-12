@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>분석결과 → PPTX 자동변환기 (Desktop Pro)</title>
+<link rel="stylesheet" href="../../assets/css/global_style.css">
 
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -22,27 +23,7 @@ function loadPptxFallback() {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-:root{
-  --red:#f87171; --bg:#0f1117; --ink:#e4e8f5;
-  --ink2:#7b84a8; --line:#2e3554; --white:#0f1117;
-  --panel:#1a1f2e; --mono:'JetBrains Mono',monospace;
-  --body:'Inter','Noto Sans KR',sans-serif;
-  --green:#34d399; --amber:#fbbf24;
-  --surface:#1a1f2e; --accent:#4f6ef7;
-  --bg-deep:#090c10;
-}
-
-html[data-theme="light"]{
-  --red:#ef4444; --bg:#f4f6fb; --ink:#1a1f3e;
-  --ink2:#6b7280; --line:#d1d5e8; --white:#f4f6fb;
-  --panel:#ffffff; --green:#10b981; --amber:#f59e0b;
-  --surface:#ffffff; --accent:#4f6ef7;
-  --bg-deep:#eef0f7;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);height:100vh;overflow:hidden;}
+body{height:100vh;overflow:hidden;}
 
 /* 레이아웃 분할 */
 .app-container {
@@ -86,13 +67,6 @@ h1 em { color:var(--accent); font-style:normal; }
 .step-desc{font-size:12px;color:var(--ink2);margin-top:2px}
 
 /* 드롭존 */
-.dropzone{
-  border:2px dashed var(--line);border-radius:8px;
-  padding:36px 20px;text-align:center;cursor:pointer;
-  background:var(--panel);transition:all .2s;
-}
-.dropzone.active{border-color:var(--accent);background:rgba(79,110,247,.06)}
-.dropzone:hover{border-color:var(--accent)}
 .dz-icon{font-size:34px;display:block;margin-bottom:12px;opacity:.5}
 .dz-main{font-weight:700;font-size:14px;margin-bottom:4px}
 .dz-sub{font-size:11px;color:var(--ink2)}
@@ -130,7 +104,7 @@ h1 em { color:var(--accent); font-style:normal; }
 
 /* 버튼 */
 .action-row{display:flex;gap:10px;margin-top:20px}
-.btn{flex:1;padding:16px 20px;border:none;cursor:pointer;font-weight:700;font-size:14px;border-radius:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn{flex:1;padding:16px 20px;font-size:14px;}
 .btn-run{background:var(--accent);color:#fff}
 .btn-run:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
 .btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none}
