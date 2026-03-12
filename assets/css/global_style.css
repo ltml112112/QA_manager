@@ -45,8 +45,7 @@
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-A. 포털 크롬 변수 — 항상 다크 고정
-        html[data-theme] 변경에 영향받지 않도록 :root에만 정의
+   3-A. 포털 크롬 변수 — 다크 기본
    ───────────────────────────────────────────────────────────── */
 :root {
   --portal-bg:           #0f1117;
@@ -61,6 +60,17 @@
   --portal-success:      #34d399;
   --portal-danger:       #f87171;
   --portal-warning:      #fbbf24;
+}
+
+/* 라이트 모드 사이드바 색상 (--portal-* 오버라이드) */
+html[data-theme="light"] {
+  --portal-bg:           #f4f6fb;
+  --portal-surface:      #ffffff;
+  --portal-surface-2:    #eef0f7;
+  --portal-border:       #d1d5e8;
+  --portal-text:         #1a1f3e;
+  --portal-text-muted:   #6b7280;
+  /* accent·success·danger·warning — 그대로 유지 */
 }
 
 
@@ -267,7 +277,7 @@ html, body {
 }
 
 .brand-name {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.3;
   color: var(--portal-text);
@@ -275,7 +285,7 @@ html, body {
 }
 
 .brand-sub {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--portal-text-muted);
 }
 
