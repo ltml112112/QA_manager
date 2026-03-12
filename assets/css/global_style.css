@@ -289,6 +289,15 @@ html, body {
   color: var(--portal-text-muted);
 }
 
+.brand-email {
+  font-size: 11px;
+  color: var(--portal-accent);
+  text-decoration: none;
+}
+.brand-email:hover {
+  text-decoration: underline;
+}
+
 /* 5-C. 탭 내비게이션 (세로) ─────────────────────────────────── */
 .tab-nav {
   display: flex;
