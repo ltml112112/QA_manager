@@ -8,20 +8,23 @@
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand" onclick="location.reload()" title="홈으로 이동">
-    <img class="brand-logo" src="./assets/img/lt_logo.jpg" alt="LT Materials">
-    <div>
-      <div class="brand-name">품질경영팀 포털</div>
-      <div class="brand-sub">전자재료사업부</div>
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand" onclick="location.reload()" title="홈으로 이동">
+      <img class="brand-logo" src="./assets/img/lt_logo.jpg" alt="LT Materials">
+      <div>
+        <div class="brand-name">품질경영팀 포털</div>
+        <div class="brand-sub">전자재료사업부</div>
+      </div>
     </div>
   </div>
-  <div class="divider"></div>
   <nav class="tab-nav">
     <!-- main.js가 동적으로 탭 버튼을 삽입합니다 -->
   </nav>
-  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="다크/라이트 전환">🌙</button>
-  <div class="status"><div class="status-dot"></div>가동 중</div>
+  <div class="sidebar-footer">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="다크/라이트 전환">🌙</button>
+    <div class="status"><div class="status-dot"></div>가동 중</div>
+  </div>
 </div>
 
 <div class="frame-area">
