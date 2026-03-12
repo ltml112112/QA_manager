@@ -99,52 +99,15 @@ function switchTab(id, btn) {
   });
   btn.classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
-
-  var iframe = document.getElementById('iframe-' + id);
-  if (iframe) {
-    try {
-      iframe.contentWindow.postMessage(
-        { type: 'setTheme', theme: document.documentElement.dataset.theme },
-        '*'
-      );
-    } catch (e) {}
-  }
 }
 
 // ── 로더 숨기기 ──────────────────────────────────────────────────────────────
 function hideLoader(id) {
   var el = document.getElementById('loader-' + id);
   if (el) el.classList.add('hidden');
-  broadcastTheme(document.documentElement.dataset.theme);
-}
-
-// ── 테마 브로드캐스트 ─────────────────────────────────────────────────────────
-function broadcastTheme(theme) {
-  document.querySelectorAll('iframe').forEach(function(f) {
-    try {
-      f.contentWindow.postMessage({ type: 'setTheme', theme: theme }, '*');
-    } catch (e) {}
-  });
-}
-
-// ── 테마 관련 ─────────────────────────────────────────────────────────────────
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem('qa_theme', theme);
-  var btn = document.getElementById('themeBtn');
-  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
-  broadcastTheme(theme);
-}
-
-function toggleTheme() {
-  applyTheme(
-    document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'
-  );
 }
 
 // ── 초기화 ───────────────────────────────────────────────────────────────────
 (function init() {
   renderApps();
-  var saved = localStorage.getItem('qa_theme') || 'dark';
-  applyTheme(saved);
 })();

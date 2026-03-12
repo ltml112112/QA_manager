@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -836,17 +836,6 @@ btnDl.addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 });
 
-// ── 테마 동기화 (부모 포털과 연동) ──
-(function(){
-  function applyTheme(theme){
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e){
-    if(e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
 </script>
 </body>
 </html>

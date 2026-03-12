@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -506,7 +506,7 @@ X축: 파장(380~780nm), Y축: 강도(a.u.)
     </div>
 </div>
 
-<footer>OLED Analyzer v2.0 &nbsp;|&nbsp; jhbaik@ltml.co.kr</footer>
+<footer>OLED Analyzer v2.0</footer>
 </div>
 
 <script>
@@ -1412,17 +1412,6 @@ document.addEventListener('keydown',e=>{
 init();
 })();
 
-// ── 테마 동기화 (부모 포털과 연동) ──
-(function(){
-  function applyTheme(theme){
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e){
-    if(e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
 </script>
 </body>
 </html>
