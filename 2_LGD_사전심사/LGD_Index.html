@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,6 +7,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
 
 :root {
+  --bg: #0f1117;
+  --bg-secondary: #1a1f2e;
+  --border: #2e3554;
+  --border-hover: #4f5a85;
+  --text: #e4e8f5;
+  --text-secondary: #7b84a8;
+  --text-tertiary: #4f5a85;
+  --primary: #4f6ef7;
+  --primary-light: #6b83ff;
+  --primary-bg: rgba(79,110,247,0.12);
+  --success: #34d399;
+  --success-bg: rgba(52,211,153,0.08);
+  --error: #f87171;
+  --error-bg: rgba(248,113,113,0.08);
+  --warning: #fbbf24;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.35);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.45);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+html[data-theme="light"] {
   --bg: #ffffff;
   --bg-secondary: #f8f9fb;
   --border: #e8eaed;
@@ -14,19 +37,17 @@
   --text: #1a1a1a;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
-  --primary: #6C5CE7;
-  --primary-light: #a29bfe;
-  --primary-bg: #f3f1ff;
-  --success: #00b894;
+  --primary: #4f6ef7;
+  --primary-light: #6b83ff;
+  --primary-bg: rgba(79,110,247,0.08);
+  --success: #10b981;
   --success-bg: #e6f9f4;
-  --error: #e74c3c;
+  --error: #ef4444;
   --error-bg: #fde8e6;
-  --warning: #f39c12;
+  --warning: #f59e0b;
   --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,.06);
   --shadow-lg: 0 8px 24px rgba(0,0,0,.08);
-  --radius: 12px;
-  --radius-sm: 8px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -108,7 +129,7 @@ body {
   text-decoration: none;
   transition: all .15s;
 }
-.btn-sheet:hover { background: #d0f5ed; border-color: var(--success); }
+.btn-sheet:hover { filter: brightness(1.1); border-color: var(--success); }
 
 .conn-badge .dot {
   width: 7px; height: 7px; border-radius: 50%;
@@ -243,8 +264,10 @@ input::placeholder { color: var(--text-tertiary); }
   font-weight: 500;
 }
 
-.file-tag.pdf { background: #fff0f0; color: #c0392b; border-color: #f5c6cb; }
-.file-tag.xlsx { background: #e8f5e9; color: #27ae60; border-color: #c8e6c9; }
+.file-tag.pdf { background: rgba(248,113,113,0.10); color: #f87171; border-color: rgba(248,113,113,0.3); }
+html[data-theme="light"] .file-tag.pdf { background: #fff0f0; color: #c0392b; border-color: #f5c6cb; }
+.file-tag.xlsx { background: rgba(52,211,153,0.10); color: #34d399; border-color: rgba(52,211,153,0.3); }
+html[data-theme="light"] .file-tag.xlsx { background: #e8f5e9; color: #27ae60; border-color: #c8e6c9; }
 
 /* ── Progress ── */
 .progress-section { display: none; margin-top: 18px; }
@@ -551,6 +574,19 @@ function log(type, msg) {
 }
 
 function clearLog() { $('logArea').innerHTML = ''; }
+
+
+// ── 테마 동기화 (부모 포털과 연동) ──
+(function(){
+  function applyTheme(theme){
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
 
 window.addEventListener('DOMContentLoaded', function() {
   testConn();

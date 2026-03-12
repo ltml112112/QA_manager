@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -22,15 +22,24 @@ function loadPptxFallback() {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root{
-  --red:#e05560; --bg:#0d1117; --ink:#e4e8f5;
-  --ink2:#7b84a8; --line:#2e3554; --white:#0d1117;
-  --panel:#161b22; --mono:'JetBrains Mono',monospace;
-  --body:'Noto Sans KR',sans-serif;
-  --green:#34d399; --amber:#f59e0b;
+  --red:#f87171; --bg:#0f1117; --ink:#e4e8f5;
+  --ink2:#7b84a8; --line:#2e3554; --white:#0f1117;
+  --panel:#1a1f2e; --mono:'JetBrains Mono',monospace;
+  --body:'Inter','Noto Sans KR',sans-serif;
+  --green:#34d399; --amber:#fbbf24;
   --surface:#1a1f2e; --accent:#4f6ef7;
+  --bg-deep:#090c10;
+}
+
+html[data-theme="light"]{
+  --red:#ef4444; --bg:#f4f6fb; --ink:#1a1f3e;
+  --ink2:#6b7280; --line:#d1d5e8; --white:#f4f6fb;
+  --panel:#ffffff; --green:#10b981; --amber:#f59e0b;
+  --surface:#ffffff; --accent:#4f6ef7;
+  --bg-deep:#eef0f7;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);height:100vh;overflow:hidden;}
@@ -57,7 +66,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);height:100vh;
   flex:1;
   display:flex;
   flex-direction:column;
-  background:#090c10;
+  background:var(--bg-deep);
   height:100%;
 }
 .left-panel::-webkit-scrollbar, .right-content::-webkit-scrollbar { width:6px; }
@@ -852,6 +861,18 @@ btnDl.addEventListener('click', () => {
   a.href = url; a.download = `HPLC_DSC_Report.pptx`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 });
+
+// ── 테마 동기화 (부모 포털과 연동) ──
+(function(){
+  function applyTheme(theme){
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
 </script>
 </body>
 </html>
