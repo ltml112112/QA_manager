@@ -2,9 +2,13 @@
 
 ## 프로젝트 개요
 
-전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털. 두 가지 주요 도구로 구성됨:
+전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털. 세 가지 도구로 구성됨:
+
 1. **OLED IVL & LT 분석기** - OLED 소재 측정 CSV 데이터를 분석·시각화
 2. **LGD 사전심사 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
+3. **HPLC/DSC Report 자동생성** - 분석 데이터 기반 리포트 자동 생성
+
+**호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
 ---
 
@@ -12,31 +16,277 @@
 
 ```
 QA_manager/
-├── index.html                      # 포털 메인 (탭 내비게이션 허브)
-├── LT소재 로고(영문).jpg            # 헤더 로고 이미지
-├── 1_OLED_IVL_LT/
-│   └── ivl_lt.html                 # OLED IVL & LT 분석기 (독립 실행 가능)
-└── 2_LGD_사전심사/
-    ├── LGD_Index.html              # LGD 사전심사 자동화 UI (GAS 클라이언트)
-    └── LGD_Code.gs                 # Google Apps Script 백엔드
+├── index.html                        # 포털 허브 (shell only — 탭/iframe은 JS가 생성)
+├── LT소재 로고(영문).jpg              # 원본 로고 (하위 호환용)
+├── assets/
+│   ├── img/
+│   │   └── lt_logo.jpg               # 포털 상단바 로고
+│   ├── css/
+│   │   └── global_style.css          # 전체 디자인 시스템 (CSS 변수·컴포넌트·레이아웃)
+│   └── js/
+│       └── main.js                   # 탭·iframe 동적 렌더링 + 테마 관리
+└── apps/
+    ├── 01_oled_ivl_lt/
+    │   └── index.html                # OLED IVL & LT 분석기
+    ├── 02_lgd_eval/
+    │   ├── index.html                # LGD 사전심사 자동화 UI (GAS 클라이언트)
+    │   └── code.gs                   # Google Apps Script 백엔드
+    └── 03_hplc_dsc/
+        └── index.html                # HPLC/DSC Report 자동생성
 ```
 
 ---
 
 ## 핵심 아키텍처
 
-### index.html - 포털 허브
-- `ivl_lt.html`을 `<iframe src="./1_OLED_IVL_LT/ivl_lt.html">` 상대경로로 직접 로드
-- `HPLC/DSC Report`는 `<iframe src="./3. HPLC_DSC_report-main/index.html">` 상대경로로 직접 로드
-- `LGD_Index.html`은 Google Apps Script 배포 URL을 직접 iframe으로 로드
-- 탭 전환은 CSS `.active` 클래스 토글 방식 (URL 라우팅 없음)
-- **Cloudflare Pages 정적 호스팅** 환경에서 운영 — 상대경로 직접 참조 방식이 가능
+### index.html — 포털 허브 (Shell)
 
-> `ivl_lt.html`을 수정한 후에는 파일을 저장하고 배포하면 바로 반영됨 (별도 인코딩 작업 불필요)
+`index.html`은 빈 컨테이너 역할만 함. 탭 버튼과 iframe은 **`main.js`가 런타임에 동적 생성**:
+
+```html
+<div class="topbar">
+  <nav class="tab-nav"><!-- main.js가 탭 버튼 삽입 --></nav>
+</div>
+<div class="frame-area"><!-- main.js가 iframe 래퍼 삽입 --></div>
+<script src="./assets/js/main.js"></script>
+```
+
+탭을 추가/수정할 때 `index.html`은 **건드리지 않음** — `main.js`의 `apps` 배열만 수정.
+
+### main.js — 앱 레지스트리
+
+파일 최상단의 `apps` 배열이 포털의 전체 탭 구성을 정의함:
+
+```javascript
+const apps = [
+  {
+    id:         'oled',                          // 탭 식별자 (고유해야 함)
+    label:      'OLED IVL & LT 분석기',           // 탭 버튼에 표시되는 이름
+    icon:       '📊',                            // 탭 버튼 앞 아이콘
+    badge:      null,                            // 뱃지 텍스트 (없으면 null)
+    src:        './apps/01_oled_ivl_lt/index.html', // iframe src (상대경로 or 외부 URL)
+    loaderText: 'OLED IVL & LT 분석기 로딩 중...', // 로딩 오버레이 텍스트
+  },
+  // ... 나머지 앱
+];
+```
+
+`renderApps()`가 이 배열을 순회하며 `.tab-nav`에 탭 버튼을, `.frame-area`에 iframe 래퍼를 주입함.
+
+### global_style.css — 디자인 시스템
+
+모든 앱이 공유하는 CSS. 각 앱의 `<head>`에서 아래와 같이 참조:
+
+```html
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+```
+
+앱별 고유 스타일만 `<style>` 블록에 남기고, 공통 변수·리셋·컴포넌트는 이 파일을 사용.
+
+### 테마 동기화
+
+- 포털 상단바(`topbar`)는 **항상 다크** — `--portal-*` 변수로 격리되어 테마 전환에 영향받지 않음
+- 탭 콘텐츠(iframe 내부)만 라이트/다크 전환
+- 부모 포털이 `postMessage({ type: 'setTheme', theme })` 전송 → 각 앱이 `window.addEventListener('message', ...)` 로 수신
+
+각 앱에 아래 수신 코드가 있어야 테마 동기화가 작동함:
+
+```javascript
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+```
 
 ---
 
-## 1. OLED IVL & LT 분석기 (`ivl_lt.html`)
+## 디자인 시스템 (`global_style.css`)
+
+### 테마 수정 가이드 — 어디를 건드려야 하나
+
+파일은 8개 섹션으로 나뉨. 테마 관련 수정은 **섹션 3** 에서만 이루어짐.
+
+#### 포털 상단바 색상 변경 → 섹션 3-A
+
+```css
+/* global_style.css · 섹션 3-A */
+:root {
+  --portal-bg:           #0f1117;   /* 상단바 배경 */
+  --portal-surface:      #1a1f2e;   /* 상단바 카드 배경 */
+  --portal-border:       #2e3554;   /* 상단바 구분선 */
+  --portal-text:         #e4e8f5;   /* 상단바 텍스트 */
+  --portal-text-muted:   #7b84a8;   /* 상단바 보조 텍스트 */
+  --portal-accent:       #4f6ef7;   /* 활성 탭 강조색 */
+  --portal-accent-hover: #6b83ff;   /* 활성 탭 hover */
+  --portal-success:      #34d399;   /* 가동 중 상태 점 */
+  --portal-danger:       #f87171;   /* 오류 상태 */
+  --portal-warning:      #fbbf24;   /* 경고 상태 */
+}
+```
+
+> 이 변수들은 `html[data-theme="light"]`에서 **재정의되지 않음** → 라이트 모드로 전환해도 상단바는 항상 다크.
+
+#### 앱 콘텐츠 다크 기본값 변경 → 섹션 3-B
+
+```css
+/* global_style.css · 섹션 3-B */
+:root {
+  --bg:           #0f1117;          /* 앱 전체 배경 */
+  --surface:      #1a1f2e;          /* 카드·패널 배경 */
+  --surface-2:    #222840;          /* 2단계 표면 (테이블 헤더 등) */
+  --border:       #2e3554;          /* 테두리 */
+  --border-hover: #4f5a85;          /* hover 테두리 */
+  --text:         #e4e8f5;          /* 본문 텍스트 */
+  --text-muted:   #7b84a8;          /* 보조 텍스트 */
+  --text-faint:   #4f5a85;          /* 희미한 텍스트 (placeholder 등) */
+  --accent:       #4f6ef7;          /* 강조색 (버튼·링크) */
+  --accent-hover: #6b83ff;          /* 강조색 hover */
+  --success:      #34d399;          /* 성공 */
+  --danger:       #f87171;          /* 오류·삭제 */
+  --warning:      #fbbf24;          /* 경고 */
+  --radius:       12px;             /* 카드 모서리 반경 */
+  --radius-sm:    8px;              /* 인풋·버튼 모서리 반경 */
+}
+```
+
+#### 라이트 모드 색상 변경 → 섹션 3-C
+
+```css
+/* global_style.css · 섹션 3-C */
+html[data-theme="light"] {
+  --bg:      #f4f6fb;
+  --surface: #ffffff;
+  /* ... 나머지 변수 오버라이드 */
+}
+```
+
+> **주의**: 여기서 `--portal-*` 변수는 절대 추가하지 않음. 추가하는 순간 라이트 모드에서 상단바도 밝아짐.
+
+#### 공통 컴포넌트 클래스
+
+| 클래스 | 설명 |
+|--------|------|
+| `.btn .btn-primary` | 강조색 버튼 |
+| `.btn .btn-secondary` | 테두리 버튼 |
+| `.btn .btn-block` | 전체 너비 버튼 |
+| `.btn .btn-lg / .btn-sm` | 크기 변형 |
+| `.card` | 배경·테두리·그림자 카드 |
+| `.card-header` | 카드 제목 영역 (하단 구분선 포함) |
+| `.card-title` | 강조색 섹션 제목 |
+| `.form-input` | 인풋 필드 (focus 링 포함) |
+| `.form-select` | 셀렉트 박스 |
+| `.form-label` | 라벨 (`.req` · `.opt` 서브클래스) |
+| `.data-table` | 분석 결과 테이블 |
+| `.dropzone` | 파일 드래그앤드롭 영역 |
+| `.progress-track / .progress-fill` | 프로그레스 바 |
+| `.badge-primary/success/danger/warning` | 상태 뱃지 |
+| `.alert-success/danger/warning/info` | 알림 박스 |
+| `.log-box` | 터미널형 로그 박스 |
+
+---
+
+## 새 도구 추가 가이드 (Step-by-Step)
+
+> 4번째, 5번째 도구를 추가할 때 이 순서를 따르면 됩니다.
+
+### Step 1 — 폴더 및 파일 생성
+
+`apps/` 아래에 번호와 이름을 붙인 폴더를 만들고 `index.html`을 생성:
+
+```
+apps/
+└── 04_새도구이름/
+    └── index.html
+```
+
+> 폴더명 규칙: `숫자두자리_영문이름` (예: `04_chemical_db`)
+
+### Step 2 — index.html 기본 뼈대 작성
+
+아래 구조를 복사해서 시작. **반드시 `global_style.css` 링크를 포함**:
+
+```html
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+/* 이 앱만의 고유 스타일만 여기에 작성 */
+body { padding: 24px; }
+.container { max-width: 900px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="card">
+    <div class="card-header">
+      <span>🔧</span> 도구 제목
+    </div>
+    <!-- 콘텐츠 -->
+  </div>
+
+</div>
+<script>
+/* 테마 동기화 — 반드시 포함 */
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+</script>
+</body>
+</html>
+```
+
+**핵심 주의사항:**
+- `global_style.css`에서 이미 제공하는 CSS(`:root` 변수, `* reset`, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등)는 `<style>`에 **다시 쓰지 말 것** — 중복
+- 앱 고유 레이아웃과 특수 컴포넌트만 `<style>`에 추가
+
+### Step 3 — main.js의 apps 배열에 등록
+
+`assets/js/main.js` 파일 최상단 `apps` 배열에 항목 추가:
+
+```javascript
+const apps = [
+  // ... 기존 항목들 ...
+  {
+    id:         '새도구아이디',              // 영문 고유값 (다른 id와 중복 불가)
+    label:      '새 도구 이름',              // 탭 버튼에 표시할 한글 이름
+    icon:       '🔧',                       // 이모지 아이콘
+    badge:      null,                       // 뱃지 없으면 null, 있으면 예: 'NEW'
+    src:        './apps/04_새도구이름/index.html', // 상대경로
+    loaderText: '새 도구 로딩 중...',        // 로딩 오버레이 메시지
+  },
+];
+```
+
+> **이것만 하면 끝.** `index.html`은 수정할 필요 없음. 저장 후 배포하면 탭이 자동으로 나타남.
+
+### Step 4 — 확인 체크리스트
+
+- [ ] `apps/04_xxx/index.html` 존재하는가?
+- [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
+- [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
+- [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `lgd`, `hplc`는 사용 중)
+
+---
+
+## 1. OLED IVL & LT 분석기 (`apps/01_oled_ivl_lt/index.html`)
 
 ### 기능 요약
 - CSV 파일 드래그앤드롭 업로드 (최대 8개)
@@ -89,8 +339,13 @@ ivlDP = 1       // 소수점 자리수 (0, 1, 2)
 ltMode = 'low'  // 'low' 또는 'high'
 ```
 
+### JS가 동적으로 생성하는 클래스명 (절대 이름 변경 금지)
+JS 코드가 `className`으로 직접 참조하는 클래스들. 이름을 바꾸면 표시가 깨짐:
+
+`r1` `r2` `ev` `bh` `blue` `red` `purple` `ivl-d` `lt-sum` `sel-tag` `ok`
+
 ### 데이터셋 색상
-```javascript
+```
 REF_IVL1:    #4a9eff  (파란색)
 REF_IVL2:    #a855f7  (보라색)
 SAMPLE_IVL1: #ef4444  (빨간색)
@@ -99,11 +354,11 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 
 ---
 
-## 2. LGD 사전심사 자동화
+## 2. LGD 사전심사 자동화 (`apps/02_lgd_eval/`)
 
 ### 구조
-- **프론트엔드**: `LGD_Index.html` (HTML 폼 + `google.script.run` API 호출)
-- **백엔드**: `LGD_Code.gs` (Google Apps Script)
+- **프론트엔드**: `index.html` (HTML 폼 + `google.script.run` API 호출)
+- **백엔드**: `code.gs` (Google Apps Script)
 - **템플릿**: Google Sheets (ID: `1kh2oBZYKXaadIJoZQJ5OPYZHlwZftiFpuIT45v2SjTk`)
 
 ### 생성 파일 목록 (7개)
@@ -122,7 +377,7 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 - 비공개물질 관련 파일에 버전 문자열 추가: `(25.8월 Ver)`
 - 구성제품확인서에서 말미 숫자 제거
 
-> 버전 문자열 변경 시 `LGD_Index.html`의 `PRIVATE_SUBSTANCE_VER` 상수 수정
+> 버전 문자열 변경 시 `apps/02_lgd_eval/index.html`의 `PRIVATE_SUBSTANCE_VER` 상수 수정
 
 ### GAS 백엔드 처리 흐름
 1. 템플릿 스프레드시트 복사 (임시)
@@ -145,40 +400,37 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 | 9 | 수직정렬 (위/중간/아래) |
 | 10 | 구성제품그룹 (0=전체, 1/2/3=상품명 수 기준 필터) |
 
+### GAS 배포 URL 변경 시
+
+`assets/js/main.js`의 `apps` 배열에서 `lgd` 항목의 `src` 값을 새 URL로 교체:
+
+```javascript
+{ id: 'lgd', src: 'https://script.google.com/macros/s/새배포URL/exec', ... }
+```
+
 ---
 
-## 포털 UI (`index.html`)
+## 3. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
 
-### 디자인 시스템 (CSS 변수)
-```css
---bg:         #0f1117  /* 전체 배경 */
---surface:    #1a1f2e  /* 상단바, 카드 */
---border:     #2e3554  /* 테두리 */
---accent:     #4f6ef7  /* 강조색 (파란보라) */
---text:       #e4e8f5  /* 본문 텍스트 */
---text-muted: #7b84a8  /* 보조 텍스트 */
---success:    #34d399  /* 성공 (초록) */
-```
-
-### 탭 전환 방식
-```javascript
-function switchTab(id, btn) {
-  // 모든 탭/프레임에서 active 제거
-  // 선택한 탭/프레임에 active 추가
-}
-```
-- 기본 탭: `ivl` (OLED IVL & LT 분석기)
-- 각 iframe의 `src`는 HTML에 상대경로로 하드코딩됨 (`./1_OLED_IVL_LT/ivl_lt.html` 등)
+분석 데이터 기반 리포트 자동 생성 도구. 독립 실행 가능한 단일 HTML 파일.
 
 ---
 
 ## 개발 시 주의사항
 
-1. **`ivl_lt.html` 수정 후 파일 저장 → 배포**만 하면 바로 반영됨 (base64 재인코딩 불필요)
-2. **로고 이미지 경로**: `index.html`에서는 `LT소재 로고(영문).jpg` (루트 기준), `ivl_lt.html`에서 직접 열 경우 `../LT소재 로고(영문).jpg`
-3. **LGD_Code.gs 수정 시**: Google Apps Script 편집기에서 배포(새 버전)해야 반영됨
-4. **GAS 배포 URL**: `LGD_Index.html`은 `index.html`에서 iframe `src`로 하드코딩됨 — URL 변경 시 `index.html` 수정 필요
-5. **파일명에 한글·공백 포함** (`LT소재 로고(영문).jpg`) — 경로 처리 시 주의
+1. **앱 수정 후 파일 저장 → 배포**만 하면 바로 반영됨 (base64 재인코딩 불필요)
+
+2. **로고 이미지 경로**
+   - 포털(`index.html`)에서: `./assets/img/lt_logo.jpg`
+   - 루트의 원본 `LT소재 로고(영문).jpg`는 하위 호환용으로 유지
+
+3. **`code.gs` 수정 시**: Google Apps Script 편집기에서 배포(새 버전)해야 반영됨
+
+4. **파일명에 한글·공백 포함** (`LT소재 로고(영문).jpg`) — 경로 처리 시 주의
+
+5. **앱에서 CSS 작성 시 중복 금지**: `:root` 변수, `* reset`, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등은 `global_style.css`가 이미 제공. 앱 고유 레이아웃만 `<style>`에 추가
+
+6. **구형 변수명 호환**: `global_style.css` 섹션 3-D에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
 
 ---
 
