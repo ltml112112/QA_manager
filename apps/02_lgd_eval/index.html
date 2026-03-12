@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,28 +7,6 @@
 <style>
 /* ── 자립형 CSS 변수 (GAS 배포 시 global_style.css 미로드 대비) ── */
 :root {
-  --primary:         #4f6ef7;
-  --primary-light:   #6b83ff;
-  --primary-bg:      rgba(79,110,247,0.15);
-  --text:            #e4e8f5;
-  --text-secondary:  #7b84a8;
-  --text-tertiary:   #4f5a85;
-  --bg:              #0f1117;
-  --bg-secondary:    #1a1f2e;
-  --bg-deep:         #090c10;
-  --border:          #2e3554;
-  --border-hover:    #4f5a85;
-  --success:         #34d399;
-  --success-bg:      rgba(52,211,153,0.10);
-  --error:           #f87171;
-  --error-bg:        rgba(248,113,113,0.10);
-  --warning:         #fbbf24;
-  --radius:          12px;
-  --radius-sm:       8px;
-  --font-body:       'Inter','Noto Sans KR',sans-serif;
-  --font-mono:       'JetBrains Mono',Consolas,monospace;
-}
-html[data-theme="light"] {
   --primary:         #4f6ef7;
   --primary-light:   #6b83ff;
   --primary-bg:      rgba(79,110,247,0.08);
@@ -45,6 +23,10 @@ html[data-theme="light"] {
   --error:           #ef4444;
   --error-bg:        rgba(239,68,68,0.08);
   --warning:         #f59e0b;
+  --radius:          12px;
+  --radius-sm:       8px;
+  --font-body:       'Inter','Noto Sans KR',sans-serif;
+  --font-mono:       'JetBrains Mono',Consolas,monospace;
 }
 
 /* ── 기본 리셋 · 바디 ── */
@@ -584,18 +566,6 @@ function log(type, msg) {
 
 function clearLog() { $('logArea').innerHTML = ''; }
 
-
-// ── 테마 동기화 (부모 포털과 연동) ──
-(function(){
-  function applyTheme(theme){
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e){
-    if(e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
 
 window.addEventListener('DOMContentLoaded', function() {
   testConn();

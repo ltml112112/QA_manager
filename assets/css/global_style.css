@@ -45,80 +45,69 @@
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-A. 포털 크롬 변수 — 다크 기본
+   3-A. 포털 사이드바 변수
    ───────────────────────────────────────────────────────────── */
 :root {
-  --portal-bg:           #0f1117;
-  --portal-surface:      #1a1f2e;
-  --portal-surface-2:    #222840;
-  --portal-border:       #2e3554;
-  --portal-text:         #e4e8f5;
-  --portal-text-muted:   #7b84a8;
-  --portal-accent:       #4f6ef7;
-  --portal-accent-hover: #6b83ff;
-  --portal-accent-glow:  rgba(79, 110, 247, 0.18);
-  --portal-success:      #34d399;
-  --portal-danger:       #f87171;
-  --portal-warning:      #fbbf24;
-}
-
-/* 라이트 모드 사이드바 색상 (--portal-* 오버라이드) */
-html[data-theme="light"] {
   --portal-bg:           #f4f6fb;
   --portal-surface:      #ffffff;
   --portal-surface-2:    #eef0f7;
   --portal-border:       #d1d5e8;
   --portal-text:         #1a1f3e;
   --portal-text-muted:   #6b7280;
-  /* accent·success·danger·warning — 그대로 유지 */
+  --portal-accent:       #4f6ef7;
+  --portal-accent-hover: #6b83ff;
+  --portal-accent-glow:  rgba(79, 110, 247, 0.10);
+  --portal-success:      #10b981;
+  --portal-danger:       #ef4444;
+  --portal-warning:      #f59e0b;
 }
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-B. 앱 콘텐츠 변수 — 다크 기본
+   3-B. 앱 콘텐츠 변수
    ───────────────────────────────────────────────────────────── */
 :root {
   /* 배경 계층 */
-  --bg:              #0f1117;
-  --surface:         #1a1f2e;
-  --surface-2:       #222840;
-  --bg-deep:         #090c10;
+  --bg:              #f4f6fb;
+  --surface:         #ffffff;
+  --surface-2:       #eef0f7;
+  --bg-deep:         #e8ecf4;
 
   /* 테두리 */
-  --border:          #2e3554;
-  --border-hover:    #4f5a85;
+  --border:          #d1d5e8;
+  --border-hover:    #b0b7d1;
 
   /* 텍스트 */
-  --text:            #e4e8f5;
-  --text-muted:      #7b84a8;
-  --text-faint:      #4f5a85;
+  --text:            #1a1f3e;
+  --text-muted:      #6b7280;
+  --text-faint:      #9ca3af;
 
   /* 강조색 */
   --accent:          #4f6ef7;
   --accent-hover:    #6b83ff;
-  --accent-glow:     rgba(79, 110, 247, 0.18);
+  --accent-glow:     rgba(79, 110, 247, 0.08);
 
   /* 시맨틱 컬러 */
-  --success:         #34d399;
-  --success-bg:      rgba(52, 211, 153, 0.10);
-  --danger:          #f87171;
-  --danger-bg:       rgba(248, 113, 113, 0.10);
-  --warning:         #fbbf24;
-  --warning-bg:      rgba(251, 191, 36, 0.10);
-  --info:            #60a5fa;
-  --info-bg:         rgba(96, 165, 250, 0.10);
+  --success:         #10b981;
+  --success-bg:      rgba(16, 185, 129, 0.08);
+  --danger:          #ef4444;
+  --danger-bg:       rgba(239, 68, 68, 0.08);
+  --warning:         #f59e0b;
+  --warning-bg:      rgba(245, 158, 11, 0.08);
+  --info:            #3b82f6;
+  --info-bg:         rgba(59, 130, 246, 0.08);
 
   /* IVL 특수 색상 (OLED 앱) */
   --color-ref1:      #4a9eff;
   --color-ref2:      #a855f7;
   --color-smp1:      #ef4444;
   --color-smp2:      #f59e0b;
-  --color-excellent: #b388ff;
+  --color-excellent: #7c3aed;
 
   /* 그림자 */
-  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg:       0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:       0 8px 24px rgba(0, 0, 0, 0.12);
 
   /* 반경 */
   --radius:          12px;
@@ -132,44 +121,7 @@ html[data-theme="light"] {
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-C. 앱 콘텐츠 변수 — 라이트 오버라이드
-        --portal-* 변수는 여기서 재정의하지 않음 → 항상 다크 유지
-   ───────────────────────────────────────────────────────────── */
-html[data-theme="light"] {
-  --bg:              #f4f6fb;
-  --surface:         #ffffff;
-  --surface-2:       #eef0f7;
-  --bg-deep:         #e8ecf4;
-
-  --border:          #d1d5e8;
-  --border-hover:    #b0b7d1;
-
-  --text:            #1a1f3e;
-  --text-muted:      #6b7280;
-  --text-faint:      #9ca3af;
-
-  --accent:          #4f6ef7;
-  --accent-hover:    #6b83ff;
-  --accent-glow:     rgba(79, 110, 247, 0.08);
-
-  --success:         #10b981;
-  --success-bg:      rgba(16, 185, 129, 0.08);
-  --danger:          #ef4444;
-  --danger-bg:       rgba(239, 68, 68, 0.08);
-  --warning:         #f59e0b;
-  --warning-bg:      rgba(245, 158, 11, 0.08);
-  --info:            #3b82f6;
-  --info-bg:         rgba(59, 130, 246, 0.08);
-
-  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md:       0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg:       0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-
-/* ─────────────────────────────────────────────────────────────
-   3-D. 구형 변수명 Aliases — 각 앱 하위 호환
-        각 앱 HTML에서 이 파일을 링크할 때 기존 코드가 그대로 동작하도록
+   3-C. 구형 변수명 Aliases — 각 앱 하위 호환
    ───────────────────────────────────────────────────────────── */
 :root {
   /* OLED (ivl_lt) 앱 변수명 */
@@ -183,7 +135,7 @@ html[data-theme="light"] {
   --hdr:         var(--surface-2);
   --row1:        var(--surface);
   --row2:        var(--surface-2);
-  --row-hl:      #1a2a4a;
+  --row-hl:      #dde7ff;
 
   /* HPLC/DSC 앱 변수명 */
   --ink:         var(--text);
@@ -205,12 +157,6 @@ html[data-theme="light"] {
   --error-bg:        var(--danger-bg);
   --text-secondary:  var(--text-muted);
   --text-tertiary:   var(--text-faint);
-}
-
-/* 라이트 모드에서도 alias 재정의 (alias는 var()를 쓰므로 자동 추적되나,
-   직접 값을 쓰는 alias만 추가 오버라이드) */
-html[data-theme="light"] {
-  --row-hl: #dde7ff;
 }
 
 
