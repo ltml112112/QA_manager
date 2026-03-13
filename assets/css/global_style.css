@@ -184,7 +184,7 @@ html, body {
 
 /* 5-A. 사이드바 ────────────────────────────────────────────── */
 .sidebar {
-  width: 220px;
+  width: 260px;
   background: var(--portal-surface);
   border-right: 1px solid var(--portal-border);
   position: fixed;
@@ -259,7 +259,8 @@ html, body {
 .tab-btn {
   display: flex;
   align-items: center;
-  gap: 9px;
+  flex-wrap: wrap;
+  gap: 6px 9px;
   padding: 9px 12px;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -270,10 +271,9 @@ html, body {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
-  white-space: nowrap;
   width: 100%;
   text-align: left;
-  line-height: 1;
+  line-height: 1.4;
 }
 .tab-btn:hover {
   background: var(--portal-surface-2);
@@ -348,7 +348,7 @@ html, body {
 .frame-area {
   position: fixed;
   top: 0;
-  left: 220px;
+  left: 260px;
   right: 0;
   bottom: 0;
 }

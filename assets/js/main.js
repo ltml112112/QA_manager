@@ -14,20 +14,28 @@ const apps = [
     loaderText:  'OLED IVL & LT 분석기 로딩 중...',
   },
   {
-    id:          'lgd',
-    label:       '사전심사자료 자동화',
-    icon:        '📋',
-    badge:       'GAS',
-    src:         'https://script.google.com/macros/s/AKfycbxv4hTJIlnNUr0qjmfAdHrV4WrjLfPz5MkiW3Te4BIWj5iLO6_4btqs82huib6U4Wsq/exec',
-    loaderText:  '사전심사자료 자동화 로딩 중...',
-  },
-  {
     id:          'hplc',
     label:       'HPLC/DSC Report 자동생성',
     icon:        '🧪',
     badge:       null,
     src:         './apps/03_hplc_dsc/index.html',
     loaderText:  'HPLC/DSC Report 자동생성 로딩 중...',
+  },
+  {
+    id:          'lgd',
+    label:       'LGD 사전심사자료 자동화',
+    icon:        '📋',
+    badge:       'GAS',
+    src:         'https://script.google.com/macros/s/AKfycbxv4hTJIlnNUr0qjmfAdHrV4WrjLfPz5MkiW3Te4BIWj5iLO6_4btqs82huib6U4Wsq/exec',
+    loaderText:  'LGD 사전심사자료 자동화 로딩 중...',
+  },
+  {
+    id:          'sdc',
+    label:       'SDC 사전심사자료 자동화',
+    icon:        '📄',
+    badge:       'GAS',
+    src:         './apps/04_sdc_eval/index.html',
+    loaderText:  'SDC 사전심사자료 자동화 로딩 중...',
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
