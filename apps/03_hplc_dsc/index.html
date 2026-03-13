@@ -153,12 +153,21 @@ h1 em { color:var(--accent); font-style:normal; }
 /* 버튼 */
 .action-row{display:flex;gap:10px;margin-top:20px}
 .btn{flex:1;padding:16px 20px;font-size:14px;}
-.btn-run{background:var(--accent);color:#fff}
-.btn-run:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
-.btn-run:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.btn-preview{background:transparent;color:var(--ink);border:1.5px solid var(--line);flex:0 0 auto;padding:16px 18px;border-radius:8px}
-.btn-preview:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-.btn-preview:disabled{opacity:.4;cursor:not-allowed}
+/* 크롭 미리보기 - 활성(파란색) */
+.btn-crop{background:var(--accent);color:#fff}
+.btn-crop:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
+.btn-crop:disabled{opacity:.4;cursor:not-allowed;transform:none}
+/* 크롭 미리보기 - 완료(아웃라인) */
+.btn-crop-done{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn-crop-done:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn-crop-done:disabled{opacity:.4;cursor:not-allowed}
+/* 분석 Report - 대기(아웃라인/흐림) */
+.btn-report-dim{background:transparent;color:var(--ink2);border:1.5px solid var(--line)}
+.btn-report-dim:disabled{opacity:.4;cursor:not-allowed}
+/* 분석 Report - 활성(파란색) */
+.btn-report{background:var(--accent);color:#fff}
+.btn-report:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
+.btn-report:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
 /* 스피너 */
 .spin{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:rot .55s linear infinite;display:none}
@@ -499,11 +508,13 @@ h1 em { color:var(--accent); font-style:normal; }
       </div>
 
       <div class="action-row">
-        <button class="btn btn-run" id="btnRun" disabled>
-          <div class="spin" id="spin"></div>
-          <span id="btnTxt">▶ 분석 Report 출력</span>
+        <button class="btn btn-crop" id="btnPrev" disabled>
+          <span id="prevTxt">▶ 크롭 미리보기</span>
         </button>
-        <button class="btn btn-preview" id="btnPrev" disabled>🔍 크롭 미리보기</button>
+        <button class="btn btn-report-dim" id="btnRun" disabled>
+          <div class="spin" id="spin"></div>
+          <span id="btnTxt">분석 Report 출력</span>
+        </button>
       </div>
 
       <div class="progress-wrap" id="progWrap">
@@ -680,6 +691,9 @@ function reset() {
   pageDetect.style.display = 'none';
   btnRun.disabled  = true;
   btnPrev.disabled = true;
+  btnPrev.className = 'btn btn-crop';
+  document.getElementById('prevTxt').textContent = '▶ 크롭 미리보기';
+  btnRun.className = 'btn btn-report-dim';
   fileInput.value  = '';
   prevStatus.textContent = '대기 중';
   setProgress(0, '');
@@ -1081,6 +1095,9 @@ btnPrev.addEventListener('click', async () => {
   }
 
   btnPrev.disabled = false; btnRun.disabled = false;
+  btnPrev.className = 'btn btn-crop-done';
+  document.getElementById('prevTxt').textContent = '🔍 크롭 미리보기';
+  btnRun.className = 'btn btn-report';
   prevStatus.textContent = `생성 완료 — 크롭 ${pdfDoc.numPages}p / 슬라이드 ${slideIdx}장`;
 });
 
@@ -1222,7 +1239,7 @@ btnRun.addEventListener('click', async () => {
     addLog('err', `오류: ${err.message}`);
   } finally {
     btnRun.disabled = btnPrev.disabled = false;
-    spin.classList.remove('on'); btnTxt.textContent = '▶ 분석 Report 출력';
+    spin.classList.remove('on'); btnTxt.textContent = '분석 Report 출력';
   }
 });
 
