@@ -103,7 +103,7 @@ h1 em { color:var(--accent); font-style:normal; }
 .cfg-desc { font-weight:normal; font-size:10px; color:var(--ink2); font-family:var(--mono); }
 
 /* ── 슬라이더 컨트롤 ── */
-.slider-section { padding:10px 16px; border-bottom:1px solid var(--line); }
+.slider-section { padding:10px 20px 10px 16px; border-bottom:1px solid var(--line); }
 .slider-section:last-child { border-bottom:none; }
 .slider-section-title {
   font-family:var(--mono); font-size:11px; font-weight:700; color:var(--ink);
@@ -143,7 +143,7 @@ h1 em { color:var(--accent); font-style:normal; }
   min-width:36px; text-align:right; flex-shrink:0; font-weight:600;
 }
 .slider-unit {
-  font-family:var(--mono); font-size:9px; color:var(--ink2); flex-shrink:0;
+  font-family:var(--mono); font-size:9px; color:var(--ink2); flex-shrink:0; min-width:14px;
 }
 .slider-pair {
   display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;
@@ -379,20 +379,20 @@ h1 em { color:var(--accent); font-style:normal; }
             </div>
             <div class="slider-row">
               <span class="slider-label">하</span>
-              <input type="range" class="slider-input" id="cfgHcBot" min="-300" max="300" value="-150" step="5">
+              <input type="range" class="slider-input" id="cfgHcBot" min="-450" max="150" value="-150" step="5">
               <span class="slider-val" id="valHcBot">-150</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
               <span class="slider-label">좌</span>
-              <input type="range" class="slider-input" id="cfgHcLeft" min="-50" max="200" value="0" step="5">
+              <input type="range" class="slider-input" id="cfgHcLeft" min="-200" max="200" value="0" step="5">
               <span class="slider-val" id="valHcLeft">0</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
               <span class="slider-label">우</span>
-              <input type="range" class="slider-input" id="cfgHcRight" min="-50" max="200" value="0" step="5">
-              <span class="slider-val" id="valHcRight">0</span>
+              <input type="range" class="slider-input" id="cfgHcRight" min="-105" max="295" value="95" step="5">
+              <span class="slider-val" id="valHcRight">95</span>
               <span class="slider-unit">px</span>
             </div>
           </div>
@@ -418,14 +418,14 @@ h1 em { color:var(--accent); font-style:normal; }
             </div>
             <div class="slider-row">
               <span class="slider-label">좌</span>
-              <input type="range" class="slider-input" id="cfgHtLeft" min="-50" max="200" value="0" step="5">
+              <input type="range" class="slider-input" id="cfgHtLeft" min="-200" max="200" value="0" step="5">
               <span class="slider-val" id="valHtLeft">0</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
               <span class="slider-label">우</span>
-              <input type="range" class="slider-input" id="cfgHtRight" min="-50" max="200" value="0" step="5">
-              <span class="slider-val" id="valHtRight">0</span>
+              <input type="range" class="slider-input" id="cfgHtRight" min="0" max="400" value="200" step="5">
+              <span class="slider-val" id="valHtRight">200</span>
               <span class="slider-unit">px</span>
             </div>
           </div>
@@ -439,13 +439,13 @@ h1 em { color:var(--accent); font-style:normal; }
           <div class="slider-pair">
             <div class="slider-row">
               <span class="slider-label">상</span>
-              <input type="range" class="slider-input" id="cfgDscTop" min="-300" max="300" value="100" step="5">
+              <input type="range" class="slider-input" id="cfgDscTop" min="-100" max="300" value="100" step="5">
               <span class="slider-val" id="valDscTop">100</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
               <span class="slider-label">하</span>
-              <input type="range" class="slider-input" id="cfgDscBot" min="-300" max="300" value="-90" step="5">
+              <input type="range" class="slider-input" id="cfgDscBot" min="-290" max="110" value="-90" step="5">
               <span class="slider-val" id="valDscBot">-90</span>
               <span class="slider-unit">px</span>
             </div>
@@ -466,8 +466,8 @@ h1 em { color:var(--accent); font-style:normal; }
           </div>
           <div class="slider-row">
             <span class="slider-label"></span>
-            <input type="range" class="slider-input" id="cfgHplcZoom" min="50" max="150" value="100" step="5">
-            <span class="slider-val" id="valHplcZoom">100</span>
+            <input type="range" class="slider-input" id="cfgHplcZoom" min="15" max="115" value="65" step="5">
+            <span class="slider-val" id="valHplcZoom">65</span>
             <span class="slider-unit">%</span>
           </div>
         </div>
