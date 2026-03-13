@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>분석결과 → PPTX 자동변환기 (Desktop Pro)</title>
+<title>HPLC/DSC 분석결과 Report 자동화</title>
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 
 <!-- PDF.js -->
@@ -296,7 +296,7 @@ h1 em { color:var(--accent); font-style:normal; }
   <!-- 왼쪽 설정 패널 -->
   <div class="left-panel">
     <div class="site-header">
-      <h1>HPLC/DSC<br><em>PPTX 변환기</em></h1>
+      <h1>HPLC/DSC<br><em>분석결과 Report 자동화</em></h1>
       <div class="header-version">v5.0 Desktop Pro · 슬라이더 크롭 + PPT 미리보기</div>
     </div>
 
@@ -500,7 +500,7 @@ h1 em { color:var(--accent); font-style:normal; }
       <div class="action-row">
         <button class="btn btn-run" id="btnRun" disabled>
           <div class="spin" id="spin"></div>
-          <span id="btnTxt">▶ PPTX 변환 시작</span>
+          <span id="btnTxt">▶ 분석 Report 출력</span>
         </button>
         <button class="btn btn-preview" id="btnPrev" disabled>🔍 크롭 미리보기</button>
       </div>
@@ -656,9 +656,9 @@ async function loadPdf(file) {
     addLog('ok', `감지 완료 — HPLC ${hCount} / DSC ${dCount}`);
     logLed.className = 'log-led ok';
     logStat.textContent = '준비 완료';
-    btnRun.disabled  = false;
+    btnRun.disabled  = true;
     btnPrev.disabled = false;
-    prevStatus.textContent = '미리보기를 생성할 수 있습니다.';
+    prevStatus.textContent = '[크롭 미리보기]를 실행하면 분석 Report 출력이 활성화됩니다.';
   } catch (err) {
     addLog('err', `로드 실패: ${err.message}`);
     logLed.className = 'log-led err';
@@ -1221,7 +1221,7 @@ btnRun.addEventListener('click', async () => {
     addLog('err', `오류: ${err.message}`);
   } finally {
     btnRun.disabled = btnPrev.disabled = false;
-    spin.classList.remove('on'); btnTxt.textContent = '▶ PPTX 변환 시작';
+    spin.classList.remove('on'); btnTxt.textContent = '▶ 분석 Report 출력';
   }
 });
 
