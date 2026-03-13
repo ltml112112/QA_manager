@@ -2,11 +2,12 @@
 
 ## 프로젝트 개요
 
-전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털. 세 가지 도구로 구성됨:
+전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털. 네 가지 도구로 구성됨:
 
 1. **OLED IVL & LT 분석기** - OLED 소재 측정 CSV 데이터를 분석·시각화
-2. **LGD 사전심사 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
-3. **HPLC/DSC Report 자동생성** - 분석 데이터 기반 리포트 자동 생성
+2. **HPLC/DSC Report 자동생성** - 분석 데이터 기반 리포트 자동 생성
+3. **LGD 사전심사자료 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
+4. **SDC 사전심사자료 자동화** - Google Apps Script 기반 구현 예정 (개발 중)
 
 **호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
@@ -20,7 +21,7 @@ QA_manager/
 ├── LT소재 로고(영문).jpg              # 원본 로고 (하위 호환용)
 ├── assets/
 │   ├── img/
-│   │   └── lt_logo.jpg               # 포털 상단바 로고
+│   │   └── lt_logo.jpg               # 포털 사이드바 로고
 │   ├── css/
 │   │   └── global_style.css          # 전체 디자인 시스템 (CSS 변수·컴포넌트·레이아웃)
 │   └── js/
@@ -29,10 +30,12 @@ QA_manager/
     ├── 01_oled_ivl_lt/
     │   └── index.html                # OLED IVL & LT 분석기
     ├── 02_lgd_eval/
-    │   ├── index.html                # LGD 사전심사 자동화 UI (GAS 클라이언트)
+    │   ├── index.html                # LGD 사전심사자료 자동화 UI (GAS 클라이언트)
     │   └── code.gs                   # Google Apps Script 백엔드
-    └── 03_hplc_dsc/
-        └── index.html                # HPLC/DSC Report 자동생성
+    ├── 03_hplc_dsc/
+    │   └── index.html                # HPLC/DSC Report 자동생성
+    └── 04_sdc_eval/
+        └── index.html                # SDC 사전심사자료 자동화 (개발 중 플레이스홀더)
 ```
 
 ---
@@ -85,7 +88,7 @@ const apps = [
 
 ### 테마 동기화
 
-- 포털 상단바(`topbar`)는 **항상 다크** — `--portal-*` 변수로 격리되어 테마 전환에 영향받지 않음
+- 포털 사이드바(`.sidebar`)는 **항상 라이트** — `--portal-*` 변수로 격리되어 테마 전환에 영향받지 않음
 - 탭 콘텐츠(iframe 내부)만 라이트/다크 전환
 - 부모 포털이 `postMessage({ type: 'setTheme', theme })` 전송 → 각 앱이 `window.addEventListener('message', ...)` 로 수신
 
@@ -112,61 +115,73 @@ const apps = [
 
 파일은 8개 섹션으로 나뉨. 테마 관련 수정은 **섹션 3** 에서만 이루어짐.
 
-#### 포털 상단바 색상 변경 → 섹션 3-A
+#### 포털 사이드바 색상 변경 → 섹션 3-A
 
 ```css
 /* global_style.css · 섹션 3-A */
 :root {
-  --portal-bg:           #0f1117;   /* 상단바 배경 */
-  --portal-surface:      #1a1f2e;   /* 상단바 카드 배경 */
-  --portal-border:       #2e3554;   /* 상단바 구분선 */
-  --portal-text:         #e4e8f5;   /* 상단바 텍스트 */
-  --portal-text-muted:   #7b84a8;   /* 상단바 보조 텍스트 */
+  --portal-bg:           #f4f6fb;   /* 사이드바 배경 */
+  --portal-surface:      #ffffff;   /* 사이드바 카드 배경 */
+  --portal-surface-2:    #eef0f7;   /* 사이드바 2단계 표면 */
+  --portal-border:       #d1d5e8;   /* 사이드바 구분선 */
+  --portal-text:         #1a1f3e;   /* 사이드바 텍스트 */
+  --portal-text-muted:   #6b7280;   /* 사이드바 보조 텍스트 */
   --portal-accent:       #4f6ef7;   /* 활성 탭 강조색 */
   --portal-accent-hover: #6b83ff;   /* 활성 탭 hover */
-  --portal-success:      #34d399;   /* 가동 중 상태 점 */
-  --portal-danger:       #f87171;   /* 오류 상태 */
-  --portal-warning:      #fbbf24;   /* 경고 상태 */
+  --portal-success:      #10b981;   /* 가동 중 상태 점 */
+  --portal-danger:       #ef4444;   /* 오류 상태 */
+  --portal-warning:      #f59e0b;   /* 경고 상태 */
 }
 ```
 
-> 이 변수들은 `html[data-theme="light"]`에서 **재정의되지 않음** → 라이트 모드로 전환해도 상단바는 항상 다크.
+> 이 변수들은 `html[data-theme="dark"]`에서 **재정의되지 않음** → 다크 모드로 전환해도 사이드바는 항상 라이트.
 
-#### 앱 콘텐츠 다크 기본값 변경 → 섹션 3-B
+#### 사이드바 너비
+
+사이드바는 `260px` 고정. 변경 시 `global_style.css`에서 두 곳을 동시에 수정해야 함:
+
+```css
+.sidebar    { width: 260px; }   /* 섹션 5-A */
+.frame-area { left: 260px; }    /* 섹션 5-F */
+```
+
+#### 앱 콘텐츠 라이트 기본값 변경 → 섹션 3-B
 
 ```css
 /* global_style.css · 섹션 3-B */
 :root {
-  --bg:           #0f1117;          /* 앱 전체 배경 */
-  --surface:      #1a1f2e;          /* 카드·패널 배경 */
-  --surface-2:    #222840;          /* 2단계 표면 (테이블 헤더 등) */
-  --border:       #2e3554;          /* 테두리 */
-  --border-hover: #4f5a85;          /* hover 테두리 */
-  --text:         #e4e8f5;          /* 본문 텍스트 */
-  --text-muted:   #7b84a8;          /* 보조 텍스트 */
-  --text-faint:   #4f5a85;          /* 희미한 텍스트 (placeholder 등) */
+  --bg:           #f4f6fb;          /* 앱 전체 배경 */
+  --surface:      #ffffff;          /* 카드·패널 배경 */
+  --surface-2:    #eef0f7;          /* 2단계 표면 (테이블 헤더 등) */
+  --border:       #d1d5e8;          /* 테두리 */
+  --border-hover: #b0b7d1;          /* hover 테두리 */
+  --text:         #1a1f3e;          /* 본문 텍스트 */
+  --text-muted:   #6b7280;          /* 보조 텍스트 */
+  --text-faint:   #9ca3af;          /* 희미한 텍스트 (placeholder 등) */
   --accent:       #4f6ef7;          /* 강조색 (버튼·링크) */
   --accent-hover: #6b83ff;          /* 강조색 hover */
-  --success:      #34d399;          /* 성공 */
-  --danger:       #f87171;          /* 오류·삭제 */
-  --warning:      #fbbf24;          /* 경고 */
+  --success:      #10b981;          /* 성공 */
+  --danger:       #ef4444;          /* 오류·삭제 */
+  --warning:      #f59e0b;          /* 경고 */
   --radius:       12px;             /* 카드 모서리 반경 */
   --radius-sm:    8px;              /* 인풋·버튼 모서리 반경 */
 }
 ```
 
-#### 라이트 모드 색상 변경 → 섹션 3-C
+> 현재 기본 테마는 **라이트 모드** 기준으로 설정되어 있음.
+
+#### 다크 모드 색상 변경 → 섹션 3-C (미구현 — 필요 시 추가)
 
 ```css
 /* global_style.css · 섹션 3-C */
-html[data-theme="light"] {
-  --bg:      #f4f6fb;
-  --surface: #ffffff;
+html[data-theme="dark"] {
+  --bg:      #0f1117;
+  --surface: #1a1f2e;
   /* ... 나머지 변수 오버라이드 */
 }
 ```
 
-> **주의**: 여기서 `--portal-*` 변수는 절대 추가하지 않음. 추가하는 순간 라이트 모드에서 상단바도 밝아짐.
+> **주의**: 여기서 `--portal-*` 변수는 절대 추가하지 않음. 추가하는 순간 다크 모드에서 사이드바도 어두워짐.
 
 #### 공통 컴포넌트 클래스
 
@@ -193,7 +208,7 @@ html[data-theme="light"] {
 
 ## 새 도구 추가 가이드 (Step-by-Step)
 
-> 4번째, 5번째 도구를 추가할 때 이 순서를 따르면 됩니다.
+> 5번째, 6번째 도구를 추가할 때 이 순서를 따르면 됩니다.
 
 ### Step 1 — 폴더 및 파일 생성
 
@@ -201,11 +216,11 @@ html[data-theme="light"] {
 
 ```
 apps/
-└── 04_새도구이름/
+└── 05_새도구이름/
     └── index.html
 ```
 
-> 폴더명 규칙: `숫자두자리_영문이름` (예: `04_chemical_db`)
+> 폴더명 규칙: `숫자두자리_영문이름` (예: `05_chemical_db`)
 
 ### Step 2 — index.html 기본 뼈대 작성
 
@@ -267,8 +282,8 @@ const apps = [
     id:         '새도구아이디',              // 영문 고유값 (다른 id와 중복 불가)
     label:      '새 도구 이름',              // 탭 버튼에 표시할 한글 이름
     icon:       '🔧',                       // 이모지 아이콘
-    badge:      null,                       // 뱃지 없으면 null, 있으면 예: 'NEW'
-    src:        './apps/04_새도구이름/index.html', // 상대경로
+    badge:      null,                       // 뱃지 없으면 null, 있으면 예: 'NEW' 또는 'GAS'
+    src:        './apps/05_새도구이름/index.html', // 상대경로 (또는 GAS 배포 URL)
     loaderText: '새 도구 로딩 중...',        // 로딩 오버레이 메시지
   },
 ];
@@ -278,11 +293,11 @@ const apps = [
 
 ### Step 4 — 확인 체크리스트
 
-- [ ] `apps/04_xxx/index.html` 존재하는가?
+- [ ] `apps/05_xxx/index.html` 존재하는가?
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
-- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `lgd`, `hplc`는 사용 중)
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `hplc`, `lgd`, `sdc`는 사용 중)
 
 ---
 
@@ -354,12 +369,19 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 
 ---
 
-## 2. LGD 사전심사 자동화 (`apps/02_lgd_eval/`)
+## 2. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
+
+분석 데이터 기반 리포트 자동 생성 도구. 독립 실행 가능한 단일 HTML 파일.
+
+---
+
+## 3. LGD 사전심사자료 자동화 (`apps/02_lgd_eval/`)
 
 ### 구조
 - **프론트엔드**: `index.html` (HTML 폼 + `google.script.run` API 호출)
 - **백엔드**: `code.gs` (Google Apps Script)
 - **템플릿**: Google Sheets (ID: `1kh2oBZYKXaadIJoZQJ5OPYZHlwZftiFpuIT45v2SjTk`)
+- **탭 `src`**: GAS 배포 URL (외부 URL 직접 참조, 로컬 파일 아님)
 
 ### 생성 파일 목록 (7개)
 | 파일 | 유형 |
@@ -410,9 +432,19 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 
 ---
 
-## 3. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
+## 4. SDC 사전심사자료 자동화 (`apps/04_sdc_eval/`)
 
-분석 데이터 기반 리포트 자동 생성 도구. 독립 실행 가능한 단일 HTML 파일.
+현재 **개발 중**. `apps/04_sdc_eval/index.html`에 "준비 중" 플레이스홀더 페이지가 있음.
+
+### 구현 계획
+- LGD 사전심사자동화와 동일하게 Google Apps Script 기반으로 구현 예정
+- GAS 배포 완료 후 `main.js`의 `sdc` 항목 `src`를 GAS URL로 교체하거나 `index.html`에 직접 구현
+
+### GAS 배포 URL 연결 시
+
+```javascript
+{ id: 'sdc', src: 'https://script.google.com/macros/s/새배포URL/exec', ... }
+```
 
 ---
 
