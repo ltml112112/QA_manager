@@ -6,9 +6,9 @@
    1. 폰트 로드
    2. 리셋
    3. 디자인 토큰 (CSS 변수)
-      3-A. 포털 크롬 변수 — 항상 다크 고정 (--portal-*)
-      3-B. 앱 콘텐츠 변수 — 다크 기본 (/:root)
-      3-C. 앱 콘텐츠 변수 — 라이트 오버라이드 (html[data-theme="light"])
+      3-A. 포털 크롬 변수 — 항상 라이트 고정 (--portal-*)
+      3-B. 앱 콘텐츠 변수 — 라이트 기본 (:root)
+      3-C. 앱 콘텐츠 변수 — 다크 오버라이드 (html[data-theme="dark"]) ← 미구현, 필요 시 추가
       3-D. 구형 변수명 aliases (각 앱 하위 호환)
    4. 기반 타이포그래피
    5. 포털 레이아웃 (topbar · 탭 내비게이션 · frame 영역 · 로더)
@@ -30,8 +30,9 @@
 
 /* ─────────────────────────────────────────────────────────────
    1. 폰트 로드
+   ── 각 HTML 파일 <head>에서 <link rel="preconnect"> + <link rel="stylesheet">
+      방식으로 로드합니다. (@import는 CSS 파싱을 블로킹하여 제거됨)
    ───────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 
 /* ─────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-A. 포털 사이드바 변수
+   3-A. 포털 사이드바 변수 — 항상 라이트 고정 (html[data-theme="dark"]에서 재정의 안 함)
    ───────────────────────────────────────────────────────────── */
 :root {
   --portal-bg:           #f4f6fb;
@@ -64,7 +65,7 @@
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-B. 앱 콘텐츠 변수
+   3-B. 앱 콘텐츠 변수 — 라이트 기본값 (다크 오버라이드는 3-C에서 추가)
    ───────────────────────────────────────────────────────────── */
 :root {
   /* 배경 계층 */
@@ -926,20 +927,20 @@ html, body {
 /* 매칭 실패 / 경고 메시지 (OLED 앱 스타일) */
 .unmatched-warning {
   padding: 8px 10px;
-  background: rgba(110, 64, 0, 0.35);
-  border: 1px solid rgba(110, 64, 0, 0.7);
+  background: var(--warning-bg);
+  border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: var(--radius-xs);
   font-size: 0.75rem;
-  color: #d29922;
+  color: var(--warning);
   margin-top: 8px;
 }
 .unmatched-error {
   padding: 8px 10px;
-  background: rgba(61, 10, 10, 0.5);
-  border: 1px solid rgba(158, 42, 42, 0.7);
+  background: var(--danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   border-radius: var(--radius-xs);
   font-size: 0.75rem;
-  color: #f85149;
+  color: var(--danger);
   margin-top: 8px;
 }
 

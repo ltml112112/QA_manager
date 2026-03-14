@@ -28,6 +28,7 @@ const apps = [
     badge:       'GAS',
     src:         'https://script.google.com/macros/s/AKfycbxv4hTJIlnNUr0qjmfAdHrV4WrjLfPz5MkiW3Te4BIWj5iLO6_4btqs82huib6U4Wsq/exec',
     loaderText:  'LGD 사전심사자료 자동화 로딩 중...',
+    sandbox:     'allow-scripts allow-forms allow-same-origin allow-popups allow-downloads',
   },
   {
     id:          'sdc',
@@ -55,8 +56,13 @@ function renderApps() {
     var btn = document.createElement('button');
     btn.className = 'tab-btn' + (isFirst ? ' active' : '');
     btn.dataset.appId = app.id;
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', isFirst ? 'true' : 'false');
+    btn.setAttribute('aria-controls', 'tab-' + app.id);
+    btn.id = 'tabbtn-' + app.id;
 
     var iconSpan = document.createElement('span');
+    iconSpan.setAttribute('aria-hidden', 'true');
     iconSpan.textContent = app.icon;
     btn.appendChild(iconSpan);
 
@@ -77,6 +83,8 @@ function renderApps() {
     var wrap = document.createElement('div');
     wrap.className = 'frame-wrap' + (isFirst ? ' active' : '');
     wrap.id = 'tab-' + app.id;
+    wrap.setAttribute('role', 'tabpanel');
+    wrap.setAttribute('aria-labelledby', 'tabbtn-' + app.id);
 
     var loader = document.createElement('div');
     loader.className = 'loader';
@@ -89,6 +97,7 @@ function renderApps() {
     iframe.id    = 'iframe-' + app.id;
     iframe.src   = app.src;
     iframe.title = app.label;
+    if (app.sandbox) { iframe.setAttribute('sandbox', app.sandbox); }
     iframe.addEventListener('load', function() { hideLoader(app.id); });
 
     wrap.appendChild(loader);
@@ -101,11 +110,13 @@ function renderApps() {
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(function(b) {
     b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
   });
   document.querySelectorAll('.frame-wrap').forEach(function(w) {
     w.classList.remove('active');
   });
   btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
   document.getElementById('tab-' + id).classList.add('active');
 }
 
@@ -118,4 +129,26 @@ function hideLoader(id) {
 // ── 초기화 ───────────────────────────────────────────────────────────────────
 (function init() {
   renderApps();
+
+  // 브랜드 버튼 — 페이지 새로고침
+  var brandBtn = document.getElementById('brandBtn');
+  if (brandBtn) {
+    brandBtn.addEventListener('click', function() { location.reload(); });
+    brandBtn.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); location.reload(); }
+    });
+  }
+
+  // 탭 키보드 내비게이션 — 위/아래 화살표로 탭 전환
+  document.querySelector('.tab-nav').addEventListener('keydown', function(e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    var btns = Array.from(document.querySelectorAll('.tab-btn'));
+    var current = btns.findIndex(function(b) { return b.classList.contains('active'); });
+    var next = e.key === 'ArrowDown'
+      ? (current + 1) % btns.length
+      : (current - 1 + btns.length) % btns.length;
+    btns[next].focus();
+    btns[next].click();
+  });
 })();

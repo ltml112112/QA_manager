@@ -47,8 +47,10 @@ QA_manager/
 `index.html`은 빈 컨테이너 역할만 함. 탭 버튼과 iframe은 **`main.js`가 런타임에 동적 생성**:
 
 ```html
-<div class="topbar">
-  <nav class="tab-nav"><!-- main.js가 탭 버튼 삽입 --></nav>
+<div class="sidebar">
+  <nav class="tab-nav" role="tablist" aria-label="앱 목록">
+    <!-- main.js가 탭 버튼 삽입 -->
+  </nav>
 </div>
 <div class="frame-area"><!-- main.js가 iframe 래퍼 삽입 --></div>
 <script src="./assets/js/main.js"></script>
@@ -63,16 +65,37 @@ QA_manager/
 ```javascript
 const apps = [
   {
-    id:         'oled',                          // 탭 식별자 (고유해야 함)
-    label:      'OLED IVL & LT 분석기',           // 탭 버튼에 표시되는 이름
-    icon:       '📊',                            // 탭 버튼 앞 아이콘
-    badge:      null,                            // 뱃지 텍스트 (없으면 null)
+    id:         'oled',                             // 탭 식별자 (고유해야 함)
+    label:      'OLED IVL & LT 분석기',              // 탭 버튼에 표시되는 이름
+    icon:       '📊',                               // 탭 버튼 앞 아이콘
+    badge:      null,                               // 뱃지 텍스트 (없으면 null)
     src:        './apps/01_oled_ivl_lt/index.html', // iframe src (상대경로 or 외부 URL)
-    loaderText: 'OLED IVL & LT 분석기 로딩 중...', // 로딩 오버레이 텍스트
+    loaderText: 'OLED IVL & LT 분석기 로딩 중...',  // 로딩 오버레이 텍스트
+    // sandbox: '...',                              // 외부 URL(GAS) 앱에만 추가 — 아래 설명 참고
   },
   // ... 나머지 앱
 ];
 ```
+
+#### `sandbox` 필드 — 외부 URL(GAS) 앱 전용
+
+로컬 상대경로 앱(`./apps/...`)에는 `sandbox` 불필요. **GAS 외부 URL** 앱에만 아래처럼 추가:
+
+```javascript
+{
+  id:      'lgd',
+  src:     'https://script.google.com/macros/s/.../exec',
+  sandbox: 'allow-scripts allow-forms allow-same-origin allow-popups allow-downloads',
+}
+```
+
+| 권한 | 이유 |
+|------|------|
+| `allow-scripts` | JS 실행 |
+| `allow-forms` | 폼 제출 |
+| `allow-same-origin` | `google.script.run` 동작 |
+| `allow-popups` | 새 탭 열기 (구글시트 등) |
+| `allow-downloads` | ZIP 파일 다운로드 |
 
 `renderApps()`가 이 배열을 순회하며 `.tab-nav`에 탭 버튼을, `.frame-area`에 iframe 래퍼를 주입함.
 
@@ -90,9 +113,10 @@ const apps = [
 
 - 포털 사이드바(`.sidebar`)는 **항상 라이트** — `--portal-*` 변수로 격리되어 테마 전환에 영향받지 않음
 - 탭 콘텐츠(iframe 내부)만 라이트/다크 전환
-- 부모 포털이 `postMessage({ type: 'setTheme', theme })` 전송 → 각 앱이 `window.addEventListener('message', ...)` 로 수신
+- **현재 상태**: 테마 전환 버튼 미구현. `main.js`에 `postMessage` 전송 코드 없음
+- **구현 시**: 포털이 `postMessage({ type: 'setTheme', theme })` 전송 → 각 앱이 수신
 
-각 앱에 아래 수신 코드가 있어야 테마 동기화가 작동함:
+각 앱에 아래 수신 코드가 있어야 테마 동기화가 작동함 (현재 모든 앱에 포함되어 있음):
 
 ```javascript
 (function() {
@@ -224,7 +248,7 @@ apps/
 
 ### Step 2 — index.html 기본 뼈대 작성
 
-아래 구조를 복사해서 시작. **반드시 `global_style.css` 링크를 포함**:
+아래 구조를 복사해서 시작. **반드시 폰트 link + `global_style.css` 링크를 포함**:
 
 ```html
 <!DOCTYPE html>
@@ -232,6 +256,9 @@ apps/
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 <style>
 /* 이 앱만의 고유 스타일만 여기에 작성 */
@@ -294,10 +321,13 @@ const apps = [
 ### Step 4 — 확인 체크리스트
 
 - [ ] `apps/05_xxx/index.html` 존재하는가?
+- [ ] `<html lang="ko" data-theme="dark">` 로 시작하는가?
+- [ ] `<link rel="preconnect">` 2개 + Google Fonts `<link>` 포함되어 있는가?
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
 - [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `hplc`, `lgd`, `sdc`는 사용 중)
+- [ ] GAS 외부 URL 앱이라면 `sandbox` 필드를 추가했는가?
 
 ---
 
@@ -382,6 +412,7 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 - **백엔드**: `code.gs` (Google Apps Script)
 - **템플릿**: Google Sheets (ID: `1kh2oBZYKXaadIJoZQJ5OPYZHlwZftiFpuIT45v2SjTk`)
 - **탭 `src`**: GAS 배포 URL (외부 URL 직접 참조, 로컬 파일 아님)
+- **iframe sandbox**: `allow-scripts allow-forms allow-same-origin allow-popups allow-downloads` — `main.js` `lgd` 항목에 설정됨
 
 ### 생성 파일 목록 (7개)
 | 파일 | 유형 |
@@ -461,6 +492,7 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 4. **파일명에 한글·공백 포함** (`LT소재 로고(영문).jpg`) — 경로 처리 시 주의
 
 5. **앱에서 CSS 작성 시 중복 금지**: `:root` 변수, `* reset`, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등은 `global_style.css`가 이미 제공. 앱 고유 레이아웃만 `<style>`에 추가
+   - **예외 — `02_lgd_eval/index.html`**: 이 앱은 GAS URL로 서빙되어 `global_style.css` 상대경로가 동작하지 않음. 인라인 `:root`·리셋·컴포넌트 CSS는 GAS 단독 실행 fallback으로 **의도적으로 유지**함
 
 6. **구형 변수명 호환**: `global_style.css` 섹션 3-D에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
 

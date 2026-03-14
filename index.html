@@ -4,13 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>전자재료사업부 품질경영팀 업무 포털</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./assets/css/global_style.css">
 </head>
 <body>
 
 <div class="sidebar">
   <div class="sidebar-header">
-    <div class="brand" onclick="location.reload()" title="홈으로 이동">
+    <div class="brand" id="brandBtn" role="button" tabindex="0" title="홈으로 이동" aria-label="홈으로 이동 (첫 번째 탭)">
       <img class="brand-logo" src="./assets/img/lt_logo.jpg" alt="LT Materials">
       <div>
         <div class="brand-name">품질경영팀 포털</div>
@@ -19,7 +22,7 @@
       </div>
     </div>
   </div>
-  <nav class="tab-nav">
+  <nav class="tab-nav" role="tablist" aria-label="앱 목록">
     <!-- main.js가 동적으로 탭 버튼을 삽입합니다 -->
   </nav>
   <div class="sidebar-footer">

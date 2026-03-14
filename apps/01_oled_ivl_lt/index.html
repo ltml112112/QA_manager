@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OLED IVL & LT Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 <style>
 /* ── App-specific overrides (base: global_style.css) ── */
@@ -1412,6 +1415,18 @@ document.addEventListener('keydown',e=>{
 init();
 })();
 
+</script>
+<script>
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
 </script>
 </body>
 </html>
