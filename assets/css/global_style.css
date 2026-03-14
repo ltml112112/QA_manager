@@ -685,7 +685,7 @@ html, body {
 }
 
 /* 셀 색상 코딩 (IVL 분석 결과) — 브랜드 테마와 독립적으로 고정값 사용 */
-.data-table td.cell-ok       { color: #4a9eff; }
+.data-table td.cell-ok       { color: #1d6fd6; }
 .data-table td.cell-ng       { color: #ef4444; }
 .data-table td.cell-excellent { color: var(--color-excellent); }
 .data-table td.cell-success  { color: var(--success); }
