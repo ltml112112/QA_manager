@@ -49,15 +49,15 @@
    3-A. 포털 사이드바 변수 — 항상 라이트 고정 (html[data-theme="dark"]에서 재정의 안 함)
    ───────────────────────────────────────────────────────────── */
 :root {
-  --portal-bg:           #f4f6fb;
+  --portal-bg:           #fdf5f6;
   --portal-surface:      #ffffff;
-  --portal-surface-2:    #eef0f7;
-  --portal-border:       #d1d5e8;
-  --portal-text:         #1a1f3e;
+  --portal-surface-2:    #f5eaec;
+  --portal-border:       #e8d0d4;
+  --portal-text:         #1e1a1b;
   --portal-text-muted:   #6b7280;
-  --portal-accent:       #4f6ef7;
-  --portal-accent-hover: #6b83ff;
-  --portal-accent-glow:  rgba(79, 110, 247, 0.10);
+  --portal-accent:       #be0039;
+  --portal-accent-hover: #d4004a;
+  --portal-accent-glow:  rgba(190, 0, 57, 0.10);
   --portal-success:      #10b981;
   --portal-danger:       #ef4444;
   --portal-warning:      #f59e0b;
@@ -69,24 +69,24 @@
    ───────────────────────────────────────────────────────────── */
 :root {
   /* 배경 계층 */
-  --bg:              #f4f6fb;
+  --bg:              #fdf5f6;
   --surface:         #ffffff;
-  --surface-2:       #eef0f7;
-  --bg-deep:         #e8ecf4;
+  --surface-2:       #f5eaec;
+  --bg-deep:         #ede0e3;
 
   /* 테두리 */
-  --border:          #d1d5e8;
-  --border-hover:    #b0b7d1;
+  --border:          #e8d0d4;
+  --border-hover:    #d4b0b7;
 
   /* 텍스트 */
-  --text:            #1a1f3e;
+  --text:            #1e1a1b;
   --text-muted:      #6b7280;
   --text-faint:      #9ca3af;
 
   /* 강조색 */
-  --accent:          #4f6ef7;
-  --accent-hover:    #6b83ff;
-  --accent-glow:     rgba(79, 110, 247, 0.08);
+  --accent:          #be0039;
+  --accent-hover:    #d4004a;
+  --accent-glow:     rgba(190, 0, 57, 0.08);
 
   /* 시맨틱 컬러 */
   --success:         #10b981;
@@ -136,7 +136,7 @@
   --hdr:         var(--surface-2);
   --row1:        var(--surface);
   --row2:        var(--surface-2);
-  --row-hl:      #dde7ff;
+  --row-hl:      #fde8ec;
 
   /* HPLC/DSC 앱 변수명 */
   --ink:         var(--text);
@@ -283,7 +283,7 @@ html, body {
 .tab-btn.active {
   background: var(--portal-accent-glow);
   color: var(--portal-accent-hover);
-  border-color: rgba(79, 110, 247, 0.35);
+  border-color: rgba(190, 0, 57, 0.35);
 }
 
 .tab-badge {
@@ -481,7 +481,7 @@ html, body {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(79, 110, 247, 0.35);
+  box-shadow: 0 4px 14px rgba(190, 0, 57, 0.35);
 }
 
 /* Secondary — 테두리 + 서피스 배경 */
@@ -718,7 +718,7 @@ html, body {
 .badge-primary {
   background: var(--accent-glow);
   color: var(--accent-hover);
-  border-color: rgba(79, 110, 247, 0.30);
+  border-color: rgba(190, 0, 57, 0.30);
 }
 .badge-success {
   background: var(--success-bg);
