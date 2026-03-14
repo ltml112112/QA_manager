@@ -150,8 +150,8 @@ const apps = [
   --portal-border:       #d1d5e8;   /* 사이드바 구분선 */
   --portal-text:         #1a1f3e;   /* 사이드바 텍스트 */
   --portal-text-muted:   #6b7280;   /* 사이드바 보조 텍스트 */
-  --portal-accent:       #4f6ef7;   /* 활성 탭 강조색 */
-  --portal-accent-hover: #6b83ff;   /* 활성 탭 hover */
+  --portal-accent:       #be0039;   /* 활성 탭 강조색 */
+  --portal-accent-hover: #d4004a;   /* 활성 탭 hover */
   --portal-success:      #10b981;   /* 가동 중 상태 점 */
   --portal-danger:       #ef4444;   /* 오류 상태 */
   --portal-warning:      #f59e0b;   /* 경고 상태 */
@@ -182,8 +182,8 @@ const apps = [
   --text:         #1a1f3e;          /* 본문 텍스트 */
   --text-muted:   #6b7280;          /* 보조 텍스트 */
   --text-faint:   #9ca3af;          /* 희미한 텍스트 (placeholder 등) */
-  --accent:       #4f6ef7;          /* 강조색 (버튼·링크) */
-  --accent-hover: #6b83ff;          /* 강조색 hover */
+  --accent:       #be0039;          /* 강조색 (버튼·링크) */
+  --accent-hover: #d4004a;          /* 강조색 hover */
   --success:      #10b981;          /* 성공 */
   --danger:       #ef4444;          /* 오류·삭제 */
   --warning:      #f59e0b;          /* 경고 */
