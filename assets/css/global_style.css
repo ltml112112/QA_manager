@@ -685,7 +685,7 @@ html, body {
 }
 
 /* 셀 색상 코딩 (IVL 분석 결과) */
-.data-table td.cell-ok       { color: var(--accent); }
+.data-table td.cell-ok       { color: #1d6fd6; }
 .data-table td.cell-ng       { color: var(--danger); }
 .data-table td.cell-excellent { color: var(--color-excellent); }
 .data-table td.cell-success  { color: var(--success); }
