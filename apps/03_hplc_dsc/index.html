@@ -859,8 +859,11 @@ async function processHplcPage(pageNum, scale) {
     ctx.restore();
   }
 
+  const peakSum = highPeaks.reduce((s, p) => s + p.areaPct, 0);
+  const rawChart = cropB64(cvs, ...cropBox.chart);
+  const chartB64 = highPeaks.length > 0 ? await addSumBoxToChart(rawChart, peakSum) : rawChart;
   return {
-    chartB64: cropB64(cvs, ...cropBox.chart),
+    chartB64,
     tableB64: cropB64(cvs, ...cropBox.table),
     chartNatW: cropBox.chart[2], chartNatH: cropBox.chart[3],
     tableNatW: cropBox.table[2], tableNatH: cropBox.table[3],
@@ -952,9 +955,12 @@ btnPrev.addEventListener('click', async () => {
         }
         cctx.restore();
       }
+      const prevSum = highPeaks.reduce((s, pk) => s + pk.areaPct, 0);
+      const rawPrevChart = cropB64(cvsClean, ...crop.chart);
+      const prevChartB64 = highPeaks.length > 0 ? await addSumBoxToChart(rawPrevChart, prevSum) : rawPrevChart;
       hplcCrops.push({
         pageNum: p,
-        chartB64: cropB64(cvsClean, ...crop.chart),
+        chartB64: prevChartB64,
         tableB64: cropB64(cvsClean, ...crop.table),
         chartNatW: crop.chart[2], chartNatH: crop.chart[3],
         tableNatW: crop.table[2], tableNatH: crop.table[3],
@@ -1113,6 +1119,41 @@ function drawB64(ctx, b64, x, y, w, h) {
     img.onload = () => { ctx.drawImage(img, x, y, w, h); resolve(); };
     img.onerror = resolve;
     img.src = b64;
+  });
+}
+
+async function addSumBoxToChart(chartB64, sumValue) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const cvs = document.createElement('canvas');
+      cvs.width = img.width; cvs.height = img.height;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      const text = sumValue.toFixed(3) + '%';
+      const fontSize = Math.max(10, Math.round(cvs.width * 0.022));
+      ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+      const tw = ctx.measureText(text).width;
+      const px = Math.round(fontSize * 0.5), py = Math.round(fontSize * 0.35);
+      const bw = tw + px * 2, bh = fontSize + py * 2;
+      const margin = Math.max(8, Math.round(cvs.width * 0.018));
+      const bx = cvs.width - bw - margin, by = margin;
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(1, Math.round(cvs.width * 0.002));
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeRect(bx, by, bw, bh);
+
+      ctx.fillStyle = '#000000';
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, bx + px, by + py);
+
+      resolve(cvs.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(chartB64);
+    img.src = chartB64;
   });
 }
 
