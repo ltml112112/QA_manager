@@ -861,9 +861,9 @@ async function processHplcPage(pageNum, scale) {
 
   const peakSum = highPeaks.reduce((s, p) => s + p.areaPct, 0);
   const rawChart = cropB64(cvs, ...cropBox.chart);
-  const chartB64 = highPeaks.length > 0 ? await addSumBoxToChart(rawChart, peakSum) : rawChart;
   return {
-    chartB64,
+    chartB64: rawChart,
+    peakSum: highPeaks.length > 0 ? peakSum : null,
     tableB64: cropB64(cvs, ...cropBox.table),
     chartNatW: cropBox.chart[2], chartNatH: cropBox.chart[3],
     tableNatW: cropBox.table[2], tableNatH: cropBox.table[3],
@@ -1193,12 +1193,20 @@ async function buildPptx() {
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
       if (lbl1) slide.addText(lbl1, { x: offX1, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
       slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
+      if (r1.peakSum !== null) {
+        const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
+        slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX1 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+      }
       slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: zPW * (r1.tableNatH/r1.tableNatW) });
 
       const offX2 = PW + (PW - zPW) / 2;
       const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
       if (lbl2) slide.addText(lbl2, { x: offX2, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
       slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
+      if (r2.peakSum !== null) {
+        const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
+        slide.addText(r2.peakSum.toFixed(3) + '%', { x: offX2 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+      }
       slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: zPW * (r2.tableNatH/r2.tableNatW) });
 
       // 가운데 구분선 (세로 점선)
@@ -1216,6 +1224,10 @@ async function buildPptx() {
       if (lbl1) slide.addText(lbl1, { x: offX, y: offY, w: zW, h: TXT, fontSize: 9, color: '333333', valign: 'middle', margin: [0,6,0,6] });
       const chartH = (zH - TXT) * 0.48;
       slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
+      if (r1.peakSum !== null) {
+        const tbW = 0.65, tbH = 0.22, tbMargin = 0.05;
+        slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+      }
       slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
     }
     done++; setProgress(done/totalWork*100, `HPLC 처리 중...`);
