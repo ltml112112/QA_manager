@@ -1007,6 +1007,14 @@ btnPrev.addEventListener('click', async () => {
   const dscZoom  = os.dscZoom / 100;
   let slideIdx = 0;
 
+  // 미리보기용 헤더 띠 그리기 헬퍼
+  function drawBandOnCanvas(ctx, sw, sh) {
+    const bh = Math.round(sh * (1.3 / 2.54 / 5.625));
+    const g = ctx.createLinearGradient(0, 0, sw, 0);
+    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, sw, bh);
+  }
+
   // HPLC 슬라이드
   for (let i = 0; i < hplcCrops.length; i += pairMode) {
     const r1 = hplcCrops[i];
@@ -1018,6 +1026,7 @@ btnPrev.addEventListener('click', async () => {
     const ctx = cvs.getContext('2d');
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, SW, SH);
+    drawBandOnCanvas(ctx, SW, SH);
 
     if (r2) {
       // 2-page layout
@@ -1077,6 +1086,7 @@ btnPrev.addEventListener('click', async () => {
     const ctx = cvs.getContext('2d');
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, SW, SH);
+    drawBandOnCanvas(ctx, SW, SH);
 
     const imgRatio = dsc.cropH / dsc.cropW;
     const targetW = SW * dscZoom;
@@ -1168,6 +1178,18 @@ async function buildPptx() {
   const dscPages  = pageMap.filter(p => p.type === 'dsc').map(p => p.pageNum);
 
   const W = 10, H = 5.625;
+  const BAND_H = 1.3 / 2.54; // 1.3cm → inches
+
+  // 그라데이션 띠 이미지 생성 (PptxGenJS는 shape gradient 미지원 → canvas PNG로 대체)
+  const bandDataUrl = (() => {
+    const c = document.createElement('canvas'); c.width = 1000; c.height = 20;
+    const cx = c.getContext('2d');
+    const g = cx.createLinearGradient(0, 0, 1000, 0);
+    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    cx.fillStyle = g; cx.fillRect(0, 0, 1000, 20);
+    return c.toDataURL('image/png');
+  })();
+
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
 
@@ -1182,6 +1204,7 @@ async function buildPptx() {
 
     const slide = pres.addSlide();
     slide.background = { color: 'FFFFFF' };
+    slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
 
     if (r2) {
       // 2-page layout with zoom
@@ -1240,6 +1263,7 @@ async function buildPptx() {
     const dscData = await processDscPage(dscPages[i], scale);
     const slide = pres.addSlide();
     slide.background = { color: 'FFFFFF' };
+    slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
 
     const imgRatio = dscData.cropH / dscData.cropW;
     const targetW = W * dscZoom;
