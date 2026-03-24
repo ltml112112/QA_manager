@@ -1032,6 +1032,23 @@ btnPrev.addEventListener('click', async () => {
       ctx.stroke();
       ctx.restore();
 
+      // 직사각형 박스 — 헤더 아래 영역 정중앙, 24×12cm (캔버스 px 변환)
+      // 슬라이드 가로 25.4cm 기준: SW px = 25.4cm
+      const pxPerCm = SW / 25.4;
+      const rectPxW = 24 * pxPerCm;
+      const rectPxH = 12 * pxPerCm;
+      const bandPxH = Math.round(SH * (1.3 / 2.54 / 5.625)); // 헤더 띠 높이
+      const rectAreaTopPx = bandPxH;
+      const rectAreaHPx = SH - bandPxH;
+      const rectPxX = (SW - rectPxW) / 2;
+      const rectPxY = rectAreaTopPx + (rectAreaHPx - rectPxH) / 2;
+      ctx.save();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      ctx.strokeRect(rectPxX, rectPxY, rectPxW, rectPxH);
+      ctx.restore();
+
     } else {
       const TXT = 28;
       const zW = SW * hplcZoom, zH = SH * hplcZoom;
@@ -1197,7 +1214,7 @@ async function buildPptx() {
       });
       slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r1.peakSum !== null) {
-        const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
+        const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
         slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX1 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
       }
       const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
@@ -1212,7 +1229,7 @@ async function buildPptx() {
       });
       slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r2.peakSum !== null) {
-        const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
+        const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
         slide.addText(r2.peakSum.toFixed(3) + '%', { x: offX2 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
       }
       const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
@@ -1224,6 +1241,19 @@ async function buildPptx() {
       slide.addShape(pres.ShapeType.line, {
         x: W/2, y: lineTop, w: 0, h: lineBot - lineTop,
         line: { color: 'CCCCCC', width: 0.75, dashType: 'dash' }
+      });
+
+      // 직사각형 박스 — 헤더 아래 영역 정중앙, 24×12cm, 채우기 없음, 검정 1pt
+      const RECT_W = 24 / 2.54; // 24cm → inch
+      const RECT_H = 12 / 2.54; // 12cm → inch
+      const rectAreaTop = BAND_H; // 헤더 띠 아래부터
+      const rectAreaH   = H - BAND_H;
+      const rectX = (W - RECT_W) / 2;
+      const rectY = rectAreaTop + (rectAreaH - RECT_H) / 2;
+      slide.addShape(pres.ShapeType.rect, {
+        x: rectX, y: rectY, w: RECT_W, h: RECT_H,
+        fill: { type: 'none' },
+        line: { color: '000000', width: 1 }
       });
 
     } else {
@@ -1241,7 +1271,7 @@ async function buildPptx() {
       const chartH = (zH - TXT) * 0.48;
       slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
       if (r1.peakSum !== null) {
-        const tbW = 0.65, tbH = 0.22, tbMargin = 0.05;
+        const tbW = 1.5 / 2.54, tbH = 0.22, tbMargin = 0.05;
         slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
       }
       slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
