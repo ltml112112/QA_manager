@@ -1021,7 +1021,7 @@ btnPrev.addEventListener('click', async () => {
   // ★ 수정 4: PPT 이미지 위치 5cm(약 1.9685 inch) 아래로
   // 16:9 슬라이드 기준 SW=960, SH=540 → 5cm/14.288cm(슬라이드 높이) = 약 0.35 비율
   // 5cm를 픽셀로: 5/14.2875 * SH = ~189.5px → IMAGE_Y_OFFSET
-  const IMAGE_Y_OFFSET_PX = Math.round(5 / 14.2875 * SH); // ~190px
+  const IMAGE_Y_OFFSET_PX = Math.round(1 / 14.2875 * SH); // ~190px
 
   // HPLC 슬라이드
   for (let i = 0; i < hplcCrops.length; i += pairMode) {
@@ -1079,8 +1079,8 @@ btnPrev.addEventListener('click', async () => {
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      ctx.moveTo(SW / 2, 8);
-      ctx.lineTo(SW / 2, SH - 8);
+      ctx.moveTo(SW / 2, 8 + 57);
+      ctx.lineTo(SW / 2, SH - 8 - 57);
       ctx.stroke();
       ctx.restore();
     } else {
@@ -1285,7 +1285,7 @@ async function buildPptx() {
 
       // 가운데 구분선 (세로 점선)
       slide.addShape(pres.ShapeType.line, {
-        x: W/2, y: 0.1, w: 0, h: H - 0.2,
+        x: W/2, y: 1.28, w: 0, h: H - 2.56
         line: { color: 'CCCCCC', width: 0.75, dashType: 'dash' }
       });
     } else {
