@@ -305,7 +305,7 @@ h1 em { color:var(--accent); font-style:normal; }
   <div class="left-panel">
     <div class="site-header">
       <h1>HPLC/DSC<br><em>분석결과 Report 자동화</em></h1>
-      <div class="header-version">v5.0 Desktop Pro · 슬라이더 크롭 + PPT 미리보기</div>
+      <div class="header-version">v5.1 Desktop Pro · 슬라이더 크롭 + PPT 미리보기</div>
     </div>
 
     <!-- STEP 1 -->
@@ -385,10 +385,11 @@ h1 em { color:var(--accent); font-style:normal; }
               <span class="slider-val" id="valHcTop">0</span>
               <span class="slider-unit">px</span>
             </div>
+            <!-- ★ 수정 1: HPLC 차트 크롭 하 기본값 -150 → -130 -->
             <div class="slider-row">
               <span class="slider-label">하</span>
-              <input type="range" class="slider-input" id="cfgHcBot" min="-450" max="150" value="-150" step="5">
-              <span class="slider-val" id="valHcBot">-150</span>
+              <input type="range" class="slider-input" id="cfgHcBot" min="-450" max="150" value="-130" step="5">
+              <span class="slider-val" id="valHcBot">-130</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
@@ -472,10 +473,11 @@ h1 em { color:var(--accent); font-style:normal; }
           <div class="slider-section-title">
             <span class="slider-icon">📈</span> HPLC 배율
           </div>
+          <!-- ★ 수정 2: HPLC 배율 기본값 65 → 80 -->
           <div class="slider-row">
             <span class="slider-label"></span>
-            <input type="range" class="slider-input" id="cfgHplcZoom" min="15" max="115" value="65" step="5">
-            <span class="slider-val" id="valHplcZoom">65</span>
+            <input type="range" class="slider-input" id="cfgHplcZoom" min="15" max="115" value="80" step="5">
+            <span class="slider-val" id="valHplcZoom">80</span>
             <span class="slider-unit">%</span>
           </div>
         </div>
@@ -1007,13 +1009,19 @@ btnPrev.addEventListener('click', async () => {
   const dscZoom  = os.dscZoom / 100;
   let slideIdx = 0;
 
-  // 미리보기용 헤더 띠 그리기 헬퍼
+  // ★ 수정 3: 헤더 띠 그라데이션 스타트 색 → RGB(192,0,0) = #C00000
   function drawBandOnCanvas(ctx, sw, sh) {
     const bh = Math.round(sh * (1.3 / 2.54 / 5.625));
     const g = ctx.createLinearGradient(0, 0, sw, 0);
-    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    g.addColorStop(0, '#C00000');
+    g.addColorStop(1, '#FFFFFF');
     ctx.fillStyle = g; ctx.fillRect(0, 0, sw, bh);
   }
+
+  // ★ 수정 4: PPT 이미지 위치 5cm(약 1.9685 inch) 아래로
+  // 16:9 슬라이드 기준 SW=960, SH=540 → 5cm/14.288cm(슬라이드 높이) = 약 0.35 비율
+  // 5cm를 픽셀로: 5/14.2875 * SH = ~189.5px → IMAGE_Y_OFFSET
+  const IMAGE_Y_OFFSET_PX = Math.round(5 / 14.2875 * SH); // ~190px
 
   // HPLC 슬라이드
   for (let i = 0; i < hplcCrops.length; i += pairMode) {
@@ -1030,13 +1038,23 @@ btnPrev.addEventListener('click', async () => {
 
     if (r2) {
       // 2-page layout
-      const PW = SW / 2, PH = SH / 2, TXT = 16;
+      const PW = SW / 2, PH = SH / 2;
+      // ★ 수정 5: Sample Info 오른쪽 정렬, 폰트 14px 굵게 (미리보기 캔버스 기준 ~10px)
+      const TXT = 22; // 텍스트 영역 높이 (px)
       const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
-      const offX1 = (PW - zPW) / 2, offY = (SH - (TXT + zPH * 2)) / 2;
+      const offX1 = (PW - zPW) / 2;
+      // ★ 수정 4: offY에 IMAGE_Y_OFFSET_PX 추가
+      const offY = (SH - (TXT + zPH * 2)) / 2 + IMAGE_Y_OFFSET_PX;
 
-      // Left side
+      // Left side — ★ 오른쪽 정렬, 굵게, 14px(미리보기에서는 ~10px)
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) { ctx.font = '9px sans-serif'; ctx.fillStyle = '#333'; ctx.fillText(lbl1, offX1 + 4, offY + TXT - 4, zPW); }
+      if (lbl1) {
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl1, offX1 + zPW - 4, offY + TXT - 6, zPW);
+        ctx.textAlign = 'left'; // 리셋
+      }
       await drawB64(ctx, r1.chartB64, offX1, offY + TXT, zPW, zPH - TXT);
       const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
       await drawB64(ctx, r1.tableB64, offX1, offY + zPH, zPW, tblH1);
@@ -1044,7 +1062,13 @@ btnPrev.addEventListener('click', async () => {
       // Right side
       const offX2 = PW + (PW - zPW) / 2;
       const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl2) { ctx.fillStyle = '#333'; ctx.fillText(lbl2, offX2 + 4, offY + TXT - 4, zPW); }
+      if (lbl2) {
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl2, offX2 + zPW - 4, offY + TXT - 6, zPW);
+        ctx.textAlign = 'left'; // 리셋
+      }
       await drawB64(ctx, r2.chartB64, offX2, offY + TXT, zPW, zPH - TXT);
       const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
       await drawB64(ctx, r2.tableB64, offX2, offY + zPH, zPW, tblH2);
@@ -1061,11 +1085,19 @@ btnPrev.addEventListener('click', async () => {
       ctx.restore();
     } else {
       // 1-page layout
-      const TXT = 22;
+      const TXT = 28;
       const zW = SW * hplcZoom, zH = SH * hplcZoom;
-      const offX = (SW - zW) / 2, offY = (SH - zH) / 2;
+      const offX = (SW - zW) / 2;
+      // ★ 수정 4: offY에 IMAGE_Y_OFFSET_PX 추가
+      const offY = (SH - zH) / 2 + IMAGE_Y_OFFSET_PX;
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#333'; ctx.fillText(lbl1, offX + 6, offY + TXT - 6, zW); }
+      if (lbl1) {
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl1, offX + zW - 6, offY + TXT - 8, zW);
+        ctx.textAlign = 'left'; // 리셋
+      }
       const chartH = (zH - TXT) * 0.48;
       await drawB64(ctx, r1.chartB64, offX, offY + TXT, zW, chartH);
       const tblH = zW * (r1.tableNatH / r1.tableNatW);
@@ -1168,6 +1200,11 @@ async function addSumBoxToChart(chartB64, sumValue) {
 }
 
 // ── PPTX 빌드 및 실행 버튼
+// ★ 수정 3: 헤더 띠 색상 #BE0039 → #C00000 (RGB 192,0,0)
+// ★ 수정 4: PPT 이미지 오프셋 5cm → 약 1.9685 inch
+// ★ 수정 5: Sample Info 오른쪽 정렬, fontSize:14, bold:true
+const PPT_Y_OFFSET_INCH = 5 / 2.54; // 5cm → inch ≈ 1.9685
+
 async function buildPptx() {
   const scale = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
@@ -1180,12 +1217,13 @@ async function buildPptx() {
   const W = 10, H = 5.625;
   const BAND_H = 1.3 / 2.54; // 1.3cm → inches
 
-  // 그라데이션 띠 이미지 생성 (PptxGenJS는 shape gradient 미지원 → canvas PNG로 대체)
+  // ★ 수정 3: 그라데이션 띠 스타트 색 → #C00000 (RGB 192,0,0)
   const bandDataUrl = (() => {
     const c = document.createElement('canvas'); c.width = 1000; c.height = 20;
     const cx = c.getContext('2d');
     const g = cx.createLinearGradient(0, 0, 1000, 0);
-    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    g.addColorStop(0, '#C00000');
+    g.addColorStop(1, '#FFFFFF');
     cx.fillStyle = g; cx.fillRect(0, 0, 1000, 20);
     return c.toDataURL('image/png');
   })();
@@ -1211,10 +1249,17 @@ async function buildPptx() {
       const PW = W/2, PH = H/2, TXT = 0.28;
       const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
       const offX1 = (PW - zPW) / 2;
-      const offY  = (H - (TXT + zPH * 2)) / 2;
+      // ★ 수정 4: PPT Y 오프셋 +5cm
+      const offY  = (H - (TXT + zPH * 2)) / 2 + PPT_Y_OFFSET_INCH;
 
+      // Left: ★ 수정 5 — 오른쪽 정렬, fontSize 14, bold
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, { x: offX1, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      if (lbl1) slide.addText(lbl1, {
+        x: offX1, y: offY, w: zPW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle',
+        margin: [0, 4, 0, 4]
+      });
       slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r1.peakSum !== null) {
         const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
@@ -1223,8 +1268,14 @@ async function buildPptx() {
       slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: zPW * (r1.tableNatH/r1.tableNatW) });
 
       const offX2 = PW + (PW - zPW) / 2;
+      // Right: ★ 수정 5 — 오른쪽 정렬, fontSize 14, bold
       const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl2) slide.addText(lbl2, { x: offX2, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      if (lbl2) slide.addText(lbl2, {
+        x: offX2, y: offY, w: zPW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle',
+        margin: [0, 4, 0, 4]
+      });
       slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r2.peakSum !== null) {
         const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
@@ -1241,10 +1292,18 @@ async function buildPptx() {
       // 1-page layout with zoom
       const TXT = 0.35;
       const zW = W * hplcZoom, zH = H * hplcZoom;
-      const offX = (W - zW) / 2, offY = (H - zH) / 2;
+      const offX = (W - zW) / 2;
+      // ★ 수정 4: PPT Y 오프셋 +5cm
+      const offY = (H - zH) / 2 + PPT_Y_OFFSET_INCH;
 
+      // ★ 수정 5 — 오른쪽 정렬, fontSize 14, bold
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, { x: offX, y: offY, w: zW, h: TXT, fontSize: 9, color: '333333', valign: 'middle', margin: [0,6,0,6] });
+      if (lbl1) slide.addText(lbl1, {
+        x: offX, y: offY, w: zW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle',
+        margin: [0, 6, 0, 6]
+      });
       const chartH = (zH - TXT) * 0.48;
       slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
       if (r1.peakSum !== null) {
