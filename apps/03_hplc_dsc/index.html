@@ -1203,7 +1203,7 @@ async function addSumBoxToChart(chartB64, sumValue) {
 // ★ 수정 3: 헤더 띠 색상 #BE0039 → #C00000 (RGB 192,0,0)
 // ★ 수정 4: PPT 이미지 오프셋 5cm → 약 1.9685 inch
 // ★ 수정 5: Sample Info 오른쪽 정렬, fontSize:14, bold:true
-const PPT_Y_OFFSET_INCH = 3 / 2.54; // 5cm → inch ≈ 1.9685
+const PPT_Y_OFFSET_INCH = 1 / 2.54; // 5cm → inch ≈ 1.9685
 
 async function buildPptx() {
   const scale = parseInt(document.getElementById('cfgScale').value);
