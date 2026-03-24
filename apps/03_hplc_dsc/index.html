@@ -972,11 +972,29 @@ btnPrev.addEventListener('click', async () => {
     ctx.fillStyle = g; ctx.fillRect(0, 0, sw, bh);
   }
 
-  // HPLC 슬라이드
+  // ── 미리보기: PDF 원본 순서대로 슬라이드 생성
+  // HPLC를 pairMode씩 묶어 그룹화
+  const prevHplcGroups = [];
   for (let i = 0; i < hplcCrops.length; i += pairMode) {
-    const r1 = hplcCrops[i];
-    const r2 = (pairMode === 2 && i+1 < hplcCrops.length) ? hplcCrops[i+1] : null;
+    prevHplcGroups.push({
+      type: 'hplc',
+      r1: hplcCrops[i],
+      r2: (pairMode === 2 && i+1 < hplcCrops.length) ? hplcCrops[i+1] : null,
+      repPage: hplcCrops[i].pageNum
+    });
+  }
+  const prevDscItems = dscCrops.map(d => ({ type: 'dsc', dsc: d, repPage: d.pageNum }));
+  const prevQueue = [...prevHplcGroups, ...prevDscItems].sort((a, b) => a.repPage - b.repPage);
 
+  // 직사각형 박스 px 계산 (2페이지 배치용)
+  const pxPerCm = SW / 25.4;
+  const rectPxW = 24 * pxPerCm;
+  const rectPxH = 12 * pxPerCm;
+  const bandPxH = Math.round(SH * (1.3 / 2.54 / 5.625));
+  const rectPxX = (SW - rectPxW) / 2;
+  const rectPxY = bandPxH + ((SH - bandPxH) - rectPxH) / 2;
+
+  for (const item of prevQueue) {
     const cvs = document.createElement('canvas');
     cvs.width = SW; cvs.height = SH;
     cvs.className = 'ppt-slide-canvas';
@@ -985,114 +1003,96 @@ btnPrev.addEventListener('click', async () => {
     ctx.fillRect(0, 0, SW, SH);
     drawBandOnCanvas(ctx, SW, SH);
 
-    if (r2) {
-      const PW = SW / 2;
-      const TXT = 22;
-      const zPW = PW * hplcZoom, zPH = (SH / 2) * hplcZoom;
-      const offX1 = (PW - zPW) / 2;
-      const offY = (SH - (TXT + zPH * 2)) / 2 + IMAGE_Y_OFFSET_PX;
+    if (item.type === 'hplc') {
+      const { r1, r2 } = item;
+      if (r2) {
+        const PW = SW / 2;
+        const TXT = 22;
+        const zPW = PW * hplcZoom, zPH = (SH / 2) * hplcZoom;
+        const offX1 = (PW - zPW) / 2;
+        const offY = (SH - (TXT + zPH * 2)) / 2 + IMAGE_Y_OFFSET_PX;
 
-      // Left
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) {
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = '#333333';
-        ctx.textAlign = 'right';
-        ctx.fillText(lbl1, offX1 + zPW - 4, offY + TXT - 6, zPW);
-        ctx.textAlign = 'left';
+        // Left
+        const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
+        if (lbl1) {
+          ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#333333';
+          ctx.textAlign = 'right';
+          ctx.fillText(lbl1, offX1 + zPW - 4, offY + TXT - 6, zPW);
+          ctx.textAlign = 'left';
+        }
+        await drawB64(ctx, r1.chartB64, offX1, offY + TXT, zPW, zPH - TXT);
+        const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
+        await drawB64(ctx, r1.tableB64, offX1, offY + zPH, zPW, tblH1);
+
+        // Right
+        const offX2 = PW + (PW - zPW) / 2;
+        const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join(' | ');
+        if (lbl2) {
+          ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#333333';
+          ctx.textAlign = 'right';
+          ctx.fillText(lbl2, offX2 + zPW - 4, offY + TXT - 6, zPW);
+          ctx.textAlign = 'left';
+        }
+        await drawB64(ctx, r2.chartB64, offX2, offY + TXT, zPW, zPH - TXT);
+        const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
+        await drawB64(ctx, r2.tableB64, offX2, offY + zPH, zPW, tblH2);
+
+        // 가운데 점선
+        const lineTop = offY;
+        const lineBot = offY + zPH + Math.max(tblH1, tblH2);
+        ctx.save();
+        ctx.strokeStyle = '#CCCCCC'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(SW / 2, lineTop); ctx.lineTo(SW / 2, lineBot); ctx.stroke();
+        ctx.restore();
+
+        // 직사각형 박스 (2페이지 배치에만)
+        ctx.save();
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 1; ctx.setLineDash([]);
+        ctx.strokeRect(rectPxX, rectPxY, rectPxW, rectPxH);
+        ctx.restore();
+
+        slideIdx++;
+        appendPptSlide(cvs, slideIdx, `HPLC p${r1.pageNum} + p${r2.pageNum}`);
+      } else {
+        const TXT = 28;
+        const zW = SW * hplcZoom, zH = SH * hplcZoom;
+        const offX = (SW - zW) / 2;
+        const offY = (SH - zH) / 2 + IMAGE_Y_OFFSET_PX;
+        const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
+        if (lbl1) {
+          ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#333333';
+          ctx.textAlign = 'right';
+          ctx.fillText(lbl1, offX + zW - 6, offY + TXT - 8, zW);
+          ctx.textAlign = 'left';
+        }
+        const chartH = (zH - TXT) * 0.48;
+        await drawB64(ctx, r1.chartB64, offX, offY + TXT, zW, chartH);
+        const tblH = zW * (r1.tableNatH / r1.tableNatW);
+        await drawB64(ctx, r1.tableB64, offX, offY + TXT + chartH, zW, tblH);
+
+        slideIdx++;
+        appendPptSlide(cvs, slideIdx, `HPLC p${r1.pageNum}`);
       }
-      await drawB64(ctx, r1.chartB64, offX1, offY + TXT, zPW, zPH - TXT);
-      const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
-      await drawB64(ctx, r1.tableB64, offX1, offY + zPH, zPW, tblH1);
-
-      // Right
-      const offX2 = PW + (PW - zPW) / 2;
-      const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl2) {
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillStyle = '#333333';
-        ctx.textAlign = 'right';
-        ctx.fillText(lbl2, offX2 + zPW - 4, offY + TXT - 6, zPW);
-        ctx.textAlign = 'left';
-      }
-      await drawB64(ctx, r2.chartB64, offX2, offY + TXT, zPW, zPH - TXT);
-      const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
-      await drawB64(ctx, r2.tableB64, offX2, offY + zPH, zPW, tblH2);
-
-      // 가운데 점선 — 콘텐츠 높이에 맞게 자동 계산
-      const lineTop = offY;
-      const lineBot = offY + zPH + Math.max(tblH1, tblH2);
-      ctx.save();
-      ctx.strokeStyle = '#CCCCCC';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 3]);
-      ctx.beginPath();
-      ctx.moveTo(SW / 2, lineTop);
-      ctx.lineTo(SW / 2, lineBot);
-      ctx.stroke();
-      ctx.restore();
-
-      // 직사각형 박스 — 헤더 아래 영역 정중앙, 24×12cm (캔버스 px 변환)
-      // 슬라이드 가로 25.4cm 기준: SW px = 25.4cm
-      const pxPerCm = SW / 25.4;
-      const rectPxW = 24 * pxPerCm;
-      const rectPxH = 12 * pxPerCm;
-      const bandPxH = Math.round(SH * (1.3 / 2.54 / 5.625)); // 헤더 띠 높이
-      const rectAreaTopPx = bandPxH;
-      const rectAreaHPx = SH - bandPxH;
-      const rectPxX = (SW - rectPxW) / 2;
-      const rectPxY = rectAreaTopPx + (rectAreaHPx - rectPxH) / 2;
-      ctx.save();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([]);
-      ctx.strokeRect(rectPxX, rectPxY, rectPxW, rectPxH);
-      ctx.restore();
-
     } else {
-      const TXT = 28;
-      const zW = SW * hplcZoom, zH = SH * hplcZoom;
-      const offX = (SW - zW) / 2;
-      const offY = (SH - zH) / 2 + IMAGE_Y_OFFSET_PX;
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) {
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillStyle = '#333333';
-        ctx.textAlign = 'right';
-        ctx.fillText(lbl1, offX + zW - 6, offY + TXT - 8, zW);
-        ctx.textAlign = 'left';
-      }
-      const chartH = (zH - TXT) * 0.48;
-      await drawB64(ctx, r1.chartB64, offX, offY + TXT, zW, chartH);
-      const tblH = zW * (r1.tableNatH / r1.tableNatW);
-      await drawB64(ctx, r1.tableB64, offX, offY + TXT + chartH, zW, tblH);
+      // DSC 슬라이드
+      const { dsc } = item;
+      const imgRatio = dsc.cropH / dsc.cropW;
+      const targetW = SW * dscZoom;
+      const targetH = targetW * imgRatio;
+      const targetX = (SW - targetW) / 2;
+      const targetY = (SH - targetH) / 2;
+      await drawB64(ctx, dsc.data, targetX, targetY, targetW, targetH);
+
+      // DSC 이미지 테두리 (검정, 0.75pt 비례)
+      ctx.save();
+      ctx.strokeStyle = '#000000'; ctx.lineWidth = 0.75; ctx.setLineDash([]);
+      ctx.strokeRect(targetX, targetY, targetW, targetH);
+      ctx.restore();
+
+      slideIdx++;
+      appendPptSlide(cvs, slideIdx, `DSC p${dsc.pageNum}`);
     }
 
-    slideIdx++;
-    const pages = r2 ? `p${r1.pageNum} + p${r2.pageNum}` : `p${r1.pageNum}`;
-    appendPptSlide(cvs, slideIdx, `HPLC ${pages}`);
-    await new Promise(r => setTimeout(r, 0));
-  }
-
-  // DSC 슬라이드
-  for (const dsc of dscCrops) {
-    const cvs = document.createElement('canvas');
-    cvs.width = SW; cvs.height = SH;
-    cvs.className = 'ppt-slide-canvas';
-    const ctx = cvs.getContext('2d');
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, SW, SH);
-    drawBandOnCanvas(ctx, SW, SH);
-
-    const imgRatio = dsc.cropH / dsc.cropW;
-    const targetW = SW * dscZoom;
-    const targetH = targetW * imgRatio;
-    const targetX = (SW - targetW) / 2;
-    const targetY = (SH - targetH) / 2;
-    await drawB64(ctx, dsc.data, targetX, targetY, targetW, targetH);
-
-    slideIdx++;
-    appendPptSlide(cvs, slideIdx, `DSC p${dsc.pageNum}`);
     await new Promise(r => setTimeout(r, 0));
   }
 
@@ -1187,116 +1187,149 @@ async function buildPptx() {
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_16x9';
 
+  // ── 직사각형 박스 공통 상수 (2페이지 배치용)
+  const RECT_W = 24 / 2.54;
+  const RECT_H = 12 / 2.54;
+  const rectAreaTop = BAND_H;
+  const rectAreaH   = H - BAND_H;
+  const rectX = (W - RECT_W) / 2;
+  const rectY = rectAreaTop + (rectAreaH - RECT_H) / 2;
+
+  // ── 페이지 순서대로 처리하기 위해 pageMap 순서 기반으로 슬라이드 생성
+  // HPLC는 pairMode에 따라 묶음 처리, DSC는 1장씩 — 원본 순서 유지
   const totalWork = Math.ceil(hplcPages.length / pairMode) + dscPages.length;
   let done = 0;
 
-  addLog('info', `HPLC 처리 중...`);
+  // HPLC 페이지를 pairMode씩 묶은 그룹 목록 (순서 보존)
+  const hplcGroups = [];
   for (let i = 0; i < hplcPages.length; i += pairMode) {
-    const p1 = hplcPages[i], p2 = (pairMode === 2 && i+1 < hplcPages.length) ? hplcPages[i+1] : null;
-    const r1 = await processHplcPage(p1, scale);
-    const r2 = p2 ? await processHplcPage(p2, scale) : null;
-
-    const slide = pres.addSlide();
-    slide.background = { color: 'FFFFFF' };
-    slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
-
-    if (r2) {
-      const PW = W/2, PH = H/2, TXT = 0.28;
-      const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
-      const offX1 = (PW - zPW) / 2;
-      const offY  = (H - (TXT + zPH * 2)) / 2 + PPT_Y_OFFSET_INCH;
-
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, {
-        x: offX1, y: offY, w: zPW, h: TXT,
-        fontSize: 14, bold: true, color: '333333',
-        align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
-      });
-      slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
-      if (r1.peakSum !== null) {
-        const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
-        slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX1 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
-      }
-      const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
-      slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: tblH1 });
-
-      const offX2 = PW + (PW - zPW) / 2;
-      const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl2) slide.addText(lbl2, {
-        x: offX2, y: offY, w: zPW, h: TXT,
-        fontSize: 14, bold: true, color: '333333',
-        align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
-      });
-      slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
-      if (r2.peakSum !== null) {
-        const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
-        slide.addText(r2.peakSum.toFixed(3) + '%', { x: offX2 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
-      }
-      const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
-      slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: tblH2 });
-
-      // 가운데 점선 — 콘텐츠 높이에 맞게 자동 계산 (inch)
-      const lineTop = offY;
-      const lineBot = offY + zPH + Math.max(tblH1, tblH2);
-      slide.addShape(pres.ShapeType.line, {
-        x: W/2, y: lineTop, w: 0, h: lineBot - lineTop,
-        line: { color: 'CCCCCC', width: 0.75, dashType: 'dash' }
-      });
-
-      // 직사각형 박스 — 헤더 아래 영역 정중앙, 24×12cm, 채우기 없음, 검정 1pt
-      const RECT_W = 24 / 2.54; // 24cm → inch
-      const RECT_H = 12 / 2.54; // 12cm → inch
-      const rectAreaTop = BAND_H; // 헤더 띠 아래부터
-      const rectAreaH   = H - BAND_H;
-      const rectX = (W - RECT_W) / 2;
-      const rectY = rectAreaTop + (rectAreaH - RECT_H) / 2;
-      slide.addShape(pres.ShapeType.rect, {
-        x: rectX, y: rectY, w: RECT_W, h: RECT_H,
-        fill: { type: 'none' },
-        line: { color: '000000', width: 1 }
-      });
-
-    } else {
-      const TXT = 0.35;
-      const zW = W * hplcZoom, zH = H * hplcZoom;
-      const offX = (W - zW) / 2;
-      const offY = (H - zH) / 2 + PPT_Y_OFFSET_INCH;
-
-      const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, {
-        x: offX, y: offY, w: zW, h: TXT,
-        fontSize: 14, bold: true, color: '333333',
-        align: 'right', valign: 'middle', margin: [0, 6, 0, 6]
-      });
-      const chartH = (zH - TXT) * 0.48;
-      slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
-      if (r1.peakSum !== null) {
-        const tbW = 1.5 / 2.54, tbH = 0.22, tbMargin = 0.05;
-        slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
-      }
-      slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
-    }
-    done++; setProgress(done/totalWork*100, `HPLC 처리 중...`);
-    addLog('ok', `HPLC p${p1}${p2?' + p'+p2:''}`);
-    await new Promise(r => setTimeout(r, 0));
+    hplcGroups.push({
+      p1: hplcPages[i],
+      p2: (pairMode === 2 && i + 1 < hplcPages.length) ? hplcPages[i + 1] : null,
+      // 그룹의 대표 페이지 번호 = 첫 번째 페이지
+      repPage: hplcPages[i]
+    });
   }
 
-  addLog('info', `DSC 처리 중...`);
-  for (let i = 0; i < dscPages.length; i++) {
-    const dscData = await processDscPage(dscPages[i], scale);
-    const slide = pres.addSlide();
-    slide.background = { color: 'FFFFFF' };
-    slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
+  // DSC 페이지 목록
+  const dscList = dscPages.map(p => ({ p, repPage: p }));
 
-    const imgRatio = dscData.cropH / dscData.cropW;
-    const targetW = W * dscZoom;
-    const targetH = targetW * imgRatio;
-    const targetX = (W - targetW) / 2;
-    const targetY = (H - targetH) / 2;
-    slide.addImage({ data: dscData.data, x: targetX, y: targetY, w: targetW, h: targetH });
+  // 원본 PDF 순서대로 슬라이드 순서 결정
+  // hplcGroups와 dscList를 repPage 기준으로 합쳐서 정렬
+  const slideQueue = [
+    ...hplcGroups.map(g => ({ type: 'hplc', ...g })),
+    ...dscList.map(d => ({ type: 'dsc', ...d }))
+  ].sort((a, b) => a.repPage - b.repPage);
 
-    done++; setProgress(done/totalWork*100, `DSC 처리 중...`);
-    addLog('ok', `DSC p${dscPages[i]}`);
+  for (const item of slideQueue) {
+    if (item.type === 'hplc') {
+      const { p1, p2 } = item;
+      const r1 = await processHplcPage(p1, scale);
+      const r2 = p2 ? await processHplcPage(p2, scale) : null;
+
+      const slide = pres.addSlide();
+      slide.background = { color: 'FFFFFF' };
+      slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
+
+      if (r2) {
+        const PW = W/2, PH = H/2, TXT = 0.28;
+        const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
+        const offX1 = (PW - zPW) / 2;
+        const offY  = (H - (TXT + zPH * 2)) / 2 + PPT_Y_OFFSET_INCH;
+
+        const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
+        if (lbl1) slide.addText(lbl1, {
+          x: offX1, y: offY, w: zPW, h: TXT,
+          fontSize: 14, bold: true, color: '333333',
+          align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
+        });
+        slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
+        if (r1.peakSum !== null) {
+          const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
+          slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX1 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+        }
+        const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
+        slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: tblH1 });
+
+        const offX2 = PW + (PW - zPW) / 2;
+        const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
+        if (lbl2) slide.addText(lbl2, {
+          x: offX2, y: offY, w: zPW, h: TXT,
+          fontSize: 14, bold: true, color: '333333',
+          align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
+        });
+        slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
+        if (r2.peakSum !== null) {
+          const tbW = 1.5 / 2.54, tbH = 0.18, tbMargin = 0.04;
+          slide.addText(r2.peakSum.toFixed(3) + '%', { x: offX2 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+        }
+        const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
+        slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: tblH2 });
+
+        // 가운데 점선
+        const lineTop = offY;
+        const lineBot = offY + zPH + Math.max(tblH1, tblH2);
+        slide.addShape(pres.ShapeType.line, {
+          x: W/2, y: lineTop, w: 0, h: lineBot - lineTop,
+          line: { color: 'CCCCCC', width: 0.75, dashType: 'dash' }
+        });
+
+        // 직사각형 박스 (2페이지 배치에만)
+        slide.addShape(pres.ShapeType.rect, {
+          x: rectX, y: rectY, w: RECT_W, h: RECT_H,
+          fill: { type: 'none' },
+          line: { color: '000000', width: 1 }
+        });
+
+      } else {
+        // 1페이지 배치 — 박스 없음
+        const TXT = 0.35;
+        const zW = W * hplcZoom, zH = H * hplcZoom;
+        const offX = (W - zW) / 2;
+        const offY = (H - zH) / 2 + PPT_Y_OFFSET_INCH;
+
+        const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
+        if (lbl1) slide.addText(lbl1, {
+          x: offX, y: offY, w: zW, h: TXT,
+          fontSize: 14, bold: true, color: '333333',
+          align: 'right', valign: 'middle', margin: [0, 6, 0, 6]
+        });
+        const chartH = (zH - TXT) * 0.48;
+        slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
+        if (r1.peakSum !== null) {
+          const tbW = 1.5 / 2.54, tbH = 0.22, tbMargin = 0.05;
+          slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
+        }
+        slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
+      }
+
+      done++; setProgress(done/totalWork*100, `HPLC 처리 중... p${p1}`);
+      addLog('ok', `HPLC p${p1}${p2?' + p'+p2:''}`);
+
+    } else {
+      // DSC 슬라이드
+      const dscData = await processDscPage(item.p, scale);
+      const slide = pres.addSlide();
+      slide.background = { color: 'FFFFFF' };
+      slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
+
+      const imgRatio = dscData.cropH / dscData.cropW;
+      const targetW = W * dscZoom;
+      const targetH = targetW * imgRatio;
+      const targetX = (W - targetW) / 2;
+      const targetY = (H - targetH) / 2;
+
+      // DSC 이미지 — 테두리 검정 0.75pt (3/4pt)
+      slide.addImage({
+        data: dscData.data,
+        x: targetX, y: targetY, w: targetW, h: targetH,
+        line: { color: '000000', width: 0.75 }
+      });
+
+      done++; setProgress(done/totalWork*100, `DSC 처리 중... p${item.p}`);
+      addLog('ok', `DSC p${item.p}`);
+    }
+
     await new Promise(r => setTimeout(r, 0));
   }
 
