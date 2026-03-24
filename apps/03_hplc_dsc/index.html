@@ -28,7 +28,6 @@ function loadPptxFallback() {
 <style>
 body{height:100vh;overflow:hidden;}
 
-/* 레이아웃 분할 */
 .app-container {
   display:flex;
   height:100vh;
@@ -56,27 +55,23 @@ body{height:100vh;overflow:hidden;}
 .left-panel::-webkit-scrollbar, .right-section-content::-webkit-scrollbar { width:6px; }
 .left-panel::-webkit-scrollbar-thumb, .right-section-content::-webkit-scrollbar-thumb { background:var(--line); border-radius:3px; }
 
-/* 헤더 */
 .site-header { margin-bottom:40px; }
 h1 { font-size:32px; line-height:1.1; font-weight:900; margin-bottom:8px; }
 h1 em { color:var(--accent); font-style:normal; }
 .header-version { font-family:var(--mono); font-size:11px; color:var(--ink2); border:1px solid var(--line); border-radius:4px; padding:4px 10px; background:var(--surface); display:inline-block;}
 
-/* 스텝 */
 .step{margin-bottom:32px}
 .step-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .step-num{font-size:32px;font-weight:900;color:var(--accent);line-height:1;border-right:2px solid var(--line);padding-right:12px}
 .step-title{font-weight:700;font-size:16px;color:var(--ink)}
 .step-desc{font-size:12px;color:var(--ink2);margin-top:2px}
 
-/* 드롭존 */
 .dz-icon{font-size:34px;display:block;margin-bottom:12px;opacity:.5}
 .dz-main{font-weight:700;font-size:14px;margin-bottom:4px}
 .dz-sub{font-size:11px;color:var(--ink2)}
 .dz-sub b{color:var(--ink)}
 #fileInput{display:none}
 
-/* 파일 바 */
 .file-bar{display:none;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:8px;padding:12px 16px;background:var(--surface);margin-top:10px}
 .file-bar.show{display:flex}
 .fb-icon{font-size:20px}
@@ -86,7 +81,6 @@ h1 em { color:var(--accent); font-style:normal; }
 .fb-remove{background:none;border:1.5px solid var(--line);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--ink2);cursor:pointer;font-family:var(--mono);transition:all .15s;flex-shrink:0;}
 .fb-remove:hover{border-color:var(--red);color:var(--red)}
 
-/* 설정 박스 */
 .config-box{border:1.5px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden;margin-bottom:12px;}
 .config-row{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
 .config-row:last-child{border-bottom:none}
@@ -97,15 +91,9 @@ h1 em { color:var(--accent); font-style:normal; }
 .cfg input:focus,.cfg select:focus{border-bottom-color:var(--accent)}
 .cfg select option{background:var(--panel);color:var(--ink)}
 
-/* 오프셋(여백) 조절 UI */
-.offset-wrap { display:flex; gap:8px; align-items:center; }
-.offset-group { display:flex; flex:1; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:2px 6px; }
-.offset-lbl { font-size:10px; color:var(--ink2); margin-right:4px; font-family:var(--mono); }
-.offset-group input[type="number"] { width:100%; min-width:30px; background:transparent; border:none; color:var(--ink); font-family:var(--mono); font-size:12px; text-align:center; outline:none; }
 .cfg-header { padding:10px 16px; border-bottom:1px solid var(--line); font-size:11px; color:var(--ink); font-weight:700; background:rgba(255,255,255,0.03); display:flex; justify-content:space-between; align-items:center; }
 .cfg-desc { font-weight:normal; font-size:10px; color:var(--ink2); font-family:var(--mono); }
 
-/* ── 슬라이더 컨트롤 ── */
 .slider-section { padding:10px 20px 10px 16px; border-bottom:1px solid var(--line); }
 .slider-section:last-child { border-bottom:none; }
 .slider-section-title {
@@ -153,31 +141,24 @@ h1 em { color:var(--accent); font-style:normal; }
   display:grid; grid-template-columns:1fr 1fr; gap:4px 16px;
 }
 
-/* 버튼 */
 .action-row{display:flex;gap:10px;margin-top:20px}
 .btn{flex:1;padding:16px 20px;font-size:14px;}
-/* 크롭 미리보기 - 활성(파란색) */
 .btn-crop{background:var(--accent);color:#fff}
 .btn-crop:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
 .btn-crop:disabled{opacity:.4;cursor:not-allowed;transform:none}
-/* 크롭 미리보기 - 완료(아웃라인) */
 .btn-crop-done{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
 .btn-crop-done:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
 .btn-crop-done:disabled{opacity:.4;cursor:not-allowed}
-/* 분석 Report - 대기(아웃라인/흐림) */
 .btn-report-dim{background:transparent;color:var(--ink2);border:1.5px solid var(--line)}
 .btn-report-dim:disabled{opacity:.4;cursor:not-allowed}
-/* 분석 Report - 활성(파란색) */
 .btn-report{background:var(--accent);color:#fff}
 .btn-report:hover:not(:disabled){background:#6b83ff;transform:translateY(-2px);box-shadow:0 4px 16px rgba(79,110,247,.35)}
 .btn-report:disabled{opacity:.4;cursor:not-allowed;transform:none}
 
-/* 스피너 */
 .spin{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:rot .55s linear infinite;display:none}
 .spin.on{display:block}
 @keyframes rot{to{transform:rotate(360deg)}}
 
-/* 진행 및 로그 */
 .progress-wrap{display:none;margin-top:14px}
 .progress-wrap.show{display:block}
 .prog-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink2);margin-bottom:6px}
@@ -197,7 +178,6 @@ h1 em { color:var(--accent); font-style:normal; }
 .ll.err{color:var(--red)}
 .ll.info{color:var(--accent)}
 
-/* 결과 표시바 */
 .result-bar{display:none;margin-top:18px;border:2.5px solid var(--green);border-radius:8px;padding:20px;background:rgba(52,211,153,.06);animation:slideUp .35s ease}
 .result-bar.show{display:flex;align-items:center;gap:14px}
 @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -209,7 +189,6 @@ h1 em { color:var(--accent); font-style:normal; }
 .divider{height:1px;background:var(--line);margin:32px 0}
 .note{font-size:11px;color:var(--ink2);font-family:var(--mono);background:rgba(79,110,247,.06);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-top:10px;line-height:1.5}
 
-/* 오른쪽 프리뷰 영역 — 상하 2분할 */
 .right-section {
   flex:1;
   display:flex;
@@ -246,7 +225,6 @@ h1 em { color:var(--accent); font-style:normal; }
   min-height:0;
 }
 
-/* 4열 그리드 - 크롭 미리보기 */
 .thumb-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:20px; align-items:start;}
 .thumb-grid:empty::before {
   content:'왼쪽 창에서 PDF를 업로드하고 [크롭 미리보기]를 실행하세요.';
@@ -265,7 +243,6 @@ h1 em { color:var(--accent); font-style:normal; }
 .thumb-type.dsc{background:#7c3aed}
 .thumb-type.hplc{background:#34d399; color:#0d1117;}
 
-/* PPT 미리보기 */
 .ppt-preview-grid {
   display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; align-items:start;
 }
@@ -301,14 +278,12 @@ h1 em { color:var(--accent); font-style:normal; }
 
 <div class="app-container">
 
-  <!-- 왼쪽 설정 패널 -->
   <div class="left-panel">
     <div class="site-header">
       <h1>HPLC/DSC<br><em>분석결과 Report 자동화</em></h1>
-      <div class="header-version">v5.0 Desktop Pro · 슬라이더 크롭 + PPT 미리보기</div>
+      <div class="header-version">v5.1 Desktop Pro · 슬라이더 크롭 + PPT 미리보기</div>
     </div>
 
-    <!-- STEP 1 -->
     <div class="step">
       <div class="step-head">
         <div class="step-num">01</div>
@@ -336,7 +311,6 @@ h1 em { color:var(--accent); font-style:normal; }
       </div>
     </div>
 
-    <!-- STEP 2 -->
     <div class="step">
       <div class="step-head">
         <div class="step-num">02</div>
@@ -366,14 +340,12 @@ h1 em { color:var(--accent); font-style:normal; }
         </div>
       </div>
 
-      <!-- 크롭 영역 슬라이더 UI -->
       <div class="config-box">
         <div class="cfg-header">
           <span>크롭 영역 미세조정 (슬라이더)</span>
           <span class="cfg-desc">드래그하여 조절</span>
         </div>
 
-        <!-- HPLC 차트 -->
         <div class="slider-section">
           <div class="slider-section-title">
             <span class="slider-icon">📈</span> HPLC 차트 크롭
@@ -387,8 +359,8 @@ h1 em { color:var(--accent); font-style:normal; }
             </div>
             <div class="slider-row">
               <span class="slider-label">하</span>
-              <input type="range" class="slider-input" id="cfgHcBot" min="-450" max="150" value="-150" step="5">
-              <span class="slider-val" id="valHcBot">-150</span>
+              <input type="range" class="slider-input" id="cfgHcBot" min="-450" max="150" value="-130" step="5">
+              <span class="slider-val" id="valHcBot">-130</span>
               <span class="slider-unit">px</span>
             </div>
             <div class="slider-row">
@@ -406,7 +378,6 @@ h1 em { color:var(--accent); font-style:normal; }
           </div>
         </div>
 
-        <!-- HPLC Peak Table -->
         <div class="slider-section">
           <div class="slider-section-title">
             <span class="slider-icon">📊</span> HPLC Peak Table 크롭
@@ -439,7 +410,6 @@ h1 em { color:var(--accent); font-style:normal; }
           </div>
         </div>
 
-        <!-- DSC -->
         <div class="slider-section">
           <div class="slider-section-title">
             <span class="slider-icon">🌡️</span> DSC 박스 크롭
@@ -461,7 +431,6 @@ h1 em { color:var(--accent); font-style:normal; }
         </div>
       </div>
 
-      <!-- 슬라이드 배율 조절 -->
       <div class="config-box">
         <div class="cfg-header">
           <span>슬라이드 내 배율 조절</span>
@@ -474,8 +443,8 @@ h1 em { color:var(--accent); font-style:normal; }
           </div>
           <div class="slider-row">
             <span class="slider-label"></span>
-            <input type="range" class="slider-input" id="cfgHplcZoom" min="15" max="115" value="65" step="5">
-            <span class="slider-val" id="valHplcZoom">65</span>
+            <input type="range" class="slider-input" id="cfgHplcZoom" min="15" max="115" value="80" step="5">
+            <span class="slider-val" id="valHplcZoom">80</span>
             <span class="slider-unit">%</span>
           </div>
         </div>
@@ -496,7 +465,6 @@ h1 em { color:var(--accent); font-style:normal; }
       <div class="note">슬라이더 변경 후 <b>[크롭 미리보기]</b>를 다시 누르면 오른쪽 화면에 즉시 반영됩니다.</div>
     </div>
 
-    <!-- STEP 3 -->
     <div class="step">
       <div class="step-head">
         <div class="step-num">03</div>
@@ -542,9 +510,7 @@ h1 em { color:var(--accent); font-style:normal; }
     </div>
   </div>
 
-  <!-- 오른쪽 미리보기 패널 -->
   <div class="right-panel">
-    <!-- 크롭 미리보기 섹션 -->
     <div class="right-section">
       <div class="right-section-header">
         <div class="right-section-title">
@@ -556,7 +522,6 @@ h1 em { color:var(--accent); font-style:normal; }
         <div class="thumb-grid" id="thumbGrid"></div>
       </div>
     </div>
-    <!-- PPT 미리보기 섹션 -->
     <div class="right-section">
       <div class="right-section-header">
         <div class="right-section-title">
@@ -572,16 +537,13 @@ h1 em { color:var(--accent); font-style:normal; }
 </div>
 
 <script>
-// ── PDF.js 워커
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── 상태 변수
 let pdfDoc     = null;
 let pdfFile    = null;
 let resultBlob = null;
 let pageMap    = [];
 
-// ── DOM 요소
 const dropzone   = document.getElementById('dropzone');
 const fileInput  = document.getElementById('fileInput');
 const fileBar    = document.getElementById('fileBar');
@@ -608,7 +570,6 @@ const thumbGrid  = document.getElementById('thumbGrid');
 const pptGrid    = document.getElementById('pptGrid');
 const prevStatus = document.getElementById('prevStatus');
 
-// ── 슬라이더 양방향 바인딩
 document.querySelectorAll('.slider-input').forEach(slider => {
   const valEl = document.getElementById('val' + slider.id.replace('cfg', ''));
   if (!valEl) return;
@@ -617,8 +578,6 @@ document.querySelectorAll('.slider-input').forEach(slider => {
   update();
 });
 
-
-// ── 드롭존 이벤트
 dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('active'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'));
 dropzone.addEventListener('drop', e => {
@@ -705,7 +664,6 @@ function setProgress(pct, label) {
   if (label !== undefined) progLabel.textContent = label;
 }
 
-// ── 유틸리티 및 오프셋 가져오기
 function getOffsets() {
   return {
     hcTop:   parseInt(document.getElementById('cfgHcTop').value) || 0,
@@ -773,7 +731,6 @@ async function buildPageMap() {
   return map;
 }
 
-// ── HPLC 크롭 연산
 async function extractHplcMeta(page) {
   const tc    = await page.getTextContent();
   const vp    = page.getViewport({ scale: 1 });
@@ -820,7 +777,6 @@ async function extractHplcMeta(page) {
 function computeHplcCropBox(meta, W, H, scale) {
   const os = getOffsets();
 
-  // 차트 영역 (상하 + 좌우 오프셋 적용)
   const chartTop = (meta.addInfoPdfY !== null ? pdf2cvsY(meta.addInfoPdfY, meta.pageH, scale) + 14 * scale : 640/2526 * H) + (os.hcTop * scale);
   const chartBot = (meta.peakHeaderPdfY !== null ? pdf2cvsY(meta.peakHeaderPdfY, meta.pageH, scale) - 30 * scale : 1310/2526 * H) + (os.hcBot * scale);
   const chartX = (18 + os.hcLeft) * scale;
@@ -828,7 +784,6 @@ function computeHplcCropBox(meta, W, H, scale) {
   const chartW = Math.max(10, W - chartX - chartR);
   const chartH = Math.max(10, chartBot - chartTop);
 
-  // 테이블 영역 (상하 + 좌우 오프셋 적용)
   const tableTop = (meta.peakHeaderPdfY !== null ? pdf2cvsY(meta.peakHeaderPdfY, meta.pageH, scale) - 8 * scale : 1360/2526 * H) + (os.htTop * scale);
   const tableBot = (meta.totalsPdfY !== null ? pdf2cvsY(meta.totalsPdfY, meta.pageH, scale) + (meta.rowH + 3) * scale : 2430/2526 * H) + (os.htBot * scale);
   const tableX = (18 + os.htLeft) * scale;
@@ -846,7 +801,6 @@ async function processHplcPage(pageNum, scale) {
   const meta = await extractHplcMeta(page);
   const cropBox = computeHplcCropBox(meta, cvs.width, cvs.height, scale);
 
-  // 빨간 박스
   const highPeaks = meta.peakRows.filter(p => p.areaPct >= 1);
   if (highPeaks.length > 0) {
     const rh = meta.rowH * scale, pad = rh * 0.15;
@@ -871,7 +825,6 @@ async function processHplcPage(pageNum, scale) {
   };
 }
 
-// ── DSC 크롭 연산
 async function computeDscCrop(page, scale) {
   const tc = await page.getTextContent();
   const vp = page.getViewport({ scale: 1 });
@@ -903,7 +856,14 @@ async function processDscPage(pageNum, scale) {
   };
 }
 
-// ── 미리보기 버튼 (크롭 미리보기 + PPT 미리보기 동시 생성)
+// ── 공통 상수
+// Y 오프셋: 미리보기(px)와 PPT(inch) 모두 이 cm 값 기준으로 계산
+const Y_OFFSET_CM = 1; // ← 이 값 하나만 바꾸면 미리보기+PPT 동시 적용
+const PPT_Y_OFFSET_INCH = Y_OFFSET_CM / 2.54;
+
+// 헤더 띠 색상 (RGB 192,0,0)
+const BAND_COLOR_START = '#C00000';
+
 btnPrev.addEventListener('click', async () => {
   if (!pdfDoc) return;
 
@@ -916,7 +876,6 @@ btnPrev.addEventListener('click', async () => {
   const pairMode = parseInt(document.getElementById('cfgPair').value);
   const os = getOffsets();
 
-  // 크롭 미리보기용 데이터 수집
   const hplcCrops = [];
   const dscCrops  = [];
 
@@ -926,7 +885,6 @@ btnPrev.addEventListener('click', async () => {
     const cvs = await renderPage(p, scale);
     const ctx = cvs.getContext('2d');
 
-    // 전체 어둡게 가림
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
@@ -940,10 +898,8 @@ btnPrev.addEventListener('click', async () => {
       ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3;
       ctx.strokeRect(...crop.chart); ctx.strokeRect(...crop.table);
 
-      // PPT 미리보기용 크롭 데이터 저장
       const cvsClean = await renderPage(p, scale);
       const cctx = cvsClean.getContext('2d');
-      // 빨간 박스
       const highPeaks = meta.peakRows.filter(pk => pk.areaPct >= 1);
       if (highPeaks.length > 0) {
         const rh = meta.rowH * scale, pad = rh * 0.15;
@@ -980,7 +936,6 @@ btnPrev.addEventListener('click', async () => {
       });
     }
 
-    // 크롭 미리보기 썸네일
     const item = document.createElement('div');
     item.className = 'thumb';
     const c2 = document.createElement('canvas');
@@ -1002,16 +957,18 @@ btnPrev.addEventListener('click', async () => {
   }
 
   // ── PPT 미리보기 생성
-  const SW = 960, SH = 540; // 16:9 캔버스 크기
+  const SW = 960, SH = 540;
   const hplcZoom = os.hplcZoom / 100;
   const dscZoom  = os.dscZoom / 100;
+  // Y 오프셋을 cm → 미리보기 px 변환 (슬라이드 높이 14.2875cm 기준)
+  const IMAGE_Y_OFFSET_PX = Math.round(Y_OFFSET_CM / 14.2875 * SH);
   let slideIdx = 0;
 
-  // 미리보기용 헤더 띠 그리기 헬퍼
   function drawBandOnCanvas(ctx, sw, sh) {
     const bh = Math.round(sh * (1.3 / 2.54 / 5.625));
     const g = ctx.createLinearGradient(0, 0, sw, 0);
-    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    g.addColorStop(0, BAND_COLOR_START);
+    g.addColorStop(1, '#FFFFFF');
     ctx.fillStyle = g; ctx.fillRect(0, 0, sw, bh);
   }
 
@@ -1029,43 +986,65 @@ btnPrev.addEventListener('click', async () => {
     drawBandOnCanvas(ctx, SW, SH);
 
     if (r2) {
-      // 2-page layout
-      const PW = SW / 2, PH = SH / 2, TXT = 16;
-      const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
-      const offX1 = (PW - zPW) / 2, offY = (SH - (TXT + zPH * 2)) / 2;
+      const PW = SW / 2;
+      const TXT = 22;
+      const zPW = PW * hplcZoom, zPH = (SH / 2) * hplcZoom;
+      const offX1 = (PW - zPW) / 2;
+      const offY = (SH - (TXT + zPH * 2)) / 2 + IMAGE_Y_OFFSET_PX;
 
-      // Left side
+      // Left
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) { ctx.font = '9px sans-serif'; ctx.fillStyle = '#333'; ctx.fillText(lbl1, offX1 + 4, offY + TXT - 4, zPW); }
+      if (lbl1) {
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl1, offX1 + zPW - 4, offY + TXT - 6, zPW);
+        ctx.textAlign = 'left';
+      }
       await drawB64(ctx, r1.chartB64, offX1, offY + TXT, zPW, zPH - TXT);
       const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
       await drawB64(ctx, r1.tableB64, offX1, offY + zPH, zPW, tblH1);
 
-      // Right side
+      // Right
       const offX2 = PW + (PW - zPW) / 2;
       const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl2) { ctx.fillStyle = '#333'; ctx.fillText(lbl2, offX2 + 4, offY + TXT - 4, zPW); }
+      if (lbl2) {
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl2, offX2 + zPW - 4, offY + TXT - 6, zPW);
+        ctx.textAlign = 'left';
+      }
       await drawB64(ctx, r2.chartB64, offX2, offY + TXT, zPW, zPH - TXT);
       const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
       await drawB64(ctx, r2.tableB64, offX2, offY + zPH, zPW, tblH2);
 
-      // 가운데 구분선
+      // 가운데 점선 — 콘텐츠 높이에 맞게 자동 계산
+      const lineTop = offY;
+      const lineBot = offY + zPH + Math.max(tblH1, tblH2);
       ctx.save();
       ctx.strokeStyle = '#CCCCCC';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      ctx.moveTo(SW / 2, 8);
-      ctx.lineTo(SW / 2, SH - 8);
+      ctx.moveTo(SW / 2, lineTop);
+      ctx.lineTo(SW / 2, lineBot);
       ctx.stroke();
       ctx.restore();
+
     } else {
-      // 1-page layout
-      const TXT = 22;
+      const TXT = 28;
       const zW = SW * hplcZoom, zH = SH * hplcZoom;
-      const offX = (SW - zW) / 2, offY = (SH - zH) / 2;
+      const offX = (SW - zW) / 2;
+      const offY = (SH - zH) / 2 + IMAGE_Y_OFFSET_PX;
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join(' | ');
-      if (lbl1) { ctx.font = '11px sans-serif'; ctx.fillStyle = '#333'; ctx.fillText(lbl1, offX + 6, offY + TXT - 6, zW); }
+      if (lbl1) {
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'right';
+        ctx.fillText(lbl1, offX + zW - 6, offY + TXT - 8, zW);
+        ctx.textAlign = 'left';
+      }
       const chartH = (zH - TXT) * 0.48;
       await drawB64(ctx, r1.chartB64, offX, offY + TXT, zW, chartH);
       const tblH = zW * (r1.tableNatH / r1.tableNatW);
@@ -1093,7 +1072,6 @@ btnPrev.addEventListener('click', async () => {
     const targetH = targetW * imgRatio;
     const targetX = (SW - targetW) / 2;
     const targetY = (SH - targetH) / 2;
-
     await drawB64(ctx, dsc.data, targetX, targetY, targetW, targetH);
 
     slideIdx++;
@@ -1167,7 +1145,6 @@ async function addSumBoxToChart(chartB64, sumValue) {
   });
 }
 
-// ── PPTX 빌드 및 실행 버튼
 async function buildPptx() {
   const scale = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
@@ -1178,14 +1155,14 @@ async function buildPptx() {
   const dscPages  = pageMap.filter(p => p.type === 'dsc').map(p => p.pageNum);
 
   const W = 10, H = 5.625;
-  const BAND_H = 1.3 / 2.54; // 1.3cm → inches
+  const BAND_H = 1.3 / 2.54;
 
-  // 그라데이션 띠 이미지 생성 (PptxGenJS는 shape gradient 미지원 → canvas PNG로 대체)
   const bandDataUrl = (() => {
     const c = document.createElement('canvas'); c.width = 1000; c.height = 20;
     const cx = c.getContext('2d');
     const g = cx.createLinearGradient(0, 0, 1000, 0);
-    g.addColorStop(0, '#BE0039'); g.addColorStop(1, '#FFFFFF');
+    g.addColorStop(0, BAND_COLOR_START);
+    g.addColorStop(1, '#FFFFFF');
     cx.fillStyle = g; cx.fillRect(0, 0, 1000, 20);
     return c.toDataURL('image/png');
   })();
@@ -1207,44 +1184,60 @@ async function buildPptx() {
     slide.addImage({ data: bandDataUrl, x: 0, y: 0, w: W, h: BAND_H });
 
     if (r2) {
-      // 2-page layout with zoom
       const PW = W/2, PH = H/2, TXT = 0.28;
       const zPW = PW * hplcZoom, zPH = PH * hplcZoom;
       const offX1 = (PW - zPW) / 2;
-      const offY  = (H - (TXT + zPH * 2)) / 2;
+      const offY  = (H - (TXT + zPH * 2)) / 2 + PPT_Y_OFFSET_INCH;
 
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, { x: offX1, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      if (lbl1) slide.addText(lbl1, {
+        x: offX1, y: offY, w: zPW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
+      });
       slide.addImage({ data: r1.chartB64, x: offX1, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r1.peakSum !== null) {
         const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
         slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX1 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
       }
-      slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: zPW * (r1.tableNatH/r1.tableNatW) });
+      const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
+      slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: tblH1 });
 
       const offX2 = PW + (PW - zPW) / 2;
       const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl2) slide.addText(lbl2, { x: offX2, y: offY, w: zPW, h: TXT, fontSize: 7, color: '333333', valign: 'middle', margin: [0,4,0,4] });
+      if (lbl2) slide.addText(lbl2, {
+        x: offX2, y: offY, w: zPW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle', margin: [0, 4, 0, 4]
+      });
       slide.addImage({ data: r2.chartB64, x: offX2, y: offY + TXT, w: zPW, h: zPH - TXT });
       if (r2.peakSum !== null) {
         const tbW = 0.55, tbH = 0.18, tbMargin = 0.04;
         slide.addText(r2.peakSum.toFixed(3) + '%', { x: offX2 + zPW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 7, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
       }
-      slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: zPW * (r2.tableNatH/r2.tableNatW) });
+      const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
+      slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: tblH2 });
 
-      // 가운데 구분선 (세로 점선)
+      // 가운데 점선 — 콘텐츠 높이에 맞게 자동 계산 (inch)
+      const lineTop = offY;
+      const lineBot = offY + zPH + Math.max(tblH1, tblH2);
       slide.addShape(pres.ShapeType.line, {
-        x: W/2, y: 0.1, w: 0, h: H - 0.2,
+        x: W/2, y: lineTop, w: 0, h: lineBot - lineTop,
         line: { color: 'CCCCCC', width: 0.75, dashType: 'dash' }
       });
+
     } else {
-      // 1-page layout with zoom
       const TXT = 0.35;
       const zW = W * hplcZoom, zH = H * hplcZoom;
-      const offX = (W - zW) / 2, offY = (H - zH) / 2;
+      const offX = (W - zW) / 2;
+      const offY = (H - zH) / 2 + PPT_Y_OFFSET_INCH;
 
       const lbl1 = [r1.sampleName, r1.sampleInfo].filter(Boolean).join('  |  ');
-      if (lbl1) slide.addText(lbl1, { x: offX, y: offY, w: zW, h: TXT, fontSize: 9, color: '333333', valign: 'middle', margin: [0,6,0,6] });
+      if (lbl1) slide.addText(lbl1, {
+        x: offX, y: offY, w: zW, h: TXT,
+        fontSize: 14, bold: true, color: '333333',
+        align: 'right', valign: 'middle', margin: [0, 6, 0, 6]
+      });
       const chartH = (zH - TXT) * 0.48;
       slide.addImage({ data: r1.chartB64, x: offX, y: offY + TXT, w: zW, h: chartH });
       if (r1.peakSum !== null) {
@@ -1270,7 +1263,6 @@ async function buildPptx() {
     const targetH = targetW * imgRatio;
     const targetX = (W - targetW) / 2;
     const targetY = (H - targetH) / 2;
-
     slide.addImage({ data: dscData.data, x: targetX, y: targetY, w: targetW, h: targetH });
 
     done++; setProgress(done/totalWork*100, `DSC 처리 중...`);
@@ -1299,7 +1291,6 @@ btnRun.addEventListener('click', async () => {
     const hc = pageMap.filter(p => p.type === 'hplc').length;
     const dc = pageMap.filter(p => p.type === 'dsc').length;
     const pm = parseInt(document.getElementById('cfgPair').value);
-
     resultSub.textContent = `총 슬라이드 ${Math.ceil(hc/pm) + dc}장 · ${(resultBlob.size/1024).toFixed(0)} KB`;
     resultBar.classList.add('show');
   } catch (err) {
@@ -1319,7 +1310,6 @@ btnDl.addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 });
 
-// ── 테마 동기화
 (function() {
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
