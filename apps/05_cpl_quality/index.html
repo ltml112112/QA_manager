@@ -516,8 +516,134 @@ function tryRenderAll() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 4: 흐름도 데이터 파싱 (다음 단계에서 구현)
+   Step 4: 흐름도 파서
    ══════════════════════════════════════════════════════════════ */
+
+/* 4-A / 4-B: 워크북 로드 + 단계 헤더 컬럼 위치 파악
+   행 0: "1단계" ~ "6단계" 헤더 → 각 단계의 시작 컬럼 인덱스 수집
+   반환: [{stageLabel, startCol}]
+*/
+function parseStageHeaders(rows) {
+  var stages = [];
+  var row0 = rows[0] || [];
+  for (var c = 0; c < row0.length; c++) {
+    var cell = String(row0[c] || '').trim();
+    if (cell.indexOf('단계') !== -1) {
+      stages.push({ stageLabel: cell, startCol: c });
+    }
+  }
+  return stages;
+}
+
+/* 4-C: 각 단계 내 서브컬럼 구조 파악
+   행 1: LOTNUM / 비고 / LOTNUM / 품목코드 / 품목명 / 투입량 등
+   단계 시작 컬럼부터 다음 단계 시작 전까지 스캔
+   반환: {lotNumCol, itemCodeCol, itemNameCol} (단계별 절대 컬럼 인덱스)
+*/
+function parseSubCols(rows, stages) {
+  var row1 = rows[1] || [];
+  var result = [];
+
+  stages.forEach(function(stg, idx) {
+    var endCol = idx + 1 < stages.length ? stages[idx + 1].startCol : row1.length;
+    var sub = { stageLabel: stg.stageLabel, lotNumCols: [], itemCodeCol: null, itemNameCol: null };
+
+    for (var c = stg.startCol; c < endCol; c++) {
+      var cell = String(row1[c] || '').trim().toUpperCase();
+      if (cell.indexOf('LOTNUM') !== -1 || cell.indexOf('LOT') !== -1) {
+        sub.lotNumCols.push(c);
+      } else if (cell.indexOf('품목코드') !== -1 || cell.indexOf('코드') !== -1) {
+        sub.itemCodeCol = c;
+      } else if (cell.indexOf('품목명') !== -1 || cell.indexOf('품명') !== -1) {
+        sub.itemNameCol = c;
+      }
+    }
+    result.push(sub);
+  });
+  return result;
+}
+
+/* 4-D / 4-E / 4-F: 데이터 행 순회 → 양방향 맵 + lotMeta 구축
+   흐름도 구조: 높은 단계(완제품) → 낮은 단계(원료) 방향으로 읽음
+   완제품 Lot = 가장 높은 단계(마지막)의 LOTNUM
+   원료 Lot   = 그보다 낮은 단계들의 LOTNUM
+*/
+function parseFlowRows(rows, subCols) {
+  var byOutput = {};  // 완제품Lot → [원료Lot, ...]
+  var byInput  = {};  // 원료Lot  → [완제품Lot, ...]
+  var lotMeta  = {};  // Lot → {itemCode, itemName}
+
+  for (var r = 2; r < rows.length; r++) {
+    var row = rows[r];
+
+    // 각 단계에서 Lot 번호 + 메타 추출
+    var stageLots = subCols.map(function(sub) {
+      // lotNumCols 중 값이 있는 첫 번째 사용
+      var lot = '';
+      for (var i = 0; i < sub.lotNumCols.length; i++) {
+        var v = String(row[sub.lotNumCols[i]] || '').trim();
+        if (v) { lot = v; break; }
+      }
+      var itemCode = sub.itemCodeCol !== null ? String(row[sub.itemCodeCol] || '').trim() : '';
+      var itemName = sub.itemNameCol !== null ? String(row[sub.itemNameCol] || '').trim() : '';
+      return { lot: lot, itemCode: itemCode, itemName: itemName };
+    });
+
+    // lotMeta 저장
+    stageLots.forEach(function(s) {
+      if (!s.lot) return;
+      if (!lotMeta[s.lot]) {
+        lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName };
+      }
+    });
+
+    // 관계 구축: 단계 순서상 앞(완제품) → 뒤(원료)
+    // 값이 있는 Lot 쌍끼리만 연결
+    var validLots = stageLots.map(function(s) { return s.lot; }).filter(Boolean);
+    if (validLots.length < 2) continue;
+
+    // 첫 번째 유효 Lot을 완제품, 나머지를 원료로 처리
+    // (흐름도가 완제품→원료 방향이므로 index 0이 완제품)
+    var outputLot = validLots[0];
+    for (var i = 1; i < validLots.length; i++) {
+      var inputLot = validLots[i];
+      if (!byOutput[outputLot]) byOutput[outputLot] = [];
+      if (byOutput[outputLot].indexOf(inputLot) === -1) byOutput[outputLot].push(inputLot);
+
+      if (!byInput[inputLot]) byInput[inputLot] = [];
+      if (byInput[inputLot].indexOf(outputLot) === -1) byInput[inputLot].push(outputLot);
+    }
+  }
+
+  return { byOutput: byOutput, byInput: byInput, lotMeta: lotMeta };
+}
+
+/* 4-G: 진입점 */
+function parseFlowData() {
+  var res  = getRows(STATE.flowWb);
+  var rows = res.rows;
+
+  var stages  = parseStageHeaders(rows);
+  var subCols = parseSubCols(rows, stages);
+  var maps    = parseFlowRows(rows, subCols);
+
+  STATE.byOutputLot = maps.byOutput;
+  STATE.byInputLot  = maps.byInput;
+  STATE.lotMeta     = maps.lotMeta;
+
+  var lotCount = Object.keys(maps.lotMeta).length;
+  var edgeCount = Object.keys(maps.byOutput).reduce(function(s, k) {
+    return s + maps.byOutput[k].length;
+  }, 0);
+  console.log('[흐름도파서] Lot 수:', lotCount, '| 관계 수:', edgeCount,
+              '| 단계:', stages.map(function(s){return s.stageLabel;}).join(', '));
+}
+
+/* 4-G: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
+function onFlowReady() {
+  parseFlowData();
+  tryRenderAll();
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 5: Lot 사이드바 + 검색 (다음 단계에서 구현)
