@@ -58,9 +58,40 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
-/* ── Mermaid ── */
-.mermaid-container { min-height: 120px; overflow-x: auto; text-align: center; padding: 16px; }
-.mermaid-container svg { max-width: 100%; }
+/* ── Genealogy Flow Table ── */
+.genealogy-flow { position: relative; overflow-x: auto; padding: 16px; }
+.stage-columns { display: flex; align-items: flex-start; min-width: max-content; gap: 0; }
+.stage-col { min-width: 160px; flex-shrink: 0; }
+.stage-col-header {
+  background: var(--surface-2); padding: 7px 12px;
+  font-size: 0.75rem; font-weight: 600; text-align: center; color: var(--text-muted);
+  border: 1px solid var(--border); border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.stage-col-body {
+  border: 1px solid var(--border); padding: 8px;
+  display: flex; flex-direction: column; gap: 8px; min-height: 60px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+.lot-node {
+  background: var(--surface-2); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 10px;
+  font-size: 0.8rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  position: relative; z-index: 1;
+}
+.lot-node:hover { border-color: var(--border-hover); background: var(--surface); }
+.lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
+.lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
+.lot-node-name { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+.arrow-col {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  width: 44px; flex-shrink: 0; padding-top: 30px;
+  color: var(--text-muted); font-size: 1.1rem; user-select: none;
+}
+.genealogy-svg {
+  position: absolute; top: 0; left: 0;
+  pointer-events: none; overflow: visible;
+}
 
 /* ── Deep Dive ── */
 .deep-dive-panel { display: none; }
@@ -138,10 +169,10 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
       <div>품질 데이터와 흐름도 데이터를 업로드하면 분석이 시작됩니다.</div>
     </div>
 
-    <!-- Mermaid Diagram -->
+    <!-- Genealogy Flow -->
     <div class="card" id="flow-card" style="display:none;">
       <div class="card-header"><span>⛓</span> Lot Genealogy Flow</div>
-      <div class="mermaid-container" id="mermaid-viewer"></div>
+      <div id="mermaid-viewer"></div>
     </div>
 
     <!-- Batch Deep Dive -->
@@ -190,6 +221,7 @@ const STATE = {
   byOutputLot:    {},     // 완제품 → 원료 맵
   byInputLot:     {},     // 원료 → 완제품 맵
   lotMeta:        {},     // Lot → {itemCode, itemName}
+  stageLabels:    [],     // 흐름도 단계 라벨 [완제품측(idx0), ..., 원료측(idxN)]
   selectedLot:    null,
   selectedBatch:  null,
   traceDir:       'backward', // 'backward' | 'forward'
@@ -645,6 +677,7 @@ function parseFlowData() {
   STATE.byOutputLot = maps.byOutput;
   STATE.byInputLot  = maps.byInput;
   STATE.lotMeta     = maps.lotMeta;
+  STATE.stageLabels = subCols.map(function(sub) { return sub.stageLabel; });
 
   var lotCount = Object.keys(maps.lotMeta).length;
   var edgeCount = Object.keys(maps.byOutput).reduce(function(s, k) {
@@ -790,67 +823,247 @@ function collectRelatedLots(startLot, dir) {
   return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
 }
 
-/* 6-B / 6-C / 6-D: Mermaid 코드 빌드
-   노드 라벨: Lot명 + 품목명, 선택 Lot 노드 빨간 강조
+/* 6-B: 각 Lot에 컬럼 인덱스 할당 (BFS 기반)
+   원료 = 컬럼 0(왼쪽), 완제품 = 컬럼 N(오른쪽)
+   edges: { from: 완제품, to: 원료 }
 */
-function buildMermaidCode(nodes, edges, selectedLot) {
-  function nodeId(lot) {
-    return 'n_' + lot.replace(/[^a-zA-Z0-9가-힣]/g, '_');
-  }
-  function nodeLabel(lot) {
-    var meta = STATE.lotMeta[lot];
-    var name = meta && meta.itemName ? meta.itemName : '';
-    return (name ? lot + '\n' + name : lot).replace(/"/g, "'");
-  }
+function assignLotColumns(nodes, edges) {
+  /* 양방향 인접 맵 구성 */
+  var rightOf = {}; // lot → 완제품 방향 이웃
+  var leftOf  = {}; // lot → 원료 방향 이웃
 
-  var lines = ['flowchart TD'];
-
-  nodes.forEach(function(lot) {
-    lines.push('  ' + nodeId(lot) + '["' + nodeLabel(lot) + '"]');
+  edges.forEach(function(e) {
+    /* e.from=완제품, e.to=원료 → to가 from의 왼쪽 */
+    if (!rightOf[e.to])  rightOf[e.to]  = [];
+    if (!leftOf[e.from]) leftOf[e.from] = [];
+    rightOf[e.to].push(e.from);
+    leftOf[e.from].push(e.to);
   });
+
+  /* 순수 원료(왼쪽 이웃 없음)에서 BFS → 컬럼 0부터 오른쪽으로 증가 */
+  var col   = {};
+  var queue = [];
+
+  nodes.forEach(function(l) {
+    if (!leftOf[l] || leftOf[l].length === 0) {
+      col[l] = 0;
+      queue.push(l);
+    }
+  });
+  /* 고립 노드 fallback */
+  if (queue.length === 0) {
+    nodes.forEach(function(l) {
+      if (col[l] === undefined) { col[l] = 0; queue.push(l); }
+    });
+  }
+
+  while (queue.length) {
+    var cur = queue.shift();
+    (rightOf[cur] || []).forEach(function(r) {
+      var proposed = col[cur] + 1;
+      if (col[r] === undefined || col[r] < proposed) {
+        col[r] = proposed;
+        queue.push(r);
+      }
+    });
+  }
+
+  /* 미할당 노드 fallback */
+  nodes.forEach(function(l) {
+    if (col[l] === undefined) col[l] = 0;
+  });
+
+  return col;
+}
+
+/* 6-C: 단계 헤더 라벨 결정
+   stageLabels[0] = 완제품(오른쪽), stageLabels[N] = 원료(왼쪽)
+   컬럼 0 = 원료, 컬럼 numCols-1 = 완제품
+*/
+function getColumnLabel(colIdx, numCols) {
+  var labels = STATE.stageLabels;
+  if (labels && labels.length > 0) {
+    /* 원료측 = labels 마지막, 완제품측 = labels 처음 */
+    var labelIdx = (labels.length - 1) - colIdx;
+    if (labelIdx >= 0 && labelIdx < labels.length) return labels[labelIdx];
+  }
+  if (colIdx === 0)            return '원재료';
+  if (colIdx === numCols - 1)  return '완제품';
+  return '중간재 ' + colIdx + '단계';
+}
+
+/* 6-D: SVG 베지어 연결선 그리기 */
+function drawGenealogyConnections(wrap, edges, colMap) {
+  var wrapRect = wrap.getBoundingClientRect();
+
+  /* 각 lot-node 위치 수집 */
+  var pos = {};
+  wrap.querySelectorAll('.lot-node[data-lot]').forEach(function(el) {
+    var r = el.getBoundingClientRect();
+    pos[el.dataset.lot] = {
+      x: r.left - wrapRect.left + wrap.scrollLeft,
+      y: r.top  - wrapRect.top  + wrap.scrollTop,
+      w: r.width, h: r.height
+    };
+  });
+
+  var totalH = wrap.scrollHeight;
+  var totalW = wrap.scrollWidth;
+
+  var NS  = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(NS, 'svg');
+  svg.classList.add('genealogy-svg');
+  svg.setAttribute('width',  totalW);
+  svg.setAttribute('height', totalH);
+  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
+
+  /* arrowhead 마커 */
+  var defs   = document.createElementNS(NS, 'defs');
+  var marker = document.createElementNS(NS, 'marker');
+  marker.setAttribute('id', 'gn-arrow');
+  marker.setAttribute('markerWidth',  '8');
+  marker.setAttribute('markerHeight', '6');
+  marker.setAttribute('refX', '8');
+  marker.setAttribute('refY', '3');
+  marker.setAttribute('orient', 'auto');
+  var poly = document.createElementNS(NS, 'polygon');
+  poly.setAttribute('points', '0 0, 8 3, 0 6');
+  poly.setAttribute('fill', 'var(--border-hover)');
+  marker.appendChild(poly);
+  defs.appendChild(marker);
+  svg.appendChild(defs);
 
   var seen = new Set();
   edges.forEach(function(e) {
-    var key = e.from + '\u2192' + e.to;
+    /* e.from=완제품(오른쪽), e.to=원료(왼쪽)
+       선: 원료(to) 오른쪽 → 완제품(from) 왼쪽 */
+    var pFrom = pos[e.from];
+    var pTo   = pos[e.to];
+    if (!pFrom || !pTo) return;
+
+    var key = e.to + '→' + e.from;
     if (seen.has(key)) return;
     seen.add(key);
-    lines.push('  ' + nodeId(e.from) + ' --> ' + nodeId(e.to));
+
+    var x1 = pTo.x   + pTo.w;          // 원료 오른쪽 끝
+    var y1 = pTo.y   + pTo.h / 2;
+    var x2 = pFrom.x;                   // 완제품 왼쪽 끝
+    var y2 = pFrom.y + pFrom.h / 2;
+    var cx = (x1 + x2) / 2;
+
+    var path = document.createElementNS(NS, 'path');
+    path.setAttribute('d',
+      'M ' + x1 + ' ' + y1 +
+      ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2);
+    path.setAttribute('stroke',       'var(--border-hover)');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill',         'none');
+    path.setAttribute('marker-end',   'url(#gn-arrow)');
+    svg.appendChild(path);
   });
 
-  // 6-C: 선택 노드 강조
-  lines.push('  style ' + nodeId(selectedLot) +
-    ' fill:#ef4444,color:#fff,stroke:#c00,stroke-width:2px');
-
-  return lines.join('\n');
+  wrap.appendChild(svg);
 }
 
-/* 6-E: 렌더링 → SVG 삽입 */
+/* 6-E: 계보도 테이블 렌더링 (Mermaid 대체) */
 function renderGenealogy(lot) {
   var flowCard  = document.getElementById('flow-card');
   var container = document.getElementById('mermaid-viewer');
 
   var result = collectRelatedLots(lot, STATE.traceDir);
-  var code   = buildMermaidCode(result.nodes, result.edges, lot);
+  var nodes  = Array.from(result.nodes);
+  var edges  = result.edges;
 
   flowCard.style.display = '';
   container.innerHTML    = '';
 
   if (result.truncated) {
     var warn = document.createElement('div');
-    warn.style.cssText = 'color:var(--warning);font-size:0.8rem;margin-bottom:8px;text-align:center;';
-    warn.textContent   = '\u26A0 노드가 50개를 초과하여 일부만 표시됩니다.';
+    warn.style.cssText = 'color:var(--warning);font-size:0.8rem;margin-bottom:8px;';
+    warn.textContent   = '⚠ 노드가 50개를 초과하여 일부만 표시됩니다.';
     container.appendChild(warn);
   }
 
-  var svgWrap = document.createElement('div');
-  container.appendChild(svgWrap);
+  if (nodes.length === 0) return;
 
-  mermaid.render('msg' + Date.now(), code).then(function(res) {
-    svgWrap.innerHTML = res.svg;
-  }).catch(function(err) {
-    svgWrap.innerHTML =
-      '<div style="color:var(--danger);padding:16px;">계보도 렌더링 오류: ' + err.message + '</div>';
+  /* 컬럼 할당 */
+  var colMap  = assignLotColumns(nodes, edges);
+  var numCols = Math.max.apply(null, nodes.map(function(l) { return colMap[l]; })) + 1;
+
+  /* 컬럼별 Lot 그룹화 */
+  var byCol = {};
+  for (var i = 0; i < numCols; i++) byCol[i] = [];
+  nodes.forEach(function(l) { byCol[colMap[l]].push(l); });
+
+  /* 래퍼 (SVG 오버레이 기준점) */
+  var wrap = document.createElement('div');
+  wrap.className = 'genealogy-flow';
+
+  /* 컬럼 행 */
+  var colsDiv = document.createElement('div');
+  colsDiv.className = 'stage-columns';
+
+  for (var c = 0; c < numCols; c++) {
+    /* 단계 컬럼 */
+    var stageDiv = document.createElement('div');
+    stageDiv.className   = 'stage-col';
+    stageDiv.dataset.col = c;
+
+    var hdr = document.createElement('div');
+    hdr.className   = 'stage-col-header';
+    hdr.textContent = getColumnLabel(c, numCols);
+    stageDiv.appendChild(hdr);
+
+    var body = document.createElement('div');
+    body.className = 'stage-col-body';
+
+    (byCol[c] || []).forEach(function(l) {
+      var meta = STATE.lotMeta[l] || {};
+      var node = document.createElement('div');
+      node.className    = 'lot-node' + (l === lot ? ' gn-selected' : '');
+      node.dataset.lot  = l;
+      node.innerHTML =
+        '<div class="lot-node-id">' + escHtml(l) + '</div>' +
+        (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '');
+      node.onclick = function() {
+        STATE.selectedLot = l;
+        document.querySelectorAll('.lot-item').forEach(function(el) {
+          el.classList.toggle('active', el.dataset.lot === l);
+        });
+        renderGenealogy(l);
+        if (typeof renderTrackingTable === 'function') renderTrackingTable(l);
+      };
+      body.appendChild(node);
+    });
+
+    stageDiv.appendChild(body);
+    colsDiv.appendChild(stageDiv);
+
+    /* 단계 사이 화살표 컬럼 */
+    if (c < numCols - 1) {
+      var arrDiv = document.createElement('div');
+      arrDiv.className = 'arrow-col';
+      arrDiv.textContent = '→';
+      colsDiv.appendChild(arrDiv);
+    }
+  }
+
+  wrap.appendChild(colsDiv);
+  container.appendChild(wrap);
+
+  /* 레이아웃 완료 후 SVG 연결선 그리기 */
+  requestAnimationFrame(function() {
+    drawGenealogyConnections(wrap, edges, colMap);
   });
+}
+
+/* 6-F: HTML 이스케이프 헬퍼 */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /* ══════════════════════════════════════════════════════════════
