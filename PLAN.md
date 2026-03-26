@@ -3,9 +3,15 @@
 > CPL에 국한하지 않고 **모든 소재**의 Lot 계보 추적 + 공정별 SPC TREND를 확인하는 도구.
 
 ## 현재 상태
-- [x] Step 0-B: `apps/05_cpl_quality/index.html` 뼈대 생성 + `main.js` 탭 등록 (push 완료)
-- [ ] Step 0-A: 제목 변경 (PLAN.md · main.js · index.html)
-- [ ] Step 2~9: JS 로직 미구현
+- [x] Step 0: 제목 변경 (PLAN.md · main.js · index.html `<title>`)
+- [x] Step 2: 파일 업로드 UI (드롭존·클릭업로드·자동판별·단일파싱·상태표시)
+- [x] Step 3: 품질 데이터 파서 (병합셀 fill·컬럼 분류·공정단계 그룹·기준값 연결·레코드 생성)
+- [x] Step 4: 흐름도 파서 (단계 헤더·서브컬럼·byOutputLot/byInputLot·lotMeta)
+- [x] Step 5: Lot 사이드바 (목록 렌더·역추적↔정추적 토글·검색 필터·클릭 선택)
+- [x] Step 6: Mermaid 계보도 (BFS·코드 빌드·선택 노드 강조·50개 제한·SVG 삽입)
+- [ ] Step 7: SPC 차트
+- [ ] Step 8: Batch Deep-Dive
+- [ ] Step 9: 추적 테이블
 
 ---
 
