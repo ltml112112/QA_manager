@@ -646,8 +646,103 @@ function onFlowReady() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 5: Lot 사이드바 + 검색 (다음 단계에서 구현)
+   Step 5: Lot 사이드바
    ══════════════════════════════════════════════════════════════ */
+
+/* 5-B: 현재 방향에 맞는 Lot 목록 반환
+   'backward' → byOutputLot 키(완제품), 'forward' → byInputLot 키(원료)
+*/
+function getLotList() {
+  var map = STATE.traceDir === 'backward' ? STATE.byOutputLot : STATE.byInputLot;
+  return Object.keys(map).sort();
+}
+
+/* 5-D: 검색 필터 적용 (Lot명 또는 품목명 부분 매칭) */
+function filterLots(lots, query) {
+  if (!query) return lots;
+  var q = query.toLowerCase();
+  return lots.filter(function(lot) {
+    if (lot.toLowerCase().indexOf(q) !== -1) return true;
+    var meta = STATE.lotMeta[lot];
+    if (meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1) return true;
+    return false;
+  });
+}
+
+/* 5-B: Lot 목록 DOM 렌더링 */
+function renderLotList(lots) {
+  var listEl  = document.getElementById('lot-list');
+  var countEl = document.getElementById('lot-count');
+  listEl.innerHTML = '';
+  countEl.textContent = lots.length + '개 Lot';
+
+  if (lots.length === 0) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">검색 결과 없음</div>';
+    return;
+  }
+
+  lots.forEach(function(lot) {
+    var meta = STATE.lotMeta[lot] || {};
+    var item = document.createElement('div');
+    item.className = 'lot-item' + (lot === STATE.selectedLot ? ' active' : '');
+    item.dataset.lot = lot;
+    item.innerHTML =
+      '<span>' + lot + '</span>' +
+      '<span class="lot-meta">' + (meta.itemName || '') + '</span>';
+
+    // 5-E: 클릭 핸들러
+    item.addEventListener('click', function() {
+      document.querySelectorAll('.lot-item').forEach(function(el) {
+        el.classList.remove('active');
+      });
+      item.classList.add('active');
+      STATE.selectedLot = lot;
+      if (typeof renderGenealogy   === 'function') renderGenealogy(lot);
+      if (typeof renderTrackingTable === 'function') renderTrackingTable(lot);
+    });
+
+    listEl.appendChild(item);
+  });
+}
+
+/* 5-A~5-D: 사이드바 전체 렌더 + 검색/토글 이벤트 연결 */
+function renderSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  sidebar.classList.remove('hidden');
+
+  var allLots     = getLotList();
+  renderLotList(allLots);
+
+  // 5-D: 검색창 input 이벤트
+  var searchInput = document.getElementById('lot-search');
+  searchInput.oninput = function() {
+    var filtered = filterLots(getLotList(), searchInput.value.trim());
+    renderLotList(filtered);
+  };
+
+  // 5-C: 역추적/정추적 토글 버튼
+  var btnReverse = document.getElementById('btn-reverse');
+  var btnForward = document.getElementById('btn-forward');
+
+  function setDir(dir) {
+    STATE.traceDir = dir;
+    btnReverse.classList.toggle('active', dir === 'backward');
+    btnForward.classList.toggle('active', dir === 'forward');
+    STATE.selectedLot = null; // 방향 전환 시 선택 초기화
+    var filtered = filterLots(getLotList(), searchInput.value.trim());
+    renderLotList(filtered);
+    // 계보도/테이블 초기화
+    var mermaidEl = document.getElementById('mermaid-viewer');
+    if (mermaidEl) mermaidEl.innerHTML = '';
+    var flowCard = document.getElementById('flow-card');
+    if (flowCard) flowCard.style.display = 'none';
+    var traceCard = document.getElementById('trace-card');
+    if (traceCard) traceCard.style.display = 'none';
+  }
+
+  btnReverse.onclick = function() { setDir('backward'); };
+  btnForward.onclick = function() { setDir('forward'); };
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 6: Mermaid Genealogy (다음 단계에서 구현)
