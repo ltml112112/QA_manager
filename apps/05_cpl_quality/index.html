@@ -839,8 +839,194 @@ function renderGenealogy(lot) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 7: SPC 차트 (다음 단계에서 구현)
+   Step 7: SPC 차트
    ══════════════════════════════════════════════════════════════ */
+
+/* 7-A: qualityRecords → 공정단계별 그룹화
+   반환: { stage: { itemLabel: [record, ...] } }
+*/
+function groupByStageAndItem() {
+  var groups = {};
+  STATE.qualityRecords.forEach(function(rec) {
+    if (!groups[rec.stage]) groups[rec.stage] = {};
+    if (!groups[rec.stage][rec.itemLabel]) groups[rec.stage][rec.itemLabel] = [];
+    groups[rec.stage][rec.itemLabel].push(rec);
+  });
+  return groups;
+}
+
+/* 7-C: 이탈 여부 판별 (USL/LSL 기준) */
+function isOutOfSpec(rec) {
+  if (rec.USL !== null && !isNaN(rec.USL) && rec.value > rec.USL) return true;
+  if (rec.LSL !== null && !isNaN(rec.LSL) && rec.value < rec.LSL) return true;
+  return false;
+}
+
+/* 7-D / 7-E: annotation 플러그인용 관리선 config 생성
+   UCL/LCL → 빨간 점선, USL/LSL → 주황 실선
+   records 배열에서 첫 번째 유효한 기준값 사용
+*/
+function buildAnnotations(records) {
+  var ann = {};
+  var limitKeys = ['UCL', 'LCL', 'USL', 'LSL'];
+  limitKeys.forEach(function(key) {
+    var val = null;
+    for (var i = 0; i < records.length; i++) {
+      var v = records[i][key];
+      if (v !== null && !isNaN(v)) { val = v; break; }
+    }
+    if (val === null) return;
+
+    var isCtrl = key === 'UCL' || key === 'LCL'; // 관리한계 vs 규격한계
+    ann[key] = {
+      type:        'line',
+      yMin:        val,
+      yMax:        val,
+      borderColor: isCtrl ? '#ef4444' : '#f59e0b',
+      borderWidth: 1.5,
+      borderDash:  isCtrl ? [6, 3] : [],
+      label: {
+        display:    true,
+        content:    key + ' ' + val,
+        position:   'end',
+        font:       { size: 10 },
+        color:      isCtrl ? '#ef4444' : '#f59e0b',
+        backgroundColor: 'transparent',
+        padding:    2,
+      },
+    };
+  });
+  return ann;
+}
+
+/* 7-F: 포인트 색상 배열 생성 (이탈 → 빨강, 정상 → 기본색) */
+function buildPointColors(records, defaultColor) {
+  return records.map(function(rec) {
+    return isOutOfSpec(rec) ? '#ef4444' : defaultColor;
+  });
+}
+
+/* 7-B / 7-G: 측정항목 1개당 차트 1개 생성
+   canvasId: 고유 ID, records: 해당 항목 레코드 배열
+*/
+function createSpcChart(canvasId, itemLabel, records) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+
+  var labels  = records.map(function(r) { return r.batchNo; });
+  var values  = records.map(function(r) { return r.value; });
+  var ptColors = buildPointColors(records, '#4a9eff');
+  var anns    = buildAnnotations(records);
+
+  var chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label:                itemLabel,
+        data:                 values,
+        borderColor:          '#4a9eff',
+        borderWidth:          2,
+        tension:              0.3,
+        pointRadius:          5,
+        pointHoverRadius:     7,
+        pointBackgroundColor: ptColors,
+        pointBorderColor:     ptColors,
+        fill:                 false,
+      }],
+    },
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: { annotations: anns },
+        tooltip: {
+          callbacks: {
+            afterLabel: function(ctx) {
+              var rec = records[ctx.dataIndex];
+              var lines = [];
+              if (rec.USL !== null && !isNaN(rec.USL)) lines.push('USL: ' + rec.USL);
+              if (rec.LSL !== null && !isNaN(rec.LSL)) lines.push('LSL: ' + rec.LSL);
+              if (isOutOfSpec(rec)) lines.push('⚠ 규격 이탈');
+              return lines;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, maxRotation: 45 },
+          grid:  { color: 'rgba(128,128,128,0.15)' },
+        },
+        y: {
+          ticks: { font: { size: 10 } },
+          grid:  { color: 'rgba(128,128,128,0.15)' },
+        },
+      },
+      // 7-H: 클릭 이벤트 → Step 8 Deep-Dive 연결
+      onClick: function(event, elements) {
+        if (!elements.length) return;
+        var idx    = elements[0].index;
+        var batchNo = records[idx].batchNo;
+        handleChartClick(batchNo);
+      },
+    },
+  });
+  return chart;
+}
+
+/* 7-G: 공정단계별 섹션 카드 렌더링 */
+function renderSpcCharts() {
+  // 7-G: 이전 차트 인스턴스 destroy (메모리 누수 방지)
+  STATE.chartInstances.forEach(function(c) { try { c.destroy(); } catch(e) {} });
+  STATE.chartInstances = [];
+
+  var container = document.getElementById('spc-container');
+  container.innerHTML = '';
+
+  var groups    = groupByStageAndItem();
+  var stageList = Object.keys(groups);
+
+  if (stageList.length === 0) return;
+
+  stageList.forEach(function(stage) {
+    // 섹션 래퍼
+    var section = document.createElement('div');
+    section.className = 'spc-section';
+
+    var title = document.createElement('div');
+    title.className   = 'spc-section-title';
+    title.textContent = stage;
+    section.appendChild(title);
+
+    var grid = document.createElement('div');
+    grid.className = 'charts-grid';
+
+    var items = Object.keys(groups[stage]);
+    items.forEach(function(itemLabel) {
+      var records  = groups[stage][itemLabel];
+      var canvasId = 'chart-' + (stage + '-' + itemLabel).replace(/[^a-zA-Z0-9가-힣]/g, '_');
+
+      var box = document.createElement('div');
+      box.className = 'chart-box';
+      box.innerHTML =
+        '<div class="chart-title">' + itemLabel + '</div>' +
+        '<canvas id="' + canvasId + '"></canvas>';
+      grid.appendChild(box);
+      section.appendChild(grid);
+
+      // 다음 프레임에 차트 생성 (DOM 삽입 후)
+      setTimeout(function() {
+        var chart = createSpcChart(canvasId, itemLabel, records);
+        if (chart) STATE.chartInstances.push(chart);
+      }, 0);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 8: Batch Deep-Dive (다음 단계에서 구현)
