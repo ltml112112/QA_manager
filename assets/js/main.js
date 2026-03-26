@@ -38,6 +38,14 @@ const apps = [
     src:         './apps/04_sdc_eval/index.html',
     loaderText:  'SDC 사전심사자료 자동화 로딩 중...',
   },
+  {
+    id:          'cpl',
+    label:       'CPL 품질 & 이력 관리',
+    icon:        '🏭',
+    badge:       'NEW',
+    src:         './apps/05_cpl_quality/index.html',
+    loaderText:  'CPL 품질 & 이력 관리 시스템 로딩 중...',
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 

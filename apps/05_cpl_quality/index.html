@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Upload Bar ── */
+.upload-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 20px; flex-shrink: 0; }
+.upload-bar .dropzone { min-height: 80px; padding: 16px; }
+
+/* ── Main Layout ── */
+.app-layout { display: flex; flex: 1; overflow: hidden; }
+.sidebar-panel {
+  width: 280px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.2s;
+}
+.sidebar-panel.hidden { width: 0; border: none; }
+.main-panel { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* ── Sidebar ── */
+.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-toggle { display: flex; gap: 4px; margin-bottom: 12px; }
+.sidebar-toggle .btn { flex: 1; font-size: 0.8rem; }
+.sidebar-toggle .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.sidebar-search { position: relative; }
+.sidebar-search .form-input { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
+.autocomplete-list {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
+  background: var(--surface); border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm); max-height: 200px; overflow-y: auto;
+  display: none;
+}
+.autocomplete-list .ac-item {
+  padding: 8px 12px; font-size: 0.82rem; cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.autocomplete-list .ac-item:hover { background: var(--surface-2); }
+.lot-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.lot-item {
+  padding: 10px 16px; cursor: pointer; font-size: 0.82rem;
+  border-bottom: 1px solid var(--border); transition: background 0.15s;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.lot-item:hover { background: var(--surface-2); }
+.lot-item.active { background: var(--accent); color: #fff; }
+.lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
+.lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+
+/* ── Mermaid ── */
+.mermaid-container { min-height: 120px; overflow-x: auto; text-align: center; padding: 16px; }
+.mermaid-container svg { max-width: 100%; }
+
+/* ── Deep Dive ── */
+.deep-dive-panel { display: none; }
+.deep-dive-panel.visible { display: block; }
+
+/* ── SPC Charts ── */
+.spc-section { margin-bottom: 24px; }
+.spc-section-title {
+  background: var(--text); color: var(--bg); padding: 10px 16px;
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem; margin-bottom: 12px;
+}
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px; }
+.chart-box { position: relative; height: 300px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.chart-box canvas { width: 100% !important; height: 100% !important; }
+.chart-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+.chart-title { font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; }
+
+/* ── Trace Table ── */
+.trace-table-wrap { max-height: 400px; overflow: auto; }
+.cell-exceed { background: rgba(239, 68, 68, 0.15) !important; color: #ef4444 !important; font-weight: 600; }
+
+/* ── No Data ── */
+.no-data { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+.no-data-icon { font-size: 48px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ── Upload Bar ── -->
+<div class="upload-bar">
+  <div class="dropzone" id="drop-quality">
+    <div class="dropzone-icon">📊</div>
+    <div class="dropzone-title">품질 데이터 업로드</div>
+    <div class="dropzone-hint">.xlsx 파일을 드래그하거나 클릭하세요</div>
+  </div>
+  <div class="dropzone" id="drop-flow">
+    <div class="dropzone-icon">🔗</div>
+    <div class="dropzone-title">흐름도 데이터 업로드</div>
+    <div class="dropzone-hint">.xlsx 파일을 드래그하거나 클릭하세요</div>
+  </div>
+</div>
+
+<!-- ── Main Layout ── -->
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar-panel hidden" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-toggle">
+        <button class="btn btn-sm active" id="btn-reverse" title="완제품 → 원료">역추적</button>
+        <button class="btn btn-sm" id="btn-forward" title="원료 → 완제품">정추적</button>
+      </div>
+      <div class="sidebar-search">
+        <input class="form-input" id="lot-search" placeholder="Lot / Batch 검색..." autocomplete="off">
+        <div class="autocomplete-list" id="ac-list"></div>
+      </div>
+    </div>
+    <div class="lot-count" id="lot-count">0개 Lot</div>
+    <div class="lot-list" id="lot-list"></div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-panel" id="main-panel">
+    <div class="no-data" id="empty-state">
+      <div class="no-data-icon">📁</div>
+      <div>품질 데이터와 흐름도 데이터를 업로드하면 분석이 시작됩니다.</div>
+    </div>
+
+    <!-- Mermaid Diagram -->
+    <div class="card" id="flow-card" style="display:none;">
+      <div class="card-header"><span>⛓</span> Lot Genealogy Flow</div>
+      <div class="mermaid-container" id="mermaid-viewer"></div>
+    </div>
+
+    <!-- Batch Deep Dive -->
+    <div class="card deep-dive-panel" id="deep-dive-card">
+      <div class="card-header"><span>🔍</span> Batch Deep-Dive</div>
+      <div id="deep-dive-content"></div>
+    </div>
+
+    <!-- Trace Table -->
+    <div class="card" id="trace-card" style="display:none;">
+      <div class="card-header"><span>📋</span> 품질 데이터 추적 요약</div>
+      <div class="trace-table-wrap" id="trace-result"></div>
+    </div>
+
+    <!-- SPC Charts -->
+    <div id="spc-container"></div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CPL 통합 품질 & 이력 관리 시스템
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 테마 동기화 ── */
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+
+/* ── Mermaid 초기화 ── */
+mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
+
+/* ── 전역 상태 ── */
+const STATE = {
+  qualityData: null,
+  flowData: null,
+  selectedLot: null,
+  traceDirection: 'reverse',
+  charts: [],
+};
+
+/* ══════════════════════════════════════════════════════════════
+   Step 2: 파일 업로드 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 3: 품질 데이터 파싱 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 4: 흐름도 데이터 파싱 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 5: Lot 사이드바 + 검색 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 6: Mermaid Genealogy (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 7: SPC 차트 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 8: Batch Deep-Dive (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════
+   Step 9: 추적 테이블 (다음 단계에서 구현)
+   ══════════════════════════════════════════════════════════════ */
+
+</script>
+</body>
+</html>
