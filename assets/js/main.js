@@ -40,11 +40,11 @@ const apps = [
   },
   {
     id:          'cpl',
-    label:       'CPL 품질 & 이력 관리',
+    label:       '소재 Lot 이력 & TREND 분석',
     icon:        '🏭',
     badge:       'NEW',
     src:         './apps/05_cpl_quality/index.html',
-    loaderText:  'CPL 품질 & 이력 관리 시스템 로딩 중...',
+    loaderText:  '소재 Lot 흐름 & 품질 TREND 분석기 로딩 중...',
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
