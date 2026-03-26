@@ -854,30 +854,34 @@ function collectRelatedLots(startLot, dir) {
   return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
 }
 
-/* 6-A2: 전체 체인 수집 — 선택 Lot 기준 양방향(원료↔완제품) BFS
-   byOutputLot(완→원)와 byInputLot(원→완)을 동시에 탐색하여
-   연결된 모든 Lot·엣지를 반환 (방향 구분 없이 전체 계보)
+/* 6-A2: 전체 체인 수집 — 선택 Lot 기준 양방향(원료↔완제품) 탐색
+   ① Backward BFS: byOutputLot만 따라 원료 방향으로만 탐색 (forward 절대 안 함)
+   ② Forward BFS:  byInputLot만 따라 완제품 방향으로만 탐색 (backward 절대 안 함)
+   → 각 방향 BFS를 완전히 분리하여 교차 오염(cross-contamination) 방지
    edges: { from: 완제품_side, to: 원료_side } 형식 유지
 */
 function collectFullChain(startLot) {
   var nodes = new Set([startLot]);
   var edges = [];
-  var queue = [startLot];
   var MAX   = 100;
 
-  while (queue.length > 0 && nodes.size < MAX) {
-    var cur = queue.shift();
-
-    /* 원료 방향 (backward) */
+  /* ① Backward BFS — byOutputLot (완제품→원료), forward 탐색 절대 금지 */
+  var bQueue = [startLot];
+  while (bQueue.length > 0 && nodes.size < MAX) {
+    var cur = bQueue.shift();
     (STATE.byOutputLot[cur] || []).forEach(function(raw) {
       edges.push({ from: cur, to: raw }); // cur=완제품측, raw=원료측
-      if (!nodes.has(raw) && nodes.size < MAX) { nodes.add(raw); queue.push(raw); }
+      if (!nodes.has(raw) && nodes.size < MAX) { nodes.add(raw); bQueue.push(raw); }
     });
+  }
 
-    /* 완제품 방향 (forward) */
+  /* ② Forward BFS — byInputLot (원료→완제품), backward 탐색 절대 금지 */
+  var fQueue = [startLot];
+  while (fQueue.length > 0 && nodes.size < MAX) {
+    var cur = fQueue.shift();
     (STATE.byInputLot[cur] || []).forEach(function(fin) {
       edges.push({ from: fin, to: cur }); // fin=완제품측, cur=원료측
-      if (!nodes.has(fin) && nodes.size < MAX) { nodes.add(fin); queue.push(fin); }
+      if (!nodes.has(fin) && nodes.size < MAX) { nodes.add(fin); fQueue.push(fin); }
     });
   }
 
