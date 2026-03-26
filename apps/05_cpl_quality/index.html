@@ -58,36 +58,30 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
-/* ── Genealogy Flow Table ── */
-.genealogy-flow { position: relative; overflow-x: auto; padding: 16px; }
-.stage-columns { display: flex; align-items: flex-start; min-width: max-content; gap: 0; }
-.stage-col { min-width: 160px; flex-shrink: 0; }
+/* ── Genealogy Flow Table (절대좌표 tree layout) ── */
+.genealogy-flow { overflow-x: auto; overflow-y: auto; padding: 16px; }
+.genealogy-inner { position: relative; } /* absolute children의 기준점 */
 .stage-col-header {
-  background: var(--surface-2); padding: 7px 12px;
-  font-size: 0.75rem; font-weight: 600; text-align: center; color: var(--text-muted);
-  border: 1px solid var(--border); border-bottom: none;
+  position: absolute;
+  background: var(--surface-2); padding: 6px 10px;
+  font-size: 0.74rem; font-weight: 600; text-align: center; color: var(--text-muted);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-}
-.stage-col-body {
-  border: 1px solid var(--border); padding: 8px;
-  display: flex; flex-direction: column; gap: 8px; min-height: 60px;
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lot-node {
+  position: absolute;
   background: var(--surface-2); border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); padding: 8px 10px;
+  border-radius: var(--radius-sm); padding: 0 10px;
   font-size: 0.8rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
-  position: relative; z-index: 1;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; justify-content: center;
+  z-index: 1;
 }
 .lot-node:hover { border-color: var(--border-hover); background: var(--surface); }
 .lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
-.lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
-.lot-node-name { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
-.arrow-col {
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  width: 44px; flex-shrink: 0; padding-top: 30px;
-  color: var(--text-muted); font-size: 1.1rem; user-select: none;
-}
+.lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
+.lot-node-name { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
 .genealogy-svg {
   position: absolute; top: 0; left: 0;
   pointer-events: none; overflow: visible;
@@ -922,23 +916,106 @@ function getColumnLabel(displayCol, maxStageIdx) {
   return (stageIdx + 1) + '단계';
 }
 
-/* 6-D: SVG 베지어 연결선 그리기 */
-function drawGenealogyConnections(wrap, edges, colMap) {
-  var wrapRect = wrap.getBoundingClientRect();
+/* 6-D: Slot 기반 tree layout 계산
+   오른쪽(완제품) 컬럼부터 slot을 배정하고, 왼쪽으로 갈수록
+   부모 노드가 자식들의 slot 범위를 span하도록 높이를 키움.
+   반환: { y, h, byCol, rightOf, totalH, SLOT_H, SLOT_GAP }
+*/
+function computeLayout(nodes, edges, colMap, maxStageIdx) {
+  var numCols  = maxStageIdx + 1;
+  var SLOT_H   = 64;   // leaf 하나의 높이(px)
+  var SLOT_GAP = 8;    // 노드 사이 gap
 
-  /* 각 lot-node 위치 수집 */
-  var pos = {};
-  wrap.querySelectorAll('.lot-node[data-lot]').forEach(function(el) {
-    var r = el.getBoundingClientRect();
-    pos[el.dataset.lot] = {
-      x: r.left - wrapRect.left + wrap.scrollLeft,
-      y: r.top  - wrapRect.top  + wrap.scrollTop,
-      w: r.width, h: r.height
-    };
+  /* 컬럼별 그룹 */
+  var byCol = {};
+  for (var c = 0; c < numCols; c++) byCol[c] = [];
+  nodes.forEach(function(l) { byCol[colMap[l]].push(l); });
+
+  /* 우→좌 인접 맵 구성
+     rightOf[A] = B  →  A(원료, 낮은 col)가 B(완제품, 높은 col)로 이어짐 */
+  var rightOf = {}, leftOf = {};
+  edges.forEach(function(e) {
+    var lc = colMap[e.to], rc = colMap[e.from];
+    if (lc < rc) {
+      if (!rightOf[e.to])  rightOf[e.to]  = [];
+      if (!leftOf[e.from]) leftOf[e.from] = [];
+      if (rightOf[e.to].indexOf(e.from)  === -1) rightOf[e.to].push(e.from);
+      if (leftOf[e.from].indexOf(e.to)   === -1) leftOf[e.from].push(e.to);
+    }
   });
 
-  var totalH = wrap.scrollHeight;
-  var totalW = wrap.scrollWidth;
+  /* Slot 배정: 오른쪽(완제품) 컬럼부터 시작 */
+  var slotIdx  = {};  // lot → 시작 slot 번호
+  var slotSpan = {};  // lot → 차지하는 slot 수
+  var nextSlot = 0;
+
+  /* 오른쪽 컬럼 lots를 lot 이름 순으로 정렬 후 1 slot씩 배정 */
+  byCol[numCols - 1].sort().forEach(function(l) {
+    slotIdx[l]  = nextSlot;
+    slotSpan[l] = 1;
+    nextSlot++;
+  });
+
+  /* 나머지 컬럼을 오른쪽→왼쪽으로 처리 */
+  for (var c = numCols - 2; c >= 0; c--) {
+    /* 이 컬럼의 lots를 "오른쪽 자식의 최소 slot" 기준으로 정렬 */
+    byCol[c].sort(function(a, b) {
+      var aMin = Infinity, bMin = Infinity;
+      (rightOf[a] || []).forEach(function(ch) {
+        if (slotIdx[ch] !== undefined && slotIdx[ch] < aMin) aMin = slotIdx[ch];
+      });
+      (rightOf[b] || []).forEach(function(ch) {
+        if (slotIdx[ch] !== undefined && slotIdx[ch] < bMin) bMin = slotIdx[ch];
+      });
+      return aMin - bMin;
+    });
+
+    byCol[c].forEach(function(l) {
+      var children = (rightOf[l] || []).filter(function(ch) {
+        return slotIdx[ch] !== undefined;
+      });
+
+      if (children.length === 0) {
+        /* 오른쪽 연결 없음 → 새 slot 1개 */
+        slotIdx[l]  = nextSlot;
+        slotSpan[l] = 1;
+        nextSlot++;
+      } else {
+        /* 자식들의 slot 범위를 span */
+        var minS = Infinity, maxEnd = -Infinity;
+        children.forEach(function(ch) {
+          if (slotIdx[ch] < minS)                       minS   = slotIdx[ch];
+          if (slotIdx[ch] + slotSpan[ch] > maxEnd) maxEnd = slotIdx[ch] + slotSpan[ch];
+        });
+        slotIdx[l]  = minS;
+        slotSpan[l] = maxEnd - minS;
+      }
+    });
+  }
+
+  /* 미할당 lot fallback */
+  nodes.forEach(function(l) {
+    if (slotIdx[l] === undefined) { slotIdx[l] = nextSlot; slotSpan[l] = 1; nextSlot++; }
+  });
+
+  /* px 계산 */
+  var y = {}, h = {};
+  nodes.forEach(function(l) {
+    y[l] = slotIdx[l]  * (SLOT_H + SLOT_GAP);
+    h[l] = slotSpan[l] * SLOT_H + (slotSpan[l] - 1) * SLOT_GAP;
+    if (h[l] < SLOT_H) h[l] = SLOT_H;
+  });
+
+  var totalH = nextSlot * SLOT_H + Math.max(0, nextSlot - 1) * SLOT_GAP;
+  return { y: y, h: h, byCol: byCol, rightOf: rightOf,
+           totalH: totalH, SLOT_H: SLOT_H, SLOT_GAP: SLOT_GAP };
+}
+
+/* 6-E: SVG 연결선 (layout 데이터 직접 사용 — getBoundingClientRect 불필요) */
+function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, HDR_H) {
+  var totalW = COL_W * Object.keys(layout.byCol).length +
+               COL_GAP * (Object.keys(layout.byCol).length - 1);
+  var totalH = layout.totalH + HDR_H + 8;
 
   var NS  = 'http://www.w3.org/2000/svg';
   var svg = document.createElementNS(NS, 'svg');
@@ -947,7 +1024,6 @@ function drawGenealogyConnections(wrap, edges, colMap) {
   svg.setAttribute('height', totalH);
   svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
 
-  /* arrowhead 마커 */
   var defs   = document.createElementNS(NS, 'defs');
   var marker = document.createElementNS(NS, 'marker');
   marker.setAttribute('id', 'gn-arrow');
@@ -963,22 +1039,22 @@ function drawGenealogyConnections(wrap, edges, colMap) {
   defs.appendChild(marker);
   svg.appendChild(defs);
 
-  var seen = new Set();
+  var seen = {};
   edges.forEach(function(e) {
-    /* e.from=완제품(오른쪽), e.to=원료(왼쪽)
-       선: 원료(to) 오른쪽 → 완제품(from) 왼쪽 */
-    var pFrom = pos[e.from];
-    var pTo   = pos[e.to];
-    if (!pFrom || !pTo) return;
-
+    var lc = colMap[e.to], rc = colMap[e.from];
+    if (lc >= rc) return;                          // 역방향/동일 컬럼 skip
     var key = e.to + '→' + e.from;
-    if (seen.has(key)) return;
-    seen.add(key);
+    if (seen[key]) return;
+    seen[key] = true;
 
-    var x1 = pTo.x   + pTo.w;          // 원료 오른쪽 끝
-    var y1 = pTo.y   + pTo.h / 2;
-    var x2 = pFrom.x;                   // 완제품 왼쪽 끝
-    var y2 = pFrom.y + pFrom.h / 2;
+    var yL = layout.y[e.to],   hL = layout.h[e.to];
+    var yR = layout.y[e.from], hR = layout.h[e.from];
+    if (yL === undefined || yR === undefined) return;
+
+    var x1 = lc * (COL_W + COL_GAP) + COL_W;   // 원료 오른쪽 끝
+    var y1 = HDR_H + 8 + yL + hL / 2;
+    var x2 = rc * (COL_W + COL_GAP);             // 완제품 왼쪽 끝
+    var y2 = HDR_H + 8 + yR + hR / 2;
     var cx = (x1 + x2) / 2;
 
     var path = document.createElementNS(NS, 'path');
@@ -992,10 +1068,10 @@ function drawGenealogyConnections(wrap, edges, colMap) {
     svg.appendChild(path);
   });
 
-  wrap.appendChild(svg);
+  inner.appendChild(svg);
 }
 
-/* 6-E: 계보도 테이블 렌더링 (Mermaid 대체) */
+/* 6-F: 계보도 렌더링 메인 (절대좌표 tree layout) */
 function renderGenealogy(lot) {
   var flowCard  = document.getElementById('flow-card');
   var container = document.getElementById('mermaid-viewer');
@@ -1009,84 +1085,80 @@ function renderGenealogy(lot) {
 
   if (result.truncated) {
     var warn = document.createElement('div');
-    warn.style.cssText = 'color:var(--warning);font-size:0.8rem;margin-bottom:8px;';
+    warn.style.cssText = 'color:var(--warning);font-size:0.8rem;margin-bottom:8px;padding:0 16px;';
     warn.textContent   = '⚠ 노드가 50개를 초과하여 일부만 표시됩니다.';
     container.appendChild(warn);
   }
 
   if (nodes.length === 0) return;
 
-  /* 컬럼 할당 */
-  var assigned   = assignLotColumns(nodes, edges);
-  var colMap     = assigned.colMap;
+  /* 컬럼 및 layout 계산 */
+  var assigned    = assignLotColumns(nodes, edges);
+  var colMap      = assigned.colMap;
   var maxStageIdx = assigned.maxStageIdx;
-  var numCols    = maxStageIdx + 1;
+  var numCols     = maxStageIdx + 1;
+  var layout      = computeLayout(nodes, edges, colMap, maxStageIdx);
 
-  /* 컬럼별 Lot 그룹화 */
-  var byCol = {};
-  for (var i = 0; i < numCols; i++) byCol[i] = [];
-  nodes.forEach(function(l) { byCol[colMap[l]].push(l); });
+  var COL_W  = 180;  // 컬럼 너비 (px)
+  var COL_GAP = 80;  // 컬럼 간 간격 (SVG 화살표용)
+  var HDR_H  = 32;   // 헤더 높이 (px)
+  var PAD    = 8;    // 헤더 아래 패딩
 
-  /* 래퍼 (SVG 오버레이 기준점) */
+  var totalW = numCols * COL_W + (numCols - 1) * COL_GAP;
+  var totalH = layout.totalH + HDR_H + PAD;
+
+  /* 스크롤 래퍼 */
   var wrap = document.createElement('div');
   wrap.className = 'genealogy-flow';
 
-  /* 컬럼 행 */
-  var colsDiv = document.createElement('div');
-  colsDiv.className = 'stage-columns';
+  /* 절대좌표 기준 inner */
+  var inner = document.createElement('div');
+  inner.className = 'genealogy-inner';
+  inner.style.cssText = 'width:' + totalW + 'px;height:' + totalH + 'px;';
 
+  /* 컬럼별 헤더 + lot 노드 */
   for (var c = 0; c < numCols; c++) {
-    /* 단계 컬럼 */
-    var stageDiv = document.createElement('div');
-    stageDiv.className   = 'stage-col';
-    stageDiv.dataset.col = c;
+    var colX = c * (COL_W + COL_GAP);
 
+    /* 헤더 */
     var hdr = document.createElement('div');
-    hdr.className   = 'stage-col-header';
-    hdr.textContent = getColumnLabel(c, maxStageIdx);
-    stageDiv.appendChild(hdr);
+    hdr.className = 'stage-col-header';
+    hdr.style.cssText = 'left:' + colX + 'px;top:0;width:' + COL_W + 'px;';
+    hdr.textContent   = getColumnLabel(c, maxStageIdx);
+    inner.appendChild(hdr);
 
-    var body = document.createElement('div');
-    body.className = 'stage-col-body';
+    /* Lot 노드들 */
+    (layout.byCol[c] || []).forEach(function(l) {
+      var meta  = STATE.lotMeta[l] || {};
+      var nodeY = HDR_H + PAD + layout.y[l];
+      var nodeH = layout.h[l];
 
-    (byCol[c] || []).forEach(function(l) {
-      var meta = STATE.lotMeta[l] || {};
       var node = document.createElement('div');
-      node.className    = 'lot-node' + (l === lot ? ' gn-selected' : '');
-      node.dataset.lot  = l;
+      node.className   = 'lot-node' + (l === lot ? ' gn-selected' : '');
+      node.dataset.lot = l;
+      node.style.cssText =
+        'left:' + colX + 'px;top:' + nodeY + 'px;' +
+        'width:' + COL_W + 'px;height:' + nodeH + 'px;';
       node.innerHTML =
         '<div class="lot-node-id">' + escHtml(l) + '</div>' +
         (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '');
-      node.onclick = function() {
-        STATE.selectedLot = l;
+      node.onclick = (function(lClosed) { return function() {
+        STATE.selectedLot = lClosed;
         document.querySelectorAll('.lot-item').forEach(function(el) {
-          el.classList.toggle('active', el.dataset.lot === l);
+          el.classList.toggle('active', el.dataset.lot === lClosed);
         });
-        renderGenealogy(l);
-        if (typeof renderTrackingTable === 'function') renderTrackingTable(l);
-      };
-      body.appendChild(node);
+        renderGenealogy(lClosed);
+        if (typeof renderTrackingTable === 'function') renderTrackingTable(lClosed);
+      }; })(l);
+      inner.appendChild(node);
     });
-
-    stageDiv.appendChild(body);
-    colsDiv.appendChild(stageDiv);
-
-    /* 단계 사이 화살표 컬럼 */
-    if (c < numCols - 1) {
-      var arrDiv = document.createElement('div');
-      arrDiv.className = 'arrow-col';
-      arrDiv.textContent = '→';
-      colsDiv.appendChild(arrDiv);
-    }
   }
 
-  wrap.appendChild(colsDiv);
+  wrap.appendChild(inner);
   container.appendChild(wrap);
 
-  /* 레이아웃 완료 후 SVG 연결선 그리기 */
-  requestAnimationFrame(function() {
-    drawGenealogyConnections(wrap, edges, colMap);
-  });
+  /* SVG 연결선 */
+  drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, HDR_H);
 }
 
 /* 6-F: HTML 이스케이프 헬퍼 */
