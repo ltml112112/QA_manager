@@ -745,8 +745,98 @@ function renderSidebar() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 6: Mermaid Genealogy (다음 단계에서 구현)
+   Step 6: Mermaid 계보도
    ══════════════════════════════════════════════════════════════ */
+
+/* 6-A: BFS 탐색 — 선택 Lot에서 연결된 모든 Lot·엣지 수집
+   dir: 'backward' → byOutputLot(완제품→원료), 'forward' → byInputLot(원료→완제품)
+   반환: { nodes: Set<lot>, edges: [{from, to}], truncated: bool }
+*/
+function collectRelatedLots(startLot, dir) {
+  var map   = dir === 'backward' ? STATE.byOutputLot : STATE.byInputLot;
+  var nodes = new Set([startLot]);
+  var edges = [];
+  var queue = [startLot];
+  var MAX   = 50;
+
+  while (queue.length > 0 && nodes.size < MAX) {
+    var cur      = queue.shift();
+    var children = map[cur] || [];
+    children.forEach(function(child) {
+      var from = dir === 'backward' ? cur   : child;
+      var to   = dir === 'backward' ? child : cur;
+      edges.push({ from: from, to: to });
+      if (!nodes.has(child) && nodes.size < MAX) {
+        nodes.add(child);
+        queue.push(child);
+      }
+    });
+  }
+  return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
+}
+
+/* 6-B / 6-C / 6-D: Mermaid 코드 빌드
+   노드 라벨: Lot명 + 품목명, 선택 Lot 노드 빨간 강조
+*/
+function buildMermaidCode(nodes, edges, selectedLot) {
+  function nodeId(lot) {
+    return 'n_' + lot.replace(/[^a-zA-Z0-9가-힣]/g, '_');
+  }
+  function nodeLabel(lot) {
+    var meta = STATE.lotMeta[lot];
+    var name = meta && meta.itemName ? meta.itemName : '';
+    return (name ? lot + '\n' + name : lot).replace(/"/g, "'");
+  }
+
+  var lines = ['flowchart TD'];
+
+  nodes.forEach(function(lot) {
+    lines.push('  ' + nodeId(lot) + '["' + nodeLabel(lot) + '"]');
+  });
+
+  var seen = new Set();
+  edges.forEach(function(e) {
+    var key = e.from + '\u2192' + e.to;
+    if (seen.has(key)) return;
+    seen.add(key);
+    lines.push('  ' + nodeId(e.from) + ' --> ' + nodeId(e.to));
+  });
+
+  // 6-C: 선택 노드 강조
+  lines.push('  style ' + nodeId(selectedLot) +
+    ' fill:#ef4444,color:#fff,stroke:#c00,stroke-width:2px');
+
+  return lines.join('\n');
+}
+
+/* 6-E: 렌더링 → SVG 삽입 */
+function renderGenealogy(lot) {
+  var flowCard  = document.getElementById('flow-card');
+  var container = document.getElementById('mermaid-viewer');
+
+  var result = collectRelatedLots(lot, STATE.traceDir);
+  var code   = buildMermaidCode(result.nodes, result.edges, lot);
+
+  flowCard.style.display = '';
+  container.innerHTML    = '';
+
+  if (result.truncated) {
+    var warn = document.createElement('div');
+    warn.style.cssText = 'color:var(--warning);font-size:0.8rem;margin-bottom:8px;text-align:center;';
+    warn.textContent   = '\u26A0 노드가 50개를 초과하여 일부만 표시됩니다.';
+    container.appendChild(warn);
+  }
+
+  var svgWrap = document.createElement('div');
+  container.appendChild(svgWrap);
+
+  mermaid.render('msg' + Date.now(), code).then(function(res) {
+    svgWrap.innerHTML = res.svg;
+  }).catch(function(err) {
+    svgWrap.innerHTML =
+      '<div style="color:var(--danger);padding:16px;">계보도 렌더링 오류: ' + err.message + '</div>';
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 7: SPC 차트 (다음 단계에서 구현)
