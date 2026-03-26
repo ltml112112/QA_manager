@@ -337,8 +337,183 @@ function handleFile(file, slot) {
 })();
 
 /* ══════════════════════════════════════════════════════════════
-   Step 3: 품질 데이터 파싱 (다음 단계에서 구현)
+   Step 3: 품질 데이터 파서
    ══════════════════════════════════════════════════════════════ */
+
+/* 3-A: 워크북 → 2D 배열 변환 */
+function getRows(workbook) {
+  var ws = workbook.Sheets[workbook.SheetNames[0]];
+  return { ws: ws, rows: XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) };
+}
+
+/* 3-B: 병합셀 forward-fill
+   ws['!merges'] 를 순회해서 병합 범위 첫 셀 값을 빈 셀에 채워 넣음 */
+function forwardFillMerges(ws, rows) {
+  var merges = ws['!merges'] || [];
+  merges.forEach(function(m) {
+    var val = '';
+    // 기준 셀 값 추출
+    if (rows[m.s.r] && rows[m.s.r][m.s.c] !== undefined) val = rows[m.s.r][m.s.c];
+    for (var r = m.s.r; r <= m.e.r; r++) {
+      for (var c = m.s.c; c <= m.e.c; c++) {
+        if (!rows[r]) rows[r] = [];
+        if (r === m.s.r && c === m.s.c) continue; // 첫 셀은 이미 있음
+        if (rows[r][c] === '' || rows[r][c] === undefined) rows[r][c] = val;
+      }
+    }
+  });
+  return rows;
+}
+
+/* 3-D: 컬럼 역할 분류
+   row3 = 상세헤더 행(index 3), row4 = 기준 행(index 4)
+   반환: 컬럼 인덱스 → 'batchNo' | 'value' | 'USL' | 'LSL' | 'UCL' | 'LCL' | 'ignore'
+*/
+function classifyColumns(row3, row4) {
+  var roles = {};
+  for (var c = 0; c < Math.max(row3.length, row4.length); c++) {
+    var h3 = String(row3[c] || '').trim();
+    var h4 = String(row4[c] || '').trim().toUpperCase();
+
+    if (h3.toUpperCase().indexOf('BATCH') !== -1 || h3.indexOf('배치') !== -1) {
+      roles[c] = 'batchNo';
+    } else if (h4 === 'USL') {
+      roles[c] = 'USL';
+    } else if (h4 === 'LSL') {
+      roles[c] = 'LSL';
+    } else if (h4 === 'UCL') {
+      roles[c] = 'UCL';
+    } else if (h4 === 'LCL') {
+      roles[c] = 'LCL';
+    } else if (h4 === '기준' || h4 === '' && h3 === '') {
+      roles[c] = 'ignore';
+    } else if (h3 !== '') {
+      roles[c] = 'value';
+    } else {
+      roles[c] = 'ignore';
+    }
+  }
+  return roles;
+}
+
+/* 3-E: 공정단계 그룹 경계 파악
+   batchNo 컬럼 위치마다 새 그룹 시작. row0 = 대분류(공정단계명)
+   반환: [{stage, batchNoCol, startCol, endCol}]
+*/
+function buildStageGroups(roles, row0, totalCols) {
+  var groups = [];
+  var batchCols = Object.keys(roles).filter(function(c) {
+    return roles[c] === 'batchNo';
+  }).map(Number).sort(function(a, b) { return a - b; });
+
+  batchCols.forEach(function(bc, idx) {
+    var nextBc  = batchCols[idx + 1] !== undefined ? batchCols[idx + 1] : totalCols;
+    var stageName = String(row0[bc] || ('공정단계 ' + (idx + 1))).trim();
+    groups.push({ stage: stageName, batchNoCol: bc, startCol: bc, endCol: nextBc - 1 });
+  });
+  return groups;
+}
+
+/* 3-F: 각 value 컬럼에 인접 기준값 컬럼 연결 (forward scan)
+   반환: {valueCols: {colIdx: {USLcol,LSLcol,UCLcol,LCLcol}}, itemLabels: {colIdx: label}}
+*/
+function buildValueMeta(roles, row2, row3) {
+  var valueMeta = {};
+  var colIndices = Object.keys(roles).map(Number).sort(function(a, b) { return a - b; });
+
+  colIndices.forEach(function(c) {
+    if (roles[c] !== 'value') return;
+    // 측정항목 라벨: row2(소분류) + row3(상세헤더) 조합
+    var label = [String(row2[c] || '').trim(), String(row3[c] || '').trim()]
+      .filter(Boolean).join(' ').trim() || ('col' + c);
+
+    var limitCols = { USLcol: null, LSLcol: null, UCLcol: null, LCLcol: null };
+    // 오른쪽으로 forward scan → 첫 번째 USL/LSL/UCL/LCL 컬럼 찾기
+    for (var i = c + 1; i < c + 10 && i < colIndices[colIndices.length - 1] + 1; i++) {
+      if (roles[i] === 'USL'  && limitCols.USLcol === null)  limitCols.USLcol  = i;
+      if (roles[i] === 'LSL'  && limitCols.LSLcol === null)  limitCols.LSLcol  = i;
+      if (roles[i] === 'UCL'  && limitCols.UCLcol === null)  limitCols.UCLcol  = i;
+      if (roles[i] === 'LCL'  && limitCols.LCLcol === null)  limitCols.LCLcol  = i;
+      if (roles[i] === 'batchNo') break; // 다음 그룹 시작 전에 중단
+    }
+    valueMeta[c] = { label: label, limits: limitCols };
+  });
+  return valueMeta;
+}
+
+/* 3-G: 데이터 행 파싱 → qualityRecords 배열 생성 */
+function parseQualityRows(rows, stageGroups, roles, valueMeta) {
+  var records = [];
+
+  stageGroups.forEach(function(grp) {
+    // 데이터 행: index 5부터
+    for (var r = 5; r < rows.length; r++) {
+      var row = rows[r];
+      var batchNo = String(row[grp.batchNoCol] || '').trim();
+      if (!batchNo) continue; // Batch No. 없는 행 스킵
+
+      // 그룹 범위 내 value 컬럼 순회
+      for (var c = grp.startCol; c <= grp.endCol; c++) {
+        if (roles[c] !== 'value') continue;
+        var meta  = valueMeta[c];
+        if (!meta) continue;
+
+        var rawVal = row[c];
+        var value  = rawVal === '' || rawVal === undefined ? null : parseFloat(rawVal);
+        if (value === null || isNaN(value)) continue; // 측정값 없는 셀 스킵
+
+        var lim = meta.limits;
+        records.push({
+          stage:     grp.stage,
+          batchNo:   batchNo,
+          itemLabel: meta.label,
+          value:     value,
+          USL: lim.USLcol !== null ? parseFloat(row[lim.USLcol]) : null,
+          LSL: lim.LSLcol !== null ? parseFloat(row[lim.LSLcol]) : null,
+          UCL: lim.UCLcol !== null ? parseFloat(row[lim.UCLcol]) : null,
+          LCL: lim.LCLcol !== null ? parseFloat(row[lim.LCLcol]) : null,
+        });
+      }
+    }
+  });
+  return records;
+}
+
+/* 3-H: 진입점 — onQualityReady() 에서 호출 */
+function parseQualityData() {
+  var res   = getRows(STATE.qualityWb);
+  var rows  = forwardFillMerges(res.ws, res.rows);
+
+  var row0  = rows[0] || [];   // 대분류(공정단계)
+  var row2  = rows[2] || [];   // 소분류(측정항목)
+  var row3  = rows[3] || [];   // 상세헤더
+  var row4  = rows[4] || [];   // 기준 행
+
+  var totalCols = row3.length;
+  var roles       = classifyColumns(row3, row4);
+  var stageGroups = buildStageGroups(roles, row0, totalCols);
+  var valueMeta   = buildValueMeta(roles, row2, row3);
+
+  STATE.qualityRecords = parseQualityRows(rows, stageGroups, roles, valueMeta);
+  console.log('[품질파서] 레코드 수:', STATE.qualityRecords.length,
+              '| 공정단계:', stageGroups.map(function(g){return g.stage;}).join(', '));
+}
+
+/* 3-H: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
+function onQualityReady() {
+  parseQualityData();
+  // Step 7 차트 렌더는 추후 구현
+  tryRenderAll();
+}
+
+/* 두 파일 모두 준비됐을 때만 전체 렌더 시작 */
+function tryRenderAll() {
+  if (STATE.qualityRecords.length && Object.keys(STATE.byOutputLot).length) {
+    document.getElementById('empty-state').style.display = 'none';
+    if (typeof renderSidebar    === 'function') renderSidebar();
+    if (typeof renderSpcCharts  === 'function') renderSpcCharts();
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 4: 흐름도 데이터 파싱 (다음 단계에서 구현)
