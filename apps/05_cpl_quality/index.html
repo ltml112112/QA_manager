@@ -1029,8 +1029,134 @@ function renderSpcCharts() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 8: Batch Deep-Dive (다음 단계에서 구현)
+   Step 8: Batch Deep-Dive
    ══════════════════════════════════════════════════════════════ */
+
+/* 8-C: 모든 SPC 차트에서 해당 BatchNo 포인트 하이라이트
+   해당 배치 → 빨간 테두리 + 큰 원, 나머지 → 원래 크기
+*/
+function highlightBatch(batchNo) {
+  STATE.chartInstances.forEach(function(chart) {
+    var ds     = chart.data.datasets[0];
+    var labels = chart.data.labels;
+    var newRadius = [];
+    var newBorder = [];
+    var newBg     = [];
+
+    labels.forEach(function(label, i) {
+      var isTarget = String(label) === String(batchNo);
+      // 원래 포인트 색(이탈 여부에 따라)
+      var origColor = Array.isArray(ds.pointBackgroundColor)
+        ? ds.pointBackgroundColor[i]
+        : (ds.pointBackgroundColor || '#4a9eff');
+
+      newRadius.push(isTarget ? 10 : 5);
+      newBorder.push(isTarget ? '#ef4444' : origColor);
+      newBg.push(origColor);
+    });
+
+    ds.pointRadius      = newRadius;
+    ds.pointBorderColor = newBorder;
+    ds.pointBorderWidth = labels.map(function(l, i) {
+      return String(l) === String(batchNo) ? 3 : 1;
+    });
+    ds.pointBackgroundColor = newBg;
+    chart.update('none'); // 애니메이션 없이 즉시 갱신
+  });
+}
+
+/* 8-C: 하이라이트 초기화 */
+function clearHighlight() {
+  STATE.chartInstances.forEach(function(chart) {
+    var ds = chart.data.datasets[0];
+    // pointBackgroundColor 는 원래 이탈 색상으로 복원
+    // → 차트를 재빌드하지 않고 radius/border만 초기화
+    ds.pointRadius      = 5;
+    ds.pointBorderWidth = 1;
+    // borderColor 는 pointBackgroundColor 와 동일하게
+    ds.pointBorderColor = ds.pointBackgroundColor;
+    chart.update('none');
+  });
+}
+
+/* 8-B: 딥다이브 패널 렌더링
+   batchNo 에 해당하는 전 공정 레코드를 공정단계별 테이블로 표시
+*/
+function renderDeepDive(batchNo) {
+  var card    = document.getElementById('deep-dive-card');
+  var content = document.getElementById('deep-dive-content');
+
+  var recs = STATE.qualityRecords.filter(function(r) {
+    return String(r.batchNo) === String(batchNo);
+  });
+
+  if (recs.length === 0) {
+    card.classList.remove('visible');
+    return;
+  }
+
+  // 공정단계별 그룹화
+  var byStage = {};
+  recs.forEach(function(r) {
+    if (!byStage[r.stage]) byStage[r.stage] = [];
+    byStage[r.stage].push(r);
+  });
+
+  var ngCount   = recs.filter(isOutOfSpec).length;
+  var totalCount = recs.length;
+
+  var html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">' +
+    '<span style="font-weight:700;font-size:1rem;">Batch: ' + batchNo + '</span>' +
+    '<span class="badge-' + (ngCount > 0 ? 'danger' : 'success') + '">' +
+      '이탈 ' + ngCount + ' / 전체 ' + totalCount +
+    '</span>' +
+    '<button id="deep-dive-close" class="btn btn-sm btn-secondary" style="margin-left:auto;">✕ 닫기</button>' +
+  '</div>';
+
+  Object.keys(byStage).forEach(function(stage) {
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div class="chart-title" style="margin-bottom:6px;">' + stage + '</div>';
+    html += '<div class="trace-table-wrap"><table class="data-table"><thead><tr>' +
+      '<th>측정항목</th><th>측정값</th><th>USL</th><th>LSL</th><th>UCL</th><th>LCL</th><th>판정</th>' +
+      '</tr></thead><tbody>';
+
+    byStage[stage].forEach(function(r) {
+      var ng  = isOutOfSpec(r);
+      var cls = ng ? ' class="cell-exceed"' : '';
+      html +=
+        '<tr>' +
+        '<td>' + r.itemLabel + '</td>' +
+        '<td' + cls + '>' + r.value + '</td>' +
+        '<td>' + (r.USL !== null && !isNaN(r.USL) ? r.USL : '-') + '</td>' +
+        '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? r.LSL : '-') + '</td>' +
+        '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? r.UCL : '-') + '</td>' +
+        '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? r.LCL : '-') + '</td>' +
+        '<td' + cls + '>' + (ng ? 'NG' : 'OK') + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+  content.innerHTML = html;
+  card.classList.add('visible');
+
+  // 8-D: 닫기 버튼
+  document.getElementById('deep-dive-close').addEventListener('click', function() {
+    card.classList.remove('visible');
+    STATE.selectedBatch = null;
+    clearHighlight();
+  });
+}
+
+/* 8-A: 차트 클릭 진입점 (Step 7의 onClick에서 호출) */
+function handleChartClick(batchNo) {
+  STATE.selectedBatch = batchNo;
+  highlightBatch(batchNo);
+  renderDeepDive(batchNo);
+  // 딥다이브 카드로 스크롤
+  document.getElementById('deep-dive-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 /* ══════════════════════════════════════════════════════════════
    Step 9: 추적 테이블 (다음 단계에서 구현)
