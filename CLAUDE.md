@@ -8,6 +8,7 @@
 2. **HPLC/DSC Report 자동생성** - 분석 데이터 기반 리포트 자동 생성
 3. **LGD 사전심사자료 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
 4. **SDC 사전심사자료 자동화** - Google Apps Script 기반 구현 예정 (개발 중)
+5. **소재 Lot 이력 & TREND 분석** - 전 소재 Lot 계보 추적 + 공정별 SPC TREND 시각화
 
 **호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
@@ -34,8 +35,10 @@ QA_manager/
     │   └── code.gs                   # Google Apps Script 백엔드
     ├── 03_hplc_dsc/
     │   └── index.html                # HPLC/DSC Report 자동생성
-    └── 04_sdc_eval/
-        └── index.html                # SDC 사전심사자료 자동화 (개발 중 플레이스홀더)
+    ├── 04_sdc_eval/
+    │   └── index.html                # SDC 사전심사자료 자동화 (개발 중 플레이스홀더)
+    └── 05_cpl_quality/
+        └── index.html                # 소재 Lot 이력 & TREND 분석 (단일 파일 앱)
 ```
 
 ---
@@ -487,6 +490,91 @@ SAMPLE_IVL2: #f59e0b  (주황색)
 ```javascript
 { id: 'sdc', src: 'https://script.google.com/macros/s/새배포URL/exec', ... }
 ```
+
+---
+
+## 5. 소재 Lot 이력 & TREND 분석 (`apps/05_cpl_quality/`)
+
+CPL에 국한하지 않고 **모든 소재**의 Lot 계보 추적 + 공정별 SPC TREND를 확인하는 도구.
+단일 HTML 파일(`index.html`)에 CSS·HTML·JS 전부 포함.
+
+### CDN 라이브러리
+```html
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+```
+
+### 입력 파일 2종
+
+#### 파일 ①: 품질 데이터 (Excel)
+| 행 | 내용 |
+|----|------|
+| 1 | 대분류 (병합셀) — 공정단계명 ("PH633 합성원재료(TPBC) COA" 등) |
+| 2 | 중분류 (병합셀) — 소재코드 |
+| 3 | 소분류 — 측정항목명 ("순도(%)", "Tm(℃)" 등) |
+| 4 | 상세헤더 — "Batch No.", 항목별 규격 표기 |
+| 5 | **기준 행** — "기준", "USL", "LSL", "UCL", "LCL" 라벨 |
+| 6+ | **데이터 행** — Batch별 측정값 + 기준값(반복) |
+
+- "Batch No." 컬럼이 공정단계별로 여러 개 존재
+- 각 측정 컬럼 바로 뒤에 USL/LSL/UCL/LCL 기준값 컬럼들이 위치
+
+#### 파일 ②: 흐름도 데이터 (Excel)
+| 행 | 내용 |
+|----|------|
+| 1 | "1단계" ~ "6단계" 헤더 |
+| 2 | 단계별 [LOTNUM, 비고, 품목코드, 품목명, 투입량] 서브컬럼 |
+| 3+ | 데이터 — 완제품→원료 역추적 관계 |
+
+### 전역 STATE 구조
+```javascript
+STATE = {
+  qualityWb:      null,   // 품질 데이터 워크북
+  flowWb:         null,   // 흐름도 워크북
+  qualityRecords: [],     // [{stage, batchNo, itemLabel, value, USL, LSL, UCL, LCL}]
+  byOutputLot:    {},     // 완제품Lot → [원료Lot, ...]
+  byInputLot:     {},     // 원료Lot  → [완제품Lot, ...]
+  lotMeta:        {},     // Lot → {itemCode, itemName}
+  selectedLot:    null,
+  selectedBatch:  null,
+  traceDir:       'backward', // 'backward' | 'forward'
+  chartInstances: [],
+}
+```
+
+### 주요 함수 목록
+| 함수 | 역할 |
+|------|------|
+| `detectFileType(wb, slotHint)` | 첫 15행 스캔 → 품질/흐름도 자동판별 |
+| `forwardFillMerges(ws, rows)` | 병합셀 forward-fill |
+| `classifyColumns(row3, row4)` | 컬럼 역할 분류 (batchNo/value/USL/LSL/UCL/LCL) |
+| `buildStageGroups(...)` | Batch No. 컬럼 기준 공정단계 그룹 경계 파악 |
+| `parseQualityData()` | 품질 파서 진입점 → `STATE.qualityRecords` 채움 |
+| `parseFlowData()` | 흐름도 파서 진입점 → `byOutputLot/byInputLot/lotMeta` 채움 |
+| `tryRenderAll()` | 두 파일 모두 준비됐을 때 렌더 시작 |
+| `collectRelatedLots(lot, dir)` | BFS로 연관 Lot·엣지 수집 (최대 50개) |
+| `renderSidebar()` | Lot 목록 + 역추적↔정추적 토글 + 검색 |
+| `renderGenealogy(lot)` | Mermaid flowchart TD 계보도 렌더링 |
+| `renderSpcCharts()` | 공정단계별 SPC 차트 전체 렌더링 |
+| `handleChartClick(batchNo)` | 차트 포인트 클릭 → Deep-Dive 진입 |
+| `highlightBatch(batchNo)` | 전체 차트에서 해당 Batch 하이라이트 |
+| `renderDeepDive(batchNo)` | Batch 전 공정 데이터 패널 표시 |
+| `renderTrackingTable(lot)` | 선택 Lot + 연관 Lot 추적 테이블 |
+
+### 파일 자동판별 로직 (`detectFileType`)
+- 첫 15행 전체 텍스트에서 `USL` / `LSL` / `BATCH NO` 키워드 → **품질 파일**
+- 첫 3행에서 `단계` 키워드 → **흐름도 파일**
+- 키워드 미검출 시 드롭존 슬롯(slotHint) fallback 사용
+
+### SPC 차트 색상 규칙
+| 선 | 색상 | 스타일 |
+|----|------|--------|
+| UCL / LCL | `#ef4444` 빨간색 | 점선 `[6,3]` |
+| USL / LSL | `#f59e0b` 주황색 | 실선 |
+| 이탈 포인트 | `#ef4444` 빨간색 | 포인트 색상 |
+| 정상 포인트 | `#4a9eff` 파란색 | 포인트 색상 |
 
 ---
 

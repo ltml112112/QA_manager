@@ -38,6 +38,14 @@ const apps = [
     src:         './apps/04_sdc_eval/index.html',
     loaderText:  'SDC 사전심사자료 자동화 로딩 중...',
   },
+  {
+    id:          'cpl',
+    label:       '소재 Lot 이력 & TREND 분석',
+    icon:        '🏭',
+    badge:       'NEW',
+    src:         './apps/05_cpl_quality/index.html',
+    loaderText:  '소재 Lot 흐름 & 품질 TREND 분석기 로딩 중...',
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
