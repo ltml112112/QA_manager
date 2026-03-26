@@ -250,22 +250,37 @@ function setUploadStatus(slot, state, info) {
 }
 
 /* 2-D: 파일 자동판별
-   행 4(index 4)에 USL/LSL → 품질 파일
-   행 0(index 0)에 "단계"   → 흐름도 파일
-   그 외                    → 'unknown'
+   - 첫 15행 전체를 스캔하여 USL/LSL 키워드 발견 → 품질 파일
+   - 첫  3행에서 "단계" 키워드 발견 → 흐름도 파일
+   - "Batch No." / "BATCH" 도 품질 파일 지표로 사용
+   - 슬롯 힌트(drop zone 위치)를 최후 fallback으로 사용
 */
-function detectFileType(workbook) {
+function detectFileType(workbook, slotHint) {
   var ws   = workbook.Sheets[workbook.SheetNames[0]];
   var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-  if (rows[4]) {
-    var r4 = rows[4].join('|').toUpperCase();
-    if (r4.indexOf('USL') !== -1 || r4.indexOf('LSL') !== -1) return 'quality';
+  var scanRows = Math.min(rows.length, 15);
+  var fullText = '';
+  for (var i = 0; i < scanRows; i++) {
+    fullText += rows[i].join('|') + '\n';
   }
-  if (rows[0]) {
-    if (rows[0].join('|').indexOf('단계') !== -1) return 'flow';
+  var upper = fullText.toUpperCase();
+
+  // 흐름도: "단계" 는 첫 3행에서만 확인 (품질 파일 공정단계명과 구별)
+  var top3 = '';
+  for (var j = 0; j < Math.min(rows.length, 3); j++) {
+    top3 += rows[j].join('|') + '\n';
   }
-  return 'unknown';
+  var isFlow    = top3.indexOf('단계') !== -1;
+  var isQuality = upper.indexOf('USL') !== -1 || upper.indexOf('LSL') !== -1 ||
+                  upper.indexOf('BATCH NO') !== -1 || upper.indexOf('BATCH NO.') !== -1;
+
+  if (isQuality && !isFlow) return 'quality';
+  if (isFlow    && !isQuality) return 'flow';
+  // 둘 다 해당하거나 둘 다 없을 때 → 슬롯 힌트로 fallback
+  if (isQuality) return 'quality';
+  if (isFlow)    return 'flow';
+  return slotHint || 'unknown';
 }
 
 /* 2-F: 파일 읽기 + 단일 파싱 (중복 방지)
@@ -278,7 +293,7 @@ function handleFile(file, slot) {
   reader.onload = function(e) {
     try {
       var wb       = XLSX.read(e.target.result, { type: 'array', cellStyles: true });
-      var detected = detectFileType(wb);
+      var detected = detectFileType(wb, slot);
       var fileInfo = { name: file.name, size: formatBytes(file.size) };
 
       if (detected === 'unknown') {
