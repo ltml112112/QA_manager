@@ -221,7 +221,9 @@ const STATE = {
   byOutputLot:    {},     // 완제품 → 원료 맵
   byInputLot:     {},     // 원료 → 완제품 맵
   lotMeta:        {},     // Lot → {itemCode, itemName}
-  stageLabels:    [],     // 흐름도 단계 라벨 [완제품측(idx0), ..., 원료측(idxN)]
+  lotStage:       {},     // Lot → 단계 인덱스 (0=완제품/1단계, N=원료/마지막단계)
+  stageLabels:    [],     // 흐름도 Excel 헤더 라벨 ["1단계","2단계",...]
+  stageTypeLabels:[],     // 실제 공정명 ["완제품","정제1차품","정제원재료",...]
   selectedLot:    null,
   selectedBatch:  null,
   traceDir:       'backward', // 'backward' | 'forward'
@@ -593,16 +595,25 @@ function parseSubCols(rows, stages) {
 
   stages.forEach(function(stg, idx) {
     var endCol = idx + 1 < stages.length ? stages[idx + 1].startCol : row1.length;
-    var sub = { stageLabel: stg.stageLabel, lotNumCols: [], itemCodeCol: null, itemNameCol: null };
+    var sub = {
+      stageLabel:   stg.stageLabel,
+      lotNumCols:   [],
+      itemCodeCol:  null,
+      itemNameCol:  null,
+      stageNameCol: null   // "단계" 서브컬럼 (완제품/정제1차품 등 실제 공정명)
+    };
 
     for (var c = stg.startCol; c < endCol; c++) {
-      var cell = String(row1[c] || '').trim().toUpperCase();
-      if (cell.indexOf('LOTNUM') !== -1 || cell.indexOf('LOT') !== -1) {
+      var cell = String(row1[c] || '').trim();
+      var upper = cell.toUpperCase();
+      if (upper.indexOf('LOTNUM') !== -1 || upper.indexOf('LOT') !== -1) {
         sub.lotNumCols.push(c);
-      } else if (cell.indexOf('품목코드') !== -1 || cell.indexOf('코드') !== -1) {
+      } else if (upper.indexOf('품목코드') !== -1 || upper.indexOf('코드') !== -1) {
         sub.itemCodeCol = c;
-      } else if (cell.indexOf('품목명') !== -1 || cell.indexOf('품명') !== -1) {
+      } else if (upper.indexOf('품목명') !== -1 || upper.indexOf('품명') !== -1) {
         sub.itemNameCol = c;
+      } else if (cell === '단계') {
+        sub.stageNameCol = c;
       }
     }
     result.push(sub);
@@ -610,59 +621,65 @@ function parseSubCols(rows, stages) {
   return result;
 }
 
-/* 4-D / 4-E / 4-F: 데이터 행 순회 → 양방향 맵 + lotMeta 구축
-   흐름도 구조: 높은 단계(완제품) → 낮은 단계(원료) 방향으로 읽음
-   완제품 Lot = 가장 높은 단계(마지막)의 LOTNUM
-   원료 Lot   = 그보다 낮은 단계들의 LOTNUM
+/* 4-D / 4-E / 4-F: 데이터 행 순회 → 양방향 맵 + lotMeta + lotStage + stageTypeLabels 구축
+   관계 구축 방식: 인접 단계 쌍끼리만 연결 (star 패턴 제거)
+     예) 1단계←2단계←3단계←4단계 → 1↔2, 2↔3, 3↔4 엣지만 생성
+   1단계(완제품)가 미기재인 경우에도 2단계부터 체인 형성 가능
 */
 function parseFlowRows(rows, subCols) {
-  var byOutput = {};  // 완제품Lot → [원료Lot, ...]
-  var byInput  = {};  // 원료Lot  → [완제품Lot, ...]
-  var lotMeta  = {};  // Lot → {itemCode, itemName}
+  var byOutput       = {};  // 완제품Lot → [원료Lot, ...]
+  var byInput        = {};  // 원료Lot  → [완제품Lot, ...]
+  var lotMeta        = {};  // Lot → {itemCode, itemName}
+  var lotStage       = {};  // Lot → 단계 인덱스 (0=완제품/1단계, N=원료/마지막단계)
+  var stageTypeLabels = new Array(subCols.length).fill(''); // 실제 공정명 ("완제품","정제1차품" 등)
 
   for (var r = 2; r < rows.length; r++) {
     var row = rows[r];
 
-    // 각 단계에서 Lot 번호 + 메타 추출
-    var stageLots = subCols.map(function(sub) {
-      // lotNumCols 중 값이 있는 첫 번째 사용
+    // 각 단계에서 Lot 번호 + 메타 + 공정명 추출
+    var stageLots = subCols.map(function(sub, sIdx) {
       var lot = '';
       for (var i = 0; i < sub.lotNumCols.length; i++) {
         var v = String(row[sub.lotNumCols[i]] || '').trim();
         if (v) { lot = v; break; }
       }
-      var itemCode = sub.itemCodeCol !== null ? String(row[sub.itemCodeCol] || '').trim() : '';
-      var itemName = sub.itemNameCol !== null ? String(row[sub.itemNameCol] || '').trim() : '';
-      return { lot: lot, itemCode: itemCode, itemName: itemName };
+      var itemCode  = sub.itemCodeCol  !== null ? String(row[sub.itemCodeCol]  || '').trim() : '';
+      var itemName  = sub.itemNameCol  !== null ? String(row[sub.itemNameCol]  || '').trim() : '';
+      var stageName = sub.stageNameCol !== null ? String(row[sub.stageNameCol] || '').trim() : '';
+      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, stageIdx: sIdx };
     });
 
-    // lotMeta 저장
+    // lotMeta + lotStage 저장, stageTypeLabels 수집
     stageLots.forEach(function(s) {
       if (!s.lot) return;
       if (!lotMeta[s.lot]) {
         lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName };
       }
+      if (lotStage[s.lot] === undefined) {
+        lotStage[s.lot] = s.stageIdx;
+      }
+      if (s.stageName && !stageTypeLabels[s.stageIdx]) {
+        stageTypeLabels[s.stageIdx] = s.stageName;
+      }
     });
 
-    // 관계 구축: 단계 순서상 앞(완제품) → 뒤(원료)
-    // 값이 있는 Lot 쌍끼리만 연결
-    var validLots = stageLots.map(function(s) { return s.lot; }).filter(Boolean);
-    if (validLots.length < 2) continue;
+    // 관계 구축: 인접한 단계 쌍끼리만 연결 (값 있는 단계 인덱스만 추려서)
+    var validIdxs = [];
+    stageLots.forEach(function(s, i) { if (s.lot) validIdxs.push(i); });
+    if (validIdxs.length < 2) continue;
 
-    // 첫 번째 유효 Lot을 완제품, 나머지를 원료로 처리
-    // (흐름도가 완제품→원료 방향이므로 index 0이 완제품)
-    var outputLot = validLots[0];
-    for (var i = 1; i < validLots.length; i++) {
-      var inputLot = validLots[i];
-      if (!byOutput[outputLot]) byOutput[outputLot] = [];
-      if (byOutput[outputLot].indexOf(inputLot) === -1) byOutput[outputLot].push(inputLot);
-
-      if (!byInput[inputLot]) byInput[inputLot] = [];
-      if (byInput[inputLot].indexOf(outputLot) === -1) byInput[inputLot].push(outputLot);
+    for (var vi = 0; vi < validIdxs.length - 1; vi++) {
+      var outLot = stageLots[validIdxs[vi]].lot;     // 더 완제품 방향 (낮은 단계 인덱스)
+      var inLot  = stageLots[validIdxs[vi + 1]].lot; // 더 원료 방향 (높은 단계 인덱스)
+      if (!byOutput[outLot]) byOutput[outLot] = [];
+      if (byOutput[outLot].indexOf(inLot) === -1) byOutput[outLot].push(inLot);
+      if (!byInput[inLot]) byInput[inLot] = [];
+      if (byInput[inLot].indexOf(outLot) === -1) byInput[inLot].push(outLot);
     }
   }
 
-  return { byOutput: byOutput, byInput: byInput, lotMeta: lotMeta };
+  return { byOutput: byOutput, byInput: byInput, lotMeta: lotMeta,
+           lotStage: lotStage, stageTypeLabels: stageTypeLabels };
 }
 
 /* 4-G: 진입점 */
@@ -674,10 +691,12 @@ function parseFlowData() {
   var subCols = parseSubCols(rows, stages);
   var maps    = parseFlowRows(rows, subCols);
 
-  STATE.byOutputLot = maps.byOutput;
-  STATE.byInputLot  = maps.byInput;
-  STATE.lotMeta     = maps.lotMeta;
-  STATE.stageLabels = subCols.map(function(sub) { return sub.stageLabel; });
+  STATE.byOutputLot      = maps.byOutput;
+  STATE.byInputLot       = maps.byInput;
+  STATE.lotMeta          = maps.lotMeta;
+  STATE.lotStage         = maps.lotStage;
+  STATE.stageLabels      = subCols.map(function(sub) { return sub.stageLabel; });
+  STATE.stageTypeLabels  = maps.stageTypeLabels;
 
   var lotCount = Object.keys(maps.lotMeta).length;
   var edgeCount = Object.keys(maps.byOutput).reduce(function(s, k) {
@@ -823,73 +842,84 @@ function collectRelatedLots(startLot, dir) {
   return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
 }
 
-/* 6-B: 각 Lot에 컬럼 인덱스 할당 (BFS 기반)
+/* 6-B: 각 Lot에 컬럼 인덱스 할당
+   우선순위 ①: STATE.lotStage (Excel 단계 인덱스 직접 사용)
+   우선순위 ②: BFS fallback (lotStage 정보 없는 Lot 대비)
    원료 = 컬럼 0(왼쪽), 완제품 = 컬럼 N(오른쪽)
-   edges: { from: 완제품, to: 원료 }
+   stageIdx 0 = 완제품(1단계) → 오른쪽, stageIdx N = 원료 → 왼쪽
 */
 function assignLotColumns(nodes, edges) {
-  /* 양방향 인접 맵 구성 */
-  var rightOf = {}; // lot → 완제품 방향 이웃
-  var leftOf  = {}; // lot → 원료 방향 이웃
+  var col = {};
+  var maxStageIdx = 0;
 
+  /* ① lotStage 기반 직접 할당 */
+  nodes.forEach(function(l) {
+    if (STATE.lotStage[l] !== undefined) {
+      var si = STATE.lotStage[l];
+      col[l] = si; // 일단 stageIdx로 저장 (나중에 반전)
+      if (si > maxStageIdx) maxStageIdx = si;
+    }
+  });
+
+  /* ② BFS fallback: lotStage 없는 노드 처리 */
+  var rightOf = {}, leftOf = {};
   edges.forEach(function(e) {
-    /* e.from=완제품, e.to=원료 → to가 from의 왼쪽 */
     if (!rightOf[e.to])  rightOf[e.to]  = [];
     if (!leftOf[e.from]) leftOf[e.from] = [];
     rightOf[e.to].push(e.from);
     leftOf[e.from].push(e.to);
   });
 
-  /* 순수 원료(왼쪽 이웃 없음)에서 BFS → 컬럼 0부터 오른쪽으로 증가 */
-  var col   = {};
-  var queue = [];
-
+  var bfsQueue = [];
   nodes.forEach(function(l) {
-    if (!leftOf[l] || leftOf[l].length === 0) {
-      col[l] = 0;
-      queue.push(l);
+    if (col[l] === undefined) {
+      if (!leftOf[l] || leftOf[l].length === 0) {
+        col[l] = maxStageIdx; // 원료측 fallback
+        bfsQueue.push(l);
+      }
     }
   });
-  /* 고립 노드 fallback */
-  if (queue.length === 0) {
+  if (bfsQueue.length === 0) {
     nodes.forEach(function(l) {
-      if (col[l] === undefined) { col[l] = 0; queue.push(l); }
+      if (col[l] === undefined) { col[l] = maxStageIdx; bfsQueue.push(l); }
     });
   }
-
-  while (queue.length) {
-    var cur = queue.shift();
+  while (bfsQueue.length) {
+    var cur = bfsQueue.shift();
     (rightOf[cur] || []).forEach(function(r) {
-      var proposed = col[cur] + 1;
-      if (col[r] === undefined || col[r] < proposed) {
-        col[r] = proposed;
-        queue.push(r);
+      if (col[r] === undefined) {
+        col[r] = Math.max(0, col[cur] - 1);
+        bfsQueue.push(r);
       }
     });
   }
+  nodes.forEach(function(l) { if (col[l] === undefined) col[l] = 0; });
 
-  /* 미할당 노드 fallback */
-  nodes.forEach(function(l) {
-    if (col[l] === undefined) col[l] = 0;
-  });
+  /* stageIdx → displayCol: 원료(높은 idx)=0, 완제품(낮은 idx)=numCols-1 */
+  nodes.forEach(function(l) { col[l] = maxStageIdx - col[l]; });
 
-  return col;
+  return { colMap: col, maxStageIdx: maxStageIdx };
 }
 
 /* 6-C: 단계 헤더 라벨 결정
-   stageLabels[0] = 완제품(오른쪽), stageLabels[N] = 원료(왼쪽)
-   컬럼 0 = 원료, 컬럼 numCols-1 = 완제품
+   displayCol 0 = 원료(stageIdx=maxStageIdx), displayCol N = 완제품(stageIdx=0)
+   우선순위: stageTypeLabels → stageLabels → 기본값
 */
-function getColumnLabel(colIdx, numCols) {
-  var labels = STATE.stageLabels;
-  if (labels && labels.length > 0) {
-    /* 원료측 = labels 마지막, 완제품측 = labels 처음 */
-    var labelIdx = (labels.length - 1) - colIdx;
-    if (labelIdx >= 0 && labelIdx < labels.length) return labels[labelIdx];
-  }
-  if (colIdx === 0)            return '원재료';
-  if (colIdx === numCols - 1)  return '완제품';
-  return '중간재 ' + colIdx + '단계';
+function getColumnLabel(displayCol, maxStageIdx) {
+  var stageIdx = maxStageIdx - displayCol; // displayCol → 원래 stageIdx 역산
+
+  /* 실제 공정명 (완제품/정제1차품 등) */
+  var typeLabels = STATE.stageTypeLabels;
+  if (typeLabels && typeLabels[stageIdx]) return typeLabels[stageIdx];
+
+  /* Excel 헤더 라벨 (1단계/2단계 등) */
+  var hdrLabels = STATE.stageLabels;
+  if (hdrLabels && hdrLabels[stageIdx]) return hdrLabels[stageIdx];
+
+  /* 기본값 */
+  if (displayCol === 0)           return '원재료';
+  if (displayCol === maxStageIdx) return '완제품';
+  return (stageIdx + 1) + '단계';
 }
 
 /* 6-D: SVG 베지어 연결선 그리기 */
@@ -987,8 +1017,10 @@ function renderGenealogy(lot) {
   if (nodes.length === 0) return;
 
   /* 컬럼 할당 */
-  var colMap  = assignLotColumns(nodes, edges);
-  var numCols = Math.max.apply(null, nodes.map(function(l) { return colMap[l]; })) + 1;
+  var assigned   = assignLotColumns(nodes, edges);
+  var colMap     = assigned.colMap;
+  var maxStageIdx = assigned.maxStageIdx;
+  var numCols    = maxStageIdx + 1;
 
   /* 컬럼별 Lot 그룹화 */
   var byCol = {};
@@ -1011,7 +1043,7 @@ function renderGenealogy(lot) {
 
     var hdr = document.createElement('div');
     hdr.className   = 'stage-col-header';
-    hdr.textContent = getColumnLabel(c, numCols);
+    hdr.textContent = getColumnLabel(c, maxStageIdx);
     stageDiv.appendChild(hdr);
 
     var body = document.createElement('div');
