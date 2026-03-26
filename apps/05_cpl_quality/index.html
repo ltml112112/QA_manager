@@ -85,6 +85,11 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 /* ── No Data ── */
 .no-data { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 .no-data-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* ── Upload States ── */
+.dropzone.drag-over { border-color: var(--accent); background: rgba(190,0,57,0.07); }
+.dropzone.upload-ok { border-color: var(--success); }
+.dropzone.upload-error { border-color: var(--danger); }
 </style>
 </head>
 <body>
@@ -92,14 +97,18 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 <!-- ── Upload Bar ── -->
 <div class="upload-bar">
   <div class="dropzone" id="drop-quality">
-    <div class="dropzone-icon">📊</div>
+    <input type="file" id="input-quality" accept=".xlsx,.xls" style="display:none">
+    <div class="dropzone-icon" id="icon-quality">📊</div>
     <div class="dropzone-title">품질 데이터 업로드</div>
-    <div class="dropzone-hint">.xlsx 파일을 드래그하거나 클릭하세요</div>
+    <div class="dropzone-hint" id="hint-quality">.xlsx 파일을 드래그하거나 클릭하세요</div>
+    <div class="upload-status" id="status-quality" style="display:none;margin-top:6px;font-size:0.82rem;text-align:center;"></div>
   </div>
   <div class="dropzone" id="drop-flow">
-    <div class="dropzone-icon">🔗</div>
+    <input type="file" id="input-flow" accept=".xlsx,.xls" style="display:none">
+    <div class="dropzone-icon" id="icon-flow">🔗</div>
     <div class="dropzone-title">흐름도 데이터 업로드</div>
-    <div class="dropzone-hint">.xlsx 파일을 드래그하거나 클릭하세요</div>
+    <div class="dropzone-hint" id="hint-flow">.xlsx 파일을 드래그하거나 클릭하세요</div>
+    <div class="upload-status" id="status-flow" style="display:none;margin-top:6px;font-size:0.82rem;text-align:center;"></div>
   </div>
 </div>
 
@@ -175,16 +184,157 @@ mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose
 
 /* ── 전역 상태 ── */
 const STATE = {
-  qualityData: null,
-  flowData: null,
-  selectedLot: null,
-  traceDirection: 'reverse',
-  charts: [],
+  qualityWb:      null,   // 품질 데이터 워크북 (XLSX)
+  flowWb:         null,   // 흐름도 워크북 (XLSX)
+  qualityRecords: [],     // 파싱된 품질 레코드 [{stage,batchNo,itemLabel,value,USL,LSL,UCL,LCL}]
+  byOutputLot:    {},     // 완제품 → 원료 맵
+  byInputLot:     {},     // 원료 → 완제품 맵
+  lotMeta:        {},     // Lot → {itemCode, itemName}
+  selectedLot:    null,
+  selectedBatch:  null,
+  traceDir:       'backward', // 'backward' | 'forward'
+  chartInstances: [],
 };
 
 /* ══════════════════════════════════════════════════════════════
-   Step 2: 파일 업로드 (다음 단계에서 구현)
+   Step 2: 파일 업로드
    ══════════════════════════════════════════════════════════════ */
+
+/* 2-E: 파일 크기 포맷 */
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+/* 2-G: 업로드 상태 UI 업데이트
+   slot  : 'quality' | 'flow'
+   state : 'idle' | 'loading' | 'ok' | 'error'
+   info  : null | {name, size} | {message}
+*/
+function setUploadStatus(slot, state, info) {
+  var drop     = document.getElementById('drop-' + slot);
+  var iconEl   = document.getElementById('icon-' + slot);
+  var hintEl   = document.getElementById('hint-' + slot);
+  var statusEl = document.getElementById('status-' + slot);
+
+  drop.classList.remove('drag-over', 'upload-ok', 'upload-error');
+
+  if (state === 'idle') {
+    iconEl.textContent    = slot === 'quality' ? '📊' : '🔗';
+    hintEl.style.display  = '';
+    statusEl.style.display = 'none';
+
+  } else if (state === 'loading') {
+    iconEl.textContent    = '⏳';
+    hintEl.style.display  = 'none';
+    statusEl.style.display = '';
+    statusEl.innerHTML    = '<span style="color:var(--text-muted)">파싱 중...</span>';
+
+  } else if (state === 'ok') {
+    iconEl.textContent    = '✅';
+    hintEl.style.display  = 'none';
+    statusEl.style.display = '';
+    statusEl.innerHTML    =
+      '<span style="color:var(--success);font-weight:600">' + info.name + '</span>' +
+      '<span style="color:var(--text-muted);font-size:0.75rem;margin-left:6px">' + info.size + '</span>';
+    drop.classList.add('upload-ok');
+
+  } else if (state === 'error') {
+    iconEl.textContent    = '❌';
+    hintEl.style.display  = 'none';
+    statusEl.style.display = '';
+    statusEl.innerHTML    = '<span style="color:var(--danger)">' + info.message + '</span>';
+    drop.classList.add('upload-error');
+  }
+}
+
+/* 2-D: 파일 자동판별
+   행 4(index 4)에 USL/LSL → 품질 파일
+   행 0(index 0)에 "단계"   → 흐름도 파일
+   그 외                    → 'unknown'
+*/
+function detectFileType(workbook) {
+  var ws   = workbook.Sheets[workbook.SheetNames[0]];
+  var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  if (rows[4]) {
+    var r4 = rows[4].join('|').toUpperCase();
+    if (r4.indexOf('USL') !== -1 || r4.indexOf('LSL') !== -1) return 'quality';
+  }
+  if (rows[0]) {
+    if (rows[0].join('|').indexOf('단계') !== -1) return 'flow';
+  }
+  return 'unknown';
+}
+
+/* 2-F: 파일 읽기 + 단일 파싱 (중복 방지)
+   slot: 드롭존 힌트 ('quality' | 'flow') — 자동판별 후 실제 타입 우선
+*/
+function handleFile(file, slot) {
+  setUploadStatus(slot, 'loading', null);
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb       = XLSX.read(e.target.result, { type: 'array', cellStyles: true });
+      var detected = detectFileType(wb);
+      var fileInfo = { name: file.name, size: formatBytes(file.size) };
+
+      if (detected === 'unknown') {
+        setUploadStatus(slot, 'error', { message: '파일 형식을 인식할 수 없습니다 (품질·흐름도 파일만 지원)' });
+        return;
+      }
+
+      // 드롭존과 실제 타입이 다르면 원래 드롭존을 idle 로 복구
+      if (detected !== slot) setUploadStatus(slot, 'idle', null);
+
+      if (detected === 'quality') {
+        STATE.qualityWb = wb;
+        setUploadStatus('quality', 'ok', fileInfo);
+        if (typeof onQualityReady === 'function') onQualityReady();
+      } else {
+        STATE.flowWb = wb;
+        setUploadStatus('flow', 'ok', fileInfo);
+        if (typeof onFlowReady === 'function') onFlowReady();
+      }
+    } catch (err) {
+      setUploadStatus(slot, 'error', { message: 'XLSX 파싱 오류: ' + err.message });
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* 2-B / 2-C: 드래그앤드롭 + 클릭 업로드 초기화 */
+(function initUpload() {
+  ['quality', 'flow'].forEach(function(slot) {
+    var drop  = document.getElementById('drop-' + slot);
+    var input = document.getElementById('input-' + slot);
+
+    // dragover — 테두리 강조
+    drop.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      drop.classList.add('drag-over');
+    });
+    // dragleave — 복원 (자식 요소로 이동 시 제외)
+    drop.addEventListener('dragleave', function(e) {
+      if (!drop.contains(e.relatedTarget)) drop.classList.remove('drag-over');
+    });
+    // drop
+    drop.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var file = e.dataTransfer.files[0];
+      if (file) handleFile(file, slot);
+    });
+
+    // 클릭 → hidden input 트리거
+    drop.addEventListener('click', function() { input.click(); });
+    input.addEventListener('change', function() {
+      if (input.files[0]) handleFile(input.files[0], slot);
+      input.value = ''; // 같은 파일 재선택 가능
+    });
+  });
+})();
 
 /* ══════════════════════════════════════════════════════════════
    Step 3: 품질 데이터 파싱 (다음 단계에서 구현)
