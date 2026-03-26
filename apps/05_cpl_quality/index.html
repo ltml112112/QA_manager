@@ -58,6 +58,24 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
+/* ── Stage Groups (사이드바 단계별 섹션) ── */
+.stage-group-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; cursor: pointer; user-select: none;
+  background: var(--surface-2); border-bottom: 1px solid var(--border);
+  font-size: 0.78rem; font-weight: 600;
+  transition: background 0.12s;
+}
+.stage-group-header:hover { background: var(--border); }
+.stage-group-label { flex: 1; }
+.stage-group-count {
+  background: var(--border); color: var(--text-muted);
+  padding: 1px 7px; border-radius: 10px; font-size: 0.68rem; font-weight: 400;
+}
+.stage-group-toggle { color: var(--text-muted); font-size: 0.68rem; width: 12px; text-align: center; }
+.stage-group-body { }
+.stage-group-body.sg-collapsed { display: none; }
+
 /* ── Genealogy Flow Table (절대좌표 tree layout) ── */
 .genealogy-flow { overflow-x: auto; overflow-y: auto; padding: 16px; }
 .genealogy-inner { position: relative; } /* absolute children의 기준점 */
@@ -143,10 +161,6 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
   <!-- Sidebar -->
   <div class="sidebar-panel hidden" id="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-toggle">
-        <button class="btn btn-sm active" id="btn-reverse" title="완제품 → 원료">역추적</button>
-        <button class="btn btn-sm" id="btn-forward" title="원료 → 완제품">정추적</button>
-      </div>
       <div class="sidebar-search">
         <input class="form-input" id="lot-search" placeholder="Lot / Batch 검색..." autocomplete="off">
         <div class="autocomplete-list" id="ac-list"></div>
@@ -707,102 +721,106 @@ function onFlowReady() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 5: Lot 사이드바
+   Step 5: Lot 사이드바 (단계별 그룹)
    ══════════════════════════════════════════════════════════════ */
 
-/* 5-B: 현재 방향에 맞는 Lot 목록 반환
-   'backward' → byOutputLot 키(완제품), 'forward' → byInputLot 키(원료)
-*/
-function getLotList() {
-  var map = STATE.traceDir === 'backward' ? STATE.byOutputLot : STATE.byInputLot;
-  return Object.keys(map).sort();
-}
-
-/* 5-D: 검색 필터 적용 (Lot명 또는 품목명 부분 매칭) */
-function filterLots(lots, query) {
-  if (!query) return lots;
-  var q = query.toLowerCase();
-  return lots.filter(function(lot) {
-    if (lot.toLowerCase().indexOf(q) !== -1) return true;
-    var meta = STATE.lotMeta[lot];
-    if (meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1) return true;
-    return false;
+/* 5-A: 단계 라벨 → stageIdx 정렬 순서 반환 (완제품=0 → 원료=N) */
+function getSortedStageIdxs() {
+  var idxs = [];
+  Object.keys(STATE.lotMeta).forEach(function(lot) {
+    var si = STATE.lotStage[lot];
+    if (si !== undefined && idxs.indexOf(si) === -1) idxs.push(si);
   });
+  idxs.sort(function(a, b) { return a - b; }); // 0=완제품 먼저
+  return idxs;
 }
 
-/* 5-B: Lot 목록 DOM 렌더링 */
-function renderLotList(lots) {
+/* 5-B: stageIdx → 표시 라벨 */
+function getStageLabel(si) {
+  return (STATE.stageTypeLabels && STATE.stageTypeLabels[si]) ||
+         (STATE.stageLabels     && STATE.stageLabels[si])     ||
+         ('단계 ' + (si + 1));
+}
+
+/* 5-C: 검색어 기반 Lot 필터 */
+function matchLot(lot, query) {
+  if (!query) return true;
+  var q = query.toLowerCase();
+  if (lot.toLowerCase().indexOf(q) !== -1) return true;
+  var meta = STATE.lotMeta[lot];
+  return !!(meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1);
+}
+
+/* 5-D: 단계 그룹 목록 렌더링 */
+function renderLotGroups(query) {
   var listEl  = document.getElementById('lot-list');
   var countEl = document.getElementById('lot-count');
   listEl.innerHTML = '';
-  countEl.textContent = lots.length + '개 Lot';
 
-  if (lots.length === 0) {
-    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">검색 결과 없음</div>';
-    return;
-  }
+  var stageIdxs = getSortedStageIdxs();
+  var total = 0;
 
-  lots.forEach(function(lot) {
-    var meta = STATE.lotMeta[lot] || {};
-    var item = document.createElement('div');
-    item.className = 'lot-item' + (lot === STATE.selectedLot ? ' active' : '');
-    item.dataset.lot = lot;
-    item.innerHTML =
-      '<span>' + lot + '</span>' +
-      '<span class="lot-meta">' + (meta.itemName || '') + '</span>';
+  stageIdxs.forEach(function(si) {
+    // 이 단계의 lot 목록 (필터 적용)
+    var lots = Object.keys(STATE.lotMeta)
+      .filter(function(l) { return STATE.lotStage[l] === si && matchLot(l, query); })
+      .sort();
+    if (lots.length === 0) return;
+    total += lots.length;
 
-    // 5-E: 클릭 핸들러
-    item.addEventListener('click', function() {
-      document.querySelectorAll('.lot-item').forEach(function(el) {
-        el.classList.remove('active');
-      });
-      item.classList.add('active');
-      STATE.selectedLot = lot;
-      if (typeof renderGenealogy   === 'function') renderGenealogy(lot);
-      if (typeof renderTrackingTable === 'function') renderTrackingTable(lot);
+    /* 그룹 헤더 */
+    var hdr = document.createElement('div');
+    hdr.className = 'stage-group-header';
+    hdr.innerHTML =
+      '<span class="stage-group-label">' + escHtml(getStageLabel(si)) + '</span>' +
+      '<span class="stage-group-count">' + lots.length + '</span>' +
+      '<span class="stage-group-toggle">▾</span>';
+
+    var body = document.createElement('div');
+    body.className = 'stage-group-body';
+
+    hdr.addEventListener('click', function() {
+      var collapsed = body.classList.toggle('sg-collapsed');
+      hdr.querySelector('.stage-group-toggle').textContent = collapsed ? '▸' : '▾';
     });
 
-    listEl.appendChild(item);
+    lots.forEach(function(lot) {
+      var meta = STATE.lotMeta[lot] || {};
+      var item = document.createElement('div');
+      item.className = 'lot-item' + (lot === STATE.selectedLot ? ' active' : '');
+      item.dataset.lot = lot;
+      item.innerHTML =
+        '<span>' + escHtml(lot) + '</span>' +
+        '<span class="lot-meta">' + escHtml(meta.itemName || '') + '</span>';
+
+      item.addEventListener('click', (function(l) { return function() {
+        document.querySelectorAll('.lot-item').forEach(function(el) { el.classList.remove('active'); });
+        item.classList.add('active');
+        STATE.selectedLot = l;
+        if (typeof renderGenealogy     === 'function') renderGenealogy(l);
+        if (typeof renderTrackingTable === 'function') renderTrackingTable(l);
+      }; })(lot));
+
+      body.appendChild(item);
+    });
+
+    listEl.appendChild(hdr);
+    listEl.appendChild(body);
   });
+
+  if (total === 0) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:0.82rem;">검색 결과 없음</div>';
+  }
+  countEl.textContent = total + '개 Lot';
 }
 
-/* 5-A~5-D: 사이드바 전체 렌더 + 검색/토글 이벤트 연결 */
+/* 5-E: 사이드바 전체 초기화 */
 function renderSidebar() {
-  var sidebar = document.getElementById('sidebar');
-  sidebar.classList.remove('hidden');
+  document.getElementById('sidebar').classList.remove('hidden');
+  renderLotGroups('');
 
-  var allLots     = getLotList();
-  renderLotList(allLots);
-
-  // 5-D: 검색창 input 이벤트
   var searchInput = document.getElementById('lot-search');
-  searchInput.oninput = function() {
-    var filtered = filterLots(getLotList(), searchInput.value.trim());
-    renderLotList(filtered);
-  };
-
-  // 5-C: 역추적/정추적 토글 버튼
-  var btnReverse = document.getElementById('btn-reverse');
-  var btnForward = document.getElementById('btn-forward');
-
-  function setDir(dir) {
-    STATE.traceDir = dir;
-    btnReverse.classList.toggle('active', dir === 'backward');
-    btnForward.classList.toggle('active', dir === 'forward');
-    STATE.selectedLot = null; // 방향 전환 시 선택 초기화
-    var filtered = filterLots(getLotList(), searchInput.value.trim());
-    renderLotList(filtered);
-    // 계보도/테이블 초기화
-    var mermaidEl = document.getElementById('mermaid-viewer');
-    if (mermaidEl) mermaidEl.innerHTML = '';
-    var flowCard = document.getElementById('flow-card');
-    if (flowCard) flowCard.style.display = 'none';
-    var traceCard = document.getElementById('trace-card');
-    if (traceCard) traceCard.style.display = 'none';
-  }
-
-  btnReverse.onclick = function() { setDir('backward'); };
-  btnForward.onclick = function() { setDir('forward'); };
+  searchInput.oninput = function() { renderLotGroups(searchInput.value.trim()); };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -834,6 +852,43 @@ function collectRelatedLots(startLot, dir) {
     });
   }
   return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
+}
+
+/* 6-A2: 전체 체인 수집 — 선택 Lot 기준 양방향(원료↔완제품) BFS
+   byOutputLot(완→원)와 byInputLot(원→완)을 동시에 탐색하여
+   연결된 모든 Lot·엣지를 반환 (방향 구분 없이 전체 계보)
+   edges: { from: 완제품_side, to: 원료_side } 형식 유지
+*/
+function collectFullChain(startLot) {
+  var nodes = new Set([startLot]);
+  var edges = [];
+  var queue = [startLot];
+  var MAX   = 100;
+
+  while (queue.length > 0 && nodes.size < MAX) {
+    var cur = queue.shift();
+
+    /* 원료 방향 (backward) */
+    (STATE.byOutputLot[cur] || []).forEach(function(raw) {
+      edges.push({ from: cur, to: raw }); // cur=완제품측, raw=원료측
+      if (!nodes.has(raw) && nodes.size < MAX) { nodes.add(raw); queue.push(raw); }
+    });
+
+    /* 완제품 방향 (forward) */
+    (STATE.byInputLot[cur] || []).forEach(function(fin) {
+      edges.push({ from: fin, to: cur }); // fin=완제품측, cur=원료측
+      if (!nodes.has(fin) && nodes.size < MAX) { nodes.add(fin); queue.push(fin); }
+    });
+  }
+
+  /* 중복 엣지 제거 */
+  var seen = {}, unique = [];
+  edges.forEach(function(e) {
+    var k = e.from + '\u2192' + e.to;
+    if (!seen[k]) { seen[k] = true; unique.push(e); }
+  });
+
+  return { nodes: nodes, edges: unique, truncated: nodes.size >= MAX };
 }
 
 /* 6-B: 각 Lot에 컬럼 인덱스 할당
@@ -916,23 +971,25 @@ function getColumnLabel(displayCol, maxStageIdx) {
   return (stageIdx + 1) + '단계';
 }
 
-/* 6-D: Slot 기반 tree layout 계산
-   오른쪽(완제품) 컬럼부터 slot을 배정하고, 왼쪽으로 갈수록
-   부모 노드가 자식들의 slot 범위를 span하도록 높이를 키움.
-   반환: { y, h, byCol, rightOf, totalH, SLOT_H, SLOT_GAP }
+/* 6-D: 반복 센터링(barycentric) tree layout 계산
+   ① 초기: 각 lot = 1 slot, 왼→오른쪽 순으로 stacking
+   ② 반복: forward pass(좌→우) + backward pass(우→좌) 로
+      각 lot을 인접 컬럼 이웃들의 평균 Y에 맞춤
+   ③ 중첩 해소: 같은 컬럼 내 lot들이 겹치면 아래로 밀어냄
+   ④ 높이 stretch: 오른쪽 자식이 여럿이면 부모 높이를 자식 범위로 확장
+   반환: { y, h, byCol, rightOf, leftOf, totalH, SLOT_H, SLOT_GAP }
 */
 function computeLayout(nodes, edges, colMap, maxStageIdx) {
   var numCols  = maxStageIdx + 1;
-  var SLOT_H   = 64;   // leaf 하나의 높이(px)
-  var SLOT_GAP = 8;    // 노드 사이 gap
+  var SLOT_H   = 64;
+  var SLOT_GAP = 8;
+  var STEP     = SLOT_H + SLOT_GAP;
 
-  /* 컬럼별 그룹 */
+  /* 컬럼별 그룹 + 인접 맵 */
   var byCol = {};
   for (var c = 0; c < numCols; c++) byCol[c] = [];
   nodes.forEach(function(l) { byCol[colMap[l]].push(l); });
 
-  /* 우→좌 인접 맵 구성
-     rightOf[A] = B  →  A(원료, 낮은 col)가 B(완제품, 높은 col)로 이어짐 */
   var rightOf = {}, leftOf = {};
   edges.forEach(function(e) {
     var lc = colMap[e.to], rc = colMap[e.from];
@@ -944,70 +1001,87 @@ function computeLayout(nodes, edges, colMap, maxStageIdx) {
     }
   });
 
-  /* Slot 배정: 오른쪽(완제품) 컬럼부터 시작 */
-  var slotIdx  = {};  // lot → 시작 slot 번호
-  var slotSpan = {};  // lot → 차지하는 slot 수
-  var nextSlot = 0;
-
-  /* 오른쪽 컬럼 lots를 lot 이름 순으로 정렬 후 1 slot씩 배정 */
-  byCol[numCols - 1].sort().forEach(function(l) {
-    slotIdx[l]  = nextSlot;
-    slotSpan[l] = 1;
-    nextSlot++;
-  });
-
-  /* 나머지 컬럼을 오른쪽→왼쪽으로 처리 */
-  for (var c = numCols - 2; c >= 0; c--) {
-    /* 이 컬럼의 lots를 "오른쪽 자식의 최소 slot" 기준으로 정렬 */
+  /* ① 초기 순서 결정: 왼쪽 부모 rank 기준 정렬 */
+  var rank = {};
+  byCol[0].sort();
+  byCol[0].forEach(function(l, i) { rank[l] = i; });
+  for (var c = 1; c < numCols; c++) {
     byCol[c].sort(function(a, b) {
-      var aMin = Infinity, bMin = Infinity;
-      (rightOf[a] || []).forEach(function(ch) {
-        if (slotIdx[ch] !== undefined && slotIdx[ch] < aMin) aMin = slotIdx[ch];
-      });
-      (rightOf[b] || []).forEach(function(ch) {
-        if (slotIdx[ch] !== undefined && slotIdx[ch] < bMin) bMin = slotIdx[ch];
-      });
-      return aMin - bMin;
+      function minRank(lot) {
+        var ps = (leftOf[lot] || []).filter(function(p) { return rank[p] !== undefined; });
+        return ps.length ? Math.min.apply(null, ps.map(function(p) { return rank[p]; })) : 999;
+      }
+      return minRank(a) - minRank(b) || a.localeCompare(b);
     });
+    byCol[c].forEach(function(l, i) { rank[l] = byCol[c - 1].length * 10 + i; });
+  }
 
-    byCol[c].forEach(function(l) {
-      var children = (rightOf[l] || []).filter(function(ch) {
-        return slotIdx[ch] !== undefined;
+  /* ① 초기 Y 배치 (1 slot each, 순서대로) */
+  var y = {};
+  for (var c = 0; c < numCols; c++) {
+    byCol[c].forEach(function(l, i) { y[l] = i * STEP; });
+  }
+
+  /* ③ 중첩 해소 헬퍼 */
+  function resolveOverlaps(colLots) {
+    var sorted = colLots.slice().sort(function(a, b) { return y[a] - y[b]; });
+    for (var i = 1; i < sorted.length; i++) {
+      var minY = y[sorted[i - 1]] + STEP;
+      if (y[sorted[i]] < minY) y[sorted[i]] = minY;
+    }
+  }
+
+  /* ② 반복 센터링 (5 passes) */
+  for (var pass = 0; pass < 5; pass++) {
+    /* forward: 각 lot을 왼쪽 부모들의 평균 Y에 맞춤 */
+    for (var c = 1; c < numCols; c++) {
+      byCol[c].forEach(function(l) {
+        var ps = (leftOf[l] || []).filter(function(p) { return y[p] !== undefined; });
+        if (ps.length) {
+          y[l] = ps.reduce(function(s, p) { return s + y[p]; }, 0) / ps.length;
+        }
       });
+      resolveOverlaps(byCol[c]);
+    }
+    /* backward: 각 lot을 오른쪽 자식들의 평균 Y에 맞춤 */
+    for (var c = numCols - 2; c >= 0; c--) {
+      byCol[c].forEach(function(l) {
+        var cs = (rightOf[l] || []).filter(function(ch) { return y[ch] !== undefined; });
+        if (cs.length) {
+          y[l] = cs.reduce(function(s, ch) { return s + y[ch]; }, 0) / cs.length;
+        }
+      });
+      resolveOverlaps(byCol[c]);
+    }
+  }
 
-      if (children.length === 0) {
-        /* 오른쪽 연결 없음 → 새 slot 1개 */
-        slotIdx[l]  = nextSlot;
-        slotSpan[l] = 1;
-        nextSlot++;
-      } else {
-        /* 자식들의 slot 범위를 span */
-        var minS = Infinity, maxEnd = -Infinity;
-        children.forEach(function(ch) {
-          if (slotIdx[ch] < minS)                       minS   = slotIdx[ch];
-          if (slotIdx[ch] + slotSpan[ch] > maxEnd) maxEnd = slotIdx[ch] + slotSpan[ch];
-        });
-        slotIdx[l]  = minS;
-        slotSpan[l] = maxEnd - minS;
+  /* Y를 0 이상으로 정규화 */
+  var minY = Infinity;
+  nodes.forEach(function(l) { if (y[l] < minY) minY = y[l]; });
+  if (minY < 0) nodes.forEach(function(l) { y[l] -= minY; });
+
+  /* ④ 각 lot 기본 높이 = SLOT_H, 오른쪽 자식 여럿이면 stretch */
+  var h = {};
+  nodes.forEach(function(l) { h[l] = SLOT_H; });
+
+  for (var c = 0; c < numCols - 1; c++) {
+    byCol[c].forEach(function(l) {
+      var cs = (rightOf[l] || []).filter(function(ch) { return colMap[ch] === c + 1; });
+      if (cs.length > 1) {
+        var topY   = Math.min.apply(null, cs.map(function(ch) { return y[ch]; }));
+        var botEnd = Math.max.apply(null, cs.map(function(ch) { return y[ch] + h[ch]; }));
+        if (topY < y[l]) y[l] = topY;
+        var newH = botEnd - y[l];
+        if (newH > h[l]) h[l] = newH;
       }
     });
   }
 
-  /* 미할당 lot fallback */
-  nodes.forEach(function(l) {
-    if (slotIdx[l] === undefined) { slotIdx[l] = nextSlot; slotSpan[l] = 1; nextSlot++; }
-  });
+  /* 전체 높이 */
+  var totalH = 0;
+  nodes.forEach(function(l) { var e = y[l] + h[l]; if (e > totalH) totalH = e; });
 
-  /* px 계산 */
-  var y = {}, h = {};
-  nodes.forEach(function(l) {
-    y[l] = slotIdx[l]  * (SLOT_H + SLOT_GAP);
-    h[l] = slotSpan[l] * SLOT_H + (slotSpan[l] - 1) * SLOT_GAP;
-    if (h[l] < SLOT_H) h[l] = SLOT_H;
-  });
-
-  var totalH = nextSlot * SLOT_H + Math.max(0, nextSlot - 1) * SLOT_GAP;
-  return { y: y, h: h, byCol: byCol, rightOf: rightOf,
+  return { y: y, h: h, byCol: byCol, rightOf: rightOf, leftOf: leftOf,
            totalH: totalH, SLOT_H: SLOT_H, SLOT_GAP: SLOT_GAP };
 }
 
@@ -1076,7 +1150,7 @@ function renderGenealogy(lot) {
   var flowCard  = document.getElementById('flow-card');
   var container = document.getElementById('mermaid-viewer');
 
-  var result = collectRelatedLots(lot, STATE.traceDir);
+  var result = collectFullChain(lot);
   var nodes  = Array.from(result.nodes);
   var edges  = result.edges;
 
