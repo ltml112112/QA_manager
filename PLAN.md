@@ -9,9 +9,9 @@
 - [x] Step 4: 흐름도 파서 (단계 헤더·서브컬럼·byOutputLot/byInputLot·lotMeta)
 - [x] Step 5: Lot 사이드바 (목록 렌더·역추적↔정추적 토글·검색 필터·클릭 선택)
 - [x] Step 6: Mermaid 계보도 (BFS·코드 빌드·선택 노드 강조·50개 제한·SVG 삽입)
-- [ ] Step 7: SPC 차트
-- [ ] Step 8: Batch Deep-Dive
-- [ ] Step 9: 추적 테이블
+- [x] Step 7: SPC 차트 (공정단계 섹션·annotation 관리선·이탈 포인트 강조·클릭 이벤트)
+- [x] Step 8: Batch Deep-Dive (차트 클릭→하이라이트·딥다이브 패널·닫기)
+- [x] Step 9: 추적 테이블 (연관 Lot 전체·Batch No. 정확 매칭·이탈 셀 강조·요약 뱃지)
 
 ---
 

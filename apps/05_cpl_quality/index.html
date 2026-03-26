@@ -1159,8 +1159,128 @@ function handleChartClick(batchNo) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Step 9: 추적 테이블 (다음 단계에서 구현)
+   Step 9: 추적 테이블
    ══════════════════════════════════════════════════════════════ */
+
+/* 9-A: 선택 Lot + BFS 연관 Lot 목록 확정
+   collectRelatedLots 재활용, 자기 자신 포함
+*/
+function getTraceLots(selectedLot) {
+  var result = collectRelatedLots(selectedLot, STATE.traceDir);
+  var lots   = Array.from(result.nodes); // Set → Array
+  // 선택 Lot을 맨 앞으로
+  lots = [selectedLot].concat(lots.filter(function(l) { return l !== selectedLot; }));
+  return lots;
+}
+
+/* 9-B: 대상 Lot 목록으로 품질 레코드 조회
+   batchNo 값 직접 비교 (row.includes() 사용 안 함)
+*/
+function getRecordsForLots(lots) {
+  var lotSet = new Set(lots.map(String));
+  return STATE.qualityRecords.filter(function(r) {
+    return lotSet.has(String(r.batchNo));
+  });
+}
+
+/* 9-C / 9-D / 9-E: 추적 테이블 렌더링 */
+function renderTrackingTable(selectedLot) {
+  var card      = document.getElementById('trace-card');
+  var container = document.getElementById('trace-result');
+
+  var lots    = getTraceLots(selectedLot);
+  var records = getRecordsForLots(lots);
+
+  if (records.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  // 9-E: 요약 뱃지
+  var ngCount    = records.filter(isOutOfSpec).length;
+  var totalCount = records.length;
+  var ngRate     = totalCount > 0 ? (ngCount / totalCount * 100).toFixed(1) : '0.0';
+
+  var summaryHtml =
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">' +
+    '<span style="font-weight:600;">선택 Lot: <span style="color:var(--accent)">' + selectedLot + '</span></span>' +
+    '<span class="badge-primary">연관 Lot ' + lots.length + '개</span>' +
+    '<span class="badge-' + (ngCount > 0 ? 'danger' : 'success') + '">이탈 ' + ngCount + ' / ' + totalCount + '건</span>' +
+    '<span class="badge-' + (parseFloat(ngRate) > 5 ? 'warning' : 'success') + '">이탈율 ' + ngRate + '%</span>' +
+    '</div>';
+
+  // 9-C: 테이블 (Lot별 그룹 헤더 → 공정단계·측정항목·값·기준값·판정)
+  // Lot → 공정단계 → 레코드 순으로 그룹화
+  var byLot = {};
+  lots.forEach(function(lot) { byLot[lot] = {}; });
+  records.forEach(function(r) {
+    var lot = String(r.batchNo);
+    if (!byLot[lot]) byLot[lot] = {};
+    if (!byLot[lot][r.stage]) byLot[lot][r.stage] = [];
+    byLot[lot][r.stage].push(r);
+  });
+
+  var tableHtml =
+    '<table class="data-table">' +
+    '<thead><tr>' +
+    '<th>Lot (Batch No.)</th><th>공정단계</th><th>측정항목</th>' +
+    '<th>측정값</th><th>USL</th><th>LSL</th><th>UCL</th><th>LCL</th><th>판정</th>' +
+    '</tr></thead><tbody>';
+
+  lots.forEach(function(lot) {
+    var stageMap = byLot[lot];
+    if (!stageMap || Object.keys(stageMap).length === 0) return;
+
+    var stages   = Object.keys(stageMap);
+    var lotRowspan = stages.reduce(function(s, st) { return s + stageMap[st].length; }, 0);
+    var lotPrinted = false;
+
+    stages.forEach(function(stage) {
+      var recs = stageMap[stage];
+      var stagePrinted = false;
+
+      recs.forEach(function(r) {
+        var ng  = isOutOfSpec(r);
+        var cls = ng ? ' class="cell-exceed"' : '';
+
+        tableHtml += '<tr>';
+
+        // Lot 셀 — rowspan
+        if (!lotPrinted) {
+          var isSelected = lot === selectedLot;
+          tableHtml +=
+            '<td rowspan="' + lotRowspan + '" style="font-weight:600;vertical-align:middle;' +
+            (isSelected ? 'color:var(--accent);' : '') + '">' + lot + '</td>';
+          lotPrinted = true;
+        }
+
+        // 공정단계 셀 — rowspan
+        if (!stagePrinted) {
+          tableHtml +=
+            '<td rowspan="' + recs.length + '" style="vertical-align:middle;font-size:0.8rem;color:var(--text-muted);">' +
+            stage + '</td>';
+          stagePrinted = true;
+        }
+
+        tableHtml +=
+          '<td>' + r.itemLabel + '</td>' +
+          '<td' + cls + '>' + r.value + '</td>' +
+          '<td>' + (r.USL !== null && !isNaN(r.USL) ? r.USL : '-') + '</td>' +
+          '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? r.LSL : '-') + '</td>' +
+          '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? r.UCL : '-') + '</td>' +
+          '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? r.LCL : '-') + '</td>' +
+          '<td' + cls + '>' + (ng ? 'NG' : 'OK') + '</td>' +
+          '</tr>';
+      });
+    });
+  });
+
+  tableHtml += '</tbody></table>';
+
+  container.innerHTML = summaryHtml + '<div class="trace-table-wrap">' + tableHtml + '</div>';
+  card.style.display  = '';
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 </script>
 </body>
