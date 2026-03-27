@@ -68,7 +68,6 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 }
 .lot-item:hover { background: var(--surface-2); }
 .lot-item.active { background: var(--accent); color: #fff; }
-.lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
 .lot-remark { color: #4a7fc1; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
@@ -113,8 +112,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-node:hover { border-color: var(--border-hover); background: var(--surface); }
 .lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
 .lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
-.lot-node-name { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
-.lot-node-remark { font-size: 0.64rem; color: #4a7fc1; margin-top: 1px; }
+.lot-node-remark { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: #4a7fc1; margin-top: 2px; }
 .genealogy-svg {
   position: absolute; top: 0; left: 0;
   pointer-events: none; overflow: visible;
@@ -845,9 +843,7 @@ function renderLotGroups(query) {
       item.dataset.lot = lot;
       item.innerHTML =
         '<span>' + escHtml(lot) + '</span>' +
-        '<span class="lot-meta">' + escHtml(meta.itemName || '') +
-        (meta.remark ? '<span class="lot-remark"> · ' + escHtml(meta.remark) + '</span>' : '') +
-        '</span>';
+        (meta.remark ? '<span class="lot-remark">' + escHtml(meta.remark) + '</span>' : '');
 
       item.addEventListener('click', (function(l) { return function() {
         document.querySelectorAll('.lot-item').forEach(function(el) { el.classList.remove('active'); });
@@ -1324,8 +1320,7 @@ function renderGenealogy(lot) {
         'width:' + COL_W + 'px;min-height:' + nodeH + 'px;';
       node.innerHTML =
         '<div class="lot-node-id">' + escHtml(l) + '</div>' +
-        (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '') +
-        (meta.remark   ? '<div class="lot-node-remark">' + escHtml(meta.remark) + '</div>' : '');
+        (meta.remark ? '<div class="lot-node-remark">' + escHtml(meta.remark) + '</div>' : '');
       node.onclick = (function(lClosed) { return function() {
         STATE.selectedLot = lClosed;
         document.querySelectorAll('.lot-item').forEach(function(el) {
