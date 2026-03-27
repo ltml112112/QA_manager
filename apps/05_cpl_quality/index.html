@@ -1778,11 +1778,11 @@ function renderDeepDive(batchNo) {
       html +=
         '<tr>' +
         '<td>' + r.itemLabel + '</td>' +
-        '<td' + cls + '>' + r.value + '</td>' +
-        '<td>' + (r.USL !== null && !isNaN(r.USL) ? r.USL : '-') + '</td>' +
-        '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? r.LSL : '-') + '</td>' +
-        '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? r.UCL : '-') + '</td>' +
-        '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? r.LCL : '-') + '</td>' +
+        '<td' + cls + '>' + fmtVal(r.value) + '</td>' +
+        '<td>' + fmtVal(r.USL) + '</td>' +
+        '<td>' + fmtVal(r.LSL) + '</td>' +
+        '<td>' + fmtVal(r.UCL) + '</td>' +
+        '<td>' + fmtVal(r.LCL) + '</td>' +
         '<td' + cls + '>' + (ng ? 'NG' : 'OK') + '</td>' +
         '</tr>';
     });
