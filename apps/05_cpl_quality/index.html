@@ -114,6 +114,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
 .lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
 .lot-node-name { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+.lot-node-remark { font-size: 0.64rem; color: var(--warning); margin-top: 1px; opacity: 0.9; }
 .genealogy-svg {
   position: absolute; top: 0; left: 0;
   pointer-events: none; overflow: visible;
@@ -1074,7 +1075,7 @@ function getColumnLabel(displayCol, maxStageIdx) {
 */
 function computeLayout(nodes, edges, colMap, maxStageIdx) {
   var numCols  = maxStageIdx + 1;
-  var SLOT_H   = 52;
+  var SLOT_H   = 64;
   var SLOT_GAP = 6;
   var STEP     = SLOT_H + SLOT_GAP;
 
@@ -1319,10 +1320,11 @@ function renderGenealogy(lot) {
       node.dataset.lot = l;
       node.style.cssText =
         'left:' + colX + 'px;top:' + nodeY + 'px;' +
-        'width:' + COL_W + 'px;height:' + nodeH + 'px;';
+        'width:' + COL_W + 'px;min-height:' + nodeH + 'px;';
       node.innerHTML =
         '<div class="lot-node-id">' + escHtml(l) + '</div>' +
-        (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '');
+        (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '') +
+        (meta.remark   ? '<div class="lot-node-remark">' + escHtml(meta.remark) + '</div>' : '');
       node.onclick = (function(lClosed) { return function() {
         STATE.selectedLot = lClosed;
         document.querySelectorAll('.lot-item').forEach(function(el) {
