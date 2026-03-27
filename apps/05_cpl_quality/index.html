@@ -77,7 +77,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .stage-group-body.sg-collapsed { display: none; }
 
 /* ── Genealogy Flow Table (절대좌표 tree layout) ── */
-.genealogy-flow { overflow-x: auto; overflow-y: auto; padding: 16px; }
+.genealogy-flow { overflow-x: auto; overflow-y: auto; padding: 12px; max-height: 560px; }
 .genealogy-inner { position: relative; } /* absolute children의 기준점 */
 .stage-col-header {
   position: absolute;
@@ -985,8 +985,8 @@ function getColumnLabel(displayCol, maxStageIdx) {
 */
 function computeLayout(nodes, edges, colMap, maxStageIdx) {
   var numCols  = maxStageIdx + 1;
-  var SLOT_H   = 64;
-  var SLOT_GAP = 8;
+  var SLOT_H   = 52;
+  var SLOT_GAP = 6;
   var STEP     = SLOT_H + SLOT_GAP;
 
   /* 컬럼별 그룹 + 인접 맵 */
@@ -1080,6 +1080,20 @@ function computeLayout(nodes, edges, colMap, maxStageIdx) {
       }
     });
   }
+
+  /* ⑤ 최종 압축: 센터링 드리프트로 생긴 과도한 gap 제거 (top→bottom, pull-up) */
+  for (var c = 0; c < numCols; c++) {
+    var sorted = byCol[c].slice().sort(function(a, b) { return y[a] - y[b]; });
+    for (var i = 1; i < sorted.length; i++) {
+      var prev = sorted[i - 1], cur = sorted[i];
+      var minY = y[prev] + h[prev] + SLOT_GAP;
+      if (y[cur] > minY) y[cur] = minY; // 과도하게 벌어진 경우 위로 당김
+    }
+  }
+  /* 압축 후 재정규화 */
+  var minYFinal = Infinity;
+  nodes.forEach(function(l) { if (y[l] < minYFinal) minYFinal = y[l]; });
+  if (minYFinal > 0) nodes.forEach(function(l) { y[l] -= minYFinal; });
 
   /* 전체 높이 */
   var totalH = 0;
