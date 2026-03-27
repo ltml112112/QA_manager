@@ -69,6 +69,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-item:hover { background: var(--surface-2); }
 .lot-item.active { background: var(--accent); color: #fff; }
 .lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
+.lot-remark { color: var(--warning); opacity: 0.9; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
 /* ── Stage Groups (사이드바 단계별 섹션) ── */
@@ -631,7 +632,8 @@ function parseSubCols(rows, stages) {
       lotNumCols:   [],
       itemCodeCol:  null,
       itemNameCol:  null,
-      stageNameCol: null   // "단계" 서브컬럼 (완제품/정제1차품 등 실제 공정명)
+      stageNameCol: null,  // "단계" 서브컬럼 (완제품/정제1차품 등 실제 공정명)
+      remarkCol:    null   // "비고" 서브컬럼
     };
 
     for (var c = stg.startCol; c < endCol; c++) {
@@ -645,6 +647,8 @@ function parseSubCols(rows, stages) {
         sub.itemNameCol = c;
       } else if (cell === '단계') {
         sub.stageNameCol = c;
+      } else if (cell === '비고') {
+        sub.remarkCol = c;
       }
     }
     result.push(sub);
@@ -677,14 +681,17 @@ function parseFlowRows(rows, subCols) {
       var itemCode  = sub.itemCodeCol  !== null ? String(row[sub.itemCodeCol]  || '').trim() : '';
       var itemName  = sub.itemNameCol  !== null ? String(row[sub.itemNameCol]  || '').trim() : '';
       var stageName = sub.stageNameCol !== null ? String(row[sub.stageNameCol] || '').trim() : '';
-      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, stageIdx: sIdx };
+      var remark    = sub.remarkCol    !== null ? String(row[sub.remarkCol]    || '').trim() : '';
+      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, remark: remark, stageIdx: sIdx };
     });
 
     // lotMeta + lotStage 저장, stageTypeLabels 수집
     stageLots.forEach(function(s) {
       if (!s.lot) return;
       if (!lotMeta[s.lot]) {
-        lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName };
+        lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName, remark: s.remark };
+      } else if (s.remark && !lotMeta[s.lot].remark) {
+        lotMeta[s.lot].remark = s.remark;
       }
       if (lotStage[s.lot] === undefined) {
         lotStage[s.lot] = s.stageIdx;
@@ -830,7 +837,9 @@ function renderLotGroups(query) {
       item.dataset.lot = lot;
       item.innerHTML =
         '<span>' + escHtml(lot) + '</span>' +
-        '<span class="lot-meta">' + escHtml(meta.itemName || '') + '</span>';
+        '<span class="lot-meta">' + escHtml(meta.itemName || '') +
+        (meta.remark ? '<span class="lot-remark"> · ' + escHtml(meta.remark) + '</span>' : '') +
+        '</span>';
 
       item.addEventListener('click', (function(l) { return function() {
         document.querySelectorAll('.lot-item').forEach(function(el) { el.classList.remove('active'); });
