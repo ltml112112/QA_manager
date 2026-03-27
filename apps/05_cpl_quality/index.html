@@ -629,26 +629,36 @@ function parseSubCols(rows, stages) {
     var endCol = idx + 1 < stages.length ? stages[idx + 1].startCol : row1.length;
     var sub = {
       stageLabel:   stg.stageLabel,
-      lotNumCols:   [],
+      mainLotCol:   null,  // 첫 번째 LOT 컬럼 (주 Lot 번호)
+      remarkLotCol: null,  // 두 번째 LOT 컬럼 또는 "비고" 컬럼 (비고 Lot)
       itemCodeCol:  null,
       itemNameCol:  null,
-      stageNameCol: null,  // "단계" 서브컬럼 (완제품/정제1차품 등 실제 공정명)
-      remarkCol:    null   // "비고" 서브컬럼
+      stageNameCol: null
     };
 
     for (var c = stg.startCol; c < endCol; c++) {
       var cell = String(row1[c] || '').trim();
       var upper = cell.toUpperCase();
-      if (upper.indexOf('LOTNUM') !== -1 || upper.indexOf('LOT') !== -1) {
-        sub.lotNumCols.push(c);
+      var isLot    = upper.indexOf('LOTNUM') !== -1 || upper.indexOf('LOT NO') !== -1 ||
+                     upper === 'LOT' || upper === 'LOTNO';
+      var isRemark = cell.indexOf('비고') !== -1;
+
+      if (isRemark && !isLot) {
+        // "비고" 단독 컬럼
+        if (sub.remarkLotCol === null) sub.remarkLotCol = c;
+      } else if (isLot) {
+        // LOT 컬럼: 첫 번째는 주 Lot, 두 번째(비고 LOTNUM 포함)는 비고
+        if (sub.mainLotCol === null) sub.mainLotCol = c;
+        else if (sub.remarkLotCol === null) sub.remarkLotCol = c;
+      } else if (isRemark) {
+        // "비고 LOTNUM" 처럼 둘 다 포함된 경우 → 비고 Lot
+        if (sub.remarkLotCol === null) sub.remarkLotCol = c;
       } else if (upper.indexOf('품목코드') !== -1 || upper.indexOf('코드') !== -1) {
         sub.itemCodeCol = c;
       } else if (upper.indexOf('품목명') !== -1 || upper.indexOf('품명') !== -1) {
         sub.itemNameCol = c;
       } else if (cell === '단계') {
         sub.stageNameCol = c;
-      } else if (cell === '비고') {
-        sub.remarkCol = c;
       }
     }
     result.push(sub);
@@ -673,15 +683,11 @@ function parseFlowRows(rows, subCols) {
 
     // 각 단계에서 Lot 번호 + 메타 + 공정명 추출
     var stageLots = subCols.map(function(sub, sIdx) {
-      var lot = '';
-      for (var i = 0; i < sub.lotNumCols.length; i++) {
-        var v = String(row[sub.lotNumCols[i]] || '').trim();
-        if (v) { lot = v; break; }
-      }
-      var itemCode  = sub.itemCodeCol  !== null ? String(row[sub.itemCodeCol]  || '').trim() : '';
-      var itemName  = sub.itemNameCol  !== null ? String(row[sub.itemNameCol]  || '').trim() : '';
-      var stageName = sub.stageNameCol !== null ? String(row[sub.stageNameCol] || '').trim() : '';
-      var remark    = sub.remarkCol    !== null ? String(row[sub.remarkCol]    || '').trim() : '';
+      var lot       = sub.mainLotCol    !== null ? String(row[sub.mainLotCol]    || '').trim() : '';
+      var remark    = sub.remarkLotCol  !== null ? String(row[sub.remarkLotCol]  || '').trim() : '';
+      var itemCode  = sub.itemCodeCol   !== null ? String(row[sub.itemCodeCol]   || '').trim() : '';
+      var itemName  = sub.itemNameCol   !== null ? String(row[sub.itemNameCol]   || '').trim() : '';
+      var stageName = sub.stageNameCol  !== null ? String(row[sub.stageNameCol]  || '').trim() : '';
       return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, remark: remark, stageIdx: sIdx };
     });
 
