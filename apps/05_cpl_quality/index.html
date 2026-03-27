@@ -193,7 +193,10 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 
     <!-- Genealogy Flow -->
     <div class="card" id="flow-card" style="display:none;">
-      <div class="card-header"><span>⛓</span> Lot Genealogy Flow</div>
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span><span>⛓</span> Lot Genealogy Flow</span>
+        <button class="btn btn-sm btn-secondary" id="btn-genealogy-copy" onclick="copyGenealogyToClipboard()" style="font-size:0.75rem;">⎘ 계보 복사</button>
+      </div>
       <div id="mermaid-viewer"></div>
     </div>
 
@@ -1367,6 +1370,124 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/* 6-G: 계보도 클립보드 복사 (rowspan HTML → Excel 병합 셀로 붙여넣기 가능)
+   완제품 → 원료 방향 DFS로 경로 열거 → 같은 컬럼의 연속 동일값을 rowspan 처리
+*/
+function copyGenealogyToClipboard() {
+  var lot = STATE.selectedLot;
+  if (!lot) { alert('먼저 Lot을 선택하세요.'); return; }
+
+  var result  = collectFullChain(lot);
+  var nodes   = Array.from(result.nodes);
+  var edges   = result.edges;
+  if (nodes.length === 0) return;
+
+  var assigned    = assignLotColumns(nodes, edges);
+  var colMap      = assigned.colMap;
+  var maxStageIdx = assigned.maxStageIdx;
+  var numCols     = maxStageIdx + 1;
+
+  /* 완제품→원료 인접 맵 */
+  var children = {};
+  edges.forEach(function(e) {
+    if (!children[e.from]) children[e.from] = [];
+    if (children[e.from].indexOf(e.to) === -1) children[e.from].push(e.to);
+  });
+
+  /* 루트: displayCol 최대 (완제품 쪽) */
+  var roots = nodes.filter(function(l) { return colMap[l] === maxStageIdx; });
+  if (roots.length === 0) roots = [lot];
+
+  /* DFS 경로 열거 */
+  var paths = [];
+  function dfs(l, path) {
+    var p = path.concat([l]);
+    var kids = children[l] || [];
+    if (kids.length === 0) { paths.push(p); return; }
+    kids.forEach(function(k) { dfs(k, p); });
+  }
+  roots.forEach(function(r) { dfs(r, []); });
+  if (paths.length === 0) paths = [[lot]];
+
+  /* 헤더 (완제품→원료) */
+  var headers = [];
+  for (var dc = maxStageIdx; dc >= 0; dc--) headers.push(getColumnLabel(dc, maxStageIdx));
+
+  /* 데이터 행 */
+  var dataRows = paths.map(function(path) {
+    var row = new Array(numCols).fill('');
+    path.forEach(function(l) {
+      var meta   = STATE.lotMeta[l] || {};
+      var colIdx = maxStageIdx - colMap[l];
+      row[colIdx] = l + (meta.remark ? ' (' + meta.remark + ')' : '');
+    });
+    return row;
+  });
+
+  /* rowspan 계산: 각 컬럼에서 연속된 동일값을 묶음 */
+  var numRows = dataRows.length;
+  var rowspan = [];   // rowspan[r][c] = n (n>1이면 병합 시작, 0이면 이 셀 skip)
+  for (var r = 0; r < numRows; r++) rowspan[r] = new Array(numCols).fill(1);
+
+  for (var c = 0; c < numCols; c++) {
+    var r = 0;
+    while (r < numRows) {
+      var val = dataRows[r][c];
+      if (!val) { r++; continue; }
+      var span = 1;
+      while (r + span < numRows && dataRows[r + span][c] === val) span++;
+      if (span > 1) {
+        rowspan[r][c] = span;
+        for (var k = 1; k < span; k++) rowspan[r + k][c] = 0; // 0 = skip
+      }
+      r += span;
+    }
+  }
+
+  /* HTML 테이블 생성 */
+  var html = '<table border="1" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">';
+  html += '<tr>';
+  headers.forEach(function(h) {
+    html += '<th style="background:#d9e1f2;padding:6px 10px;text-align:center;">' + escHtml(h) + '</th>';
+  });
+  html += '</tr>';
+
+  for (var r = 0; r < numRows; r++) {
+    html += '<tr>';
+    for (var c = 0; c < numCols; c++) {
+      var rs = rowspan[r][c];
+      if (rs === 0) continue; // 위 셀 rowspan에 포함
+      var val = dataRows[r][c] || '';
+      html += '<td' +
+        (rs > 1 ? ' rowspan="' + rs + '"' : '') +
+        ' style="padding:5px 10px;vertical-align:middle;">' +
+        escHtml(val) + '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+
+  /* 클립보드 복사 */
+  var btn = document.getElementById('btn-genealogy-copy');
+  try {
+    navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }) })])
+      .then(function() {
+        btn.textContent = '✓ 복사됨';
+        setTimeout(function() { btn.textContent = '⎘ 계보 복사'; }, 2000);
+      });
+  } catch(e) {
+    /* fallback: execCommand */
+    var ta = document.createElement('textarea');
+    ta.value = html;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✓ 복사됨';
+    setTimeout(function() { btn.textContent = '⎘ 계보 복사'; }, 2000);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
