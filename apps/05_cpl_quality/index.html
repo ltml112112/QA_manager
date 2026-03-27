@@ -423,41 +423,40 @@ function forwardFillMerges(ws, rows) {
 }
 
 /* 3-D: 컬럼 역할 분류
-   row3 = 상세헤더 행(index 3), row4 = 기준 행(index 4)
+   rowHeader = Row 4 (index 3) — "Batch No." + 측정항목명 + USL/LSL/UCL/LCL 가 모두 같은 행에 존재
    반환: 컬럼 인덱스 → 'batchNo' | 'value' | 'USL' | 'LSL' | 'UCL' | 'LCL' | 'ignore'
 */
-function classifyColumns(row3, row4) {
+function classifyColumns(rowHeader) {
   var roles = {};
-  for (var c = 0; c < Math.max(row3.length, row4.length); c++) {
-    var h3 = String(row3[c] || '').trim();
-    var h4 = String(row4[c] || '').trim().toUpperCase();
+  for (var c = 0; c < rowHeader.length; c++) {
+    var h = String(rowHeader[c] || '').trim();
+    var hU = h.toUpperCase();
 
-    if (h3.toUpperCase().indexOf('BATCH') !== -1 || h3.indexOf('배치') !== -1) {
+    if (hU.indexOf('BATCH') !== -1 || h.indexOf('배치') !== -1) {
       roles[c] = 'batchNo';
-    } else if (h4 === 'USL') {
+    } else if (hU === 'USL') {
       roles[c] = 'USL';
-    } else if (h4 === 'LSL') {
+    } else if (hU === 'LSL') {
       roles[c] = 'LSL';
-    } else if (h4 === 'UCL') {
+    } else if (hU === 'UCL') {
       roles[c] = 'UCL';
-    } else if (h4 === 'LCL') {
+    } else if (hU === 'LCL') {
       roles[c] = 'LCL';
-    } else if (h4 === '기준' || h4 === '' && h3 === '') {
+    } else if (hU === '기준' || h === '') {
       roles[c] = 'ignore';
-    } else if (h3 !== '') {
-      roles[c] = 'value';
     } else {
-      roles[c] = 'ignore';
+      roles[c] = 'value';
     }
   }
   return roles;
 }
 
 /* 3-E: 공정단계 그룹 경계 파악
-   batchNo 컬럼 위치마다 새 그룹 시작. row0 = 대분류(공정단계명)
+   batchNo 컬럼 위치마다 새 그룹 시작.
+   rowStage = Row 3 (index 2) — 공정명, rowMat = Row 2 (index 1) — 재료명 (fallback)
    반환: [{stage, batchNoCol, startCol, endCol}]
 */
-function buildStageGroups(roles, row0, totalCols) {
+function buildStageGroups(roles, rowStage, rowMat, totalCols) {
   var groups = [];
   var batchCols = Object.keys(roles).filter(function(c) {
     return roles[c] === 'batchNo';
@@ -465,7 +464,7 @@ function buildStageGroups(roles, row0, totalCols) {
 
   batchCols.forEach(function(bc, idx) {
     var nextBc  = batchCols[idx + 1] !== undefined ? batchCols[idx + 1] : totalCols;
-    var stageName = String(row0[bc] || ('공정단계 ' + (idx + 1))).trim();
+    var stageName = String(rowStage[bc] || rowMat[bc] || ('공정단계 ' + (idx + 1))).trim();
     groups.push({ stage: stageName, batchNoCol: bc, startCol: bc, endCol: nextBc - 1 });
   });
   return groups;
@@ -474,14 +473,14 @@ function buildStageGroups(roles, row0, totalCols) {
 /* 3-F: 각 value 컬럼에 인접 기준값 컬럼 연결 (forward scan)
    반환: {valueCols: {colIdx: {USLcol,LSLcol,UCLcol,LCLcol}}, itemLabels: {colIdx: label}}
 */
-function buildValueMeta(roles, row2, row3) {
+function buildValueMeta(roles, rowStage, rowHeader) {
   var valueMeta = {};
   var colIndices = Object.keys(roles).map(Number).sort(function(a, b) { return a - b; });
 
   colIndices.forEach(function(c) {
     if (roles[c] !== 'value') return;
-    // 측정항목 라벨: row2(소분류) + row3(상세헤더) 조합
-    var label = [String(row2[c] || '').trim(), String(row3[c] || '').trim()]
+    // 측정항목 라벨: rowStage(공정명, index 2) + rowHeader(항목명, index 3) 조합
+    var label = [String(rowStage[c] || '').trim(), String(rowHeader[c] || '').trim()]
       .filter(Boolean).join(' ').trim() || ('col' + c);
 
     var limitCols = { USLcol: null, LSLcol: null, UCLcol: null, LCLcol: null };
@@ -503,8 +502,8 @@ function parseQualityRows(rows, stageGroups, roles, valueMeta) {
   var records = [];
 
   stageGroups.forEach(function(grp) {
-    // 데이터 행: index 5부터
-    for (var r = 5; r < rows.length; r++) {
+    // 데이터 행: index 4부터 (Row 5+)
+    for (var r = 4; r < rows.length; r++) {
       var row = rows[r];
       var batchNo = String(row[grp.batchNoCol] || '').trim();
       if (!batchNo) continue; // Batch No. 없는 행 스킵
@@ -541,15 +540,20 @@ function parseQualityData() {
   var res   = getRows(STATE.qualityWb);
   var rows  = forwardFillMerges(res.ws, res.rows);
 
-  var row0  = rows[0] || [];   // 대분류(공정단계)
-  var row2  = rows[2] || [];   // 소분류(측정항목)
-  var row3  = rows[3] || [];   // 상세헤더
-  var row4  = rows[4] || [];   // 기준 행
+  // 실제 엑셀 헤더 구조:
+  // idx 0 (Row 1): 비어있음 (기준값 우측 영역은 1~2행 병합)
+  // idx 1 (Row 2): 재료명
+  // idx 2 (Row 3): 공정명 (stage 그룹명 소스)
+  // idx 3 (Row 4): "Batch No." + 측정항목명 + USL/LSL/UCL/LCL (모두 같은 행)
+  // idx 4+ (Row 5+): DATA
+  var rowMat    = rows[1] || [];   // 재료명 (stage명 fallback용)
+  var rowStage  = rows[2] || [];   // 공정명
+  var rowHeader = rows[3] || [];   // Batch No. + 측정항목명 + USL/LSL/UCL/LCL
 
-  var totalCols = row3.length;
-  var roles       = classifyColumns(row3, row4);
-  var stageGroups = buildStageGroups(roles, row0, totalCols);
-  var valueMeta   = buildValueMeta(roles, row2, row3);
+  var totalCols   = rowHeader.length;
+  var roles       = classifyColumns(rowHeader);
+  var stageGroups = buildStageGroups(roles, rowStage, rowMat, totalCols);
+  var valueMeta   = buildValueMeta(roles, rowStage, rowHeader);
 
   STATE.qualityRecords = parseQualityRows(rows, stageGroups, roles, valueMeta);
   console.log('[품질파서] 레코드 수:', STATE.qualityRecords.length,
