@@ -174,7 +174,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
   <div class="main-panel" id="main-panel">
     <div class="no-data" id="empty-state">
       <div class="no-data-icon">📁</div>
-      <div>품질 데이터와 흐름도 데이터를 업로드하면 분석이 시작됩니다.</div>
+      <div>흐름도 데이터를 업로드하면 Lot 계보도가 표시됩니다.<br><span style="font-size:0.85rem;color:var(--text-faint)">품질 데이터를 함께 올리면 SPC TREND 차트도 표시됩니다.</span></div>
     </div>
 
     <!-- Genealogy Flow -->
@@ -563,16 +563,20 @@ function parseQualityData() {
 /* 3-H: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
 function onQualityReady() {
   parseQualityData();
-  // Step 7 차트 렌더는 추후 구현
-  tryRenderAll();
+  // 흐름도 데이터가 이미 있으면 SPC 차트 추가, 없으면 대기
+  if (Object.keys(STATE.byOutputLot).length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
+  }
 }
 
 /* 두 파일 모두 준비됐을 때만 전체 렌더 시작 */
 function tryRenderAll() {
-  if (STATE.qualityRecords.length && Object.keys(STATE.byOutputLot).length) {
+  if (Object.keys(STATE.byOutputLot).length) {
     document.getElementById('empty-state').style.display = 'none';
-    if (typeof renderSidebar    === 'function') renderSidebar();
-    if (typeof renderSpcCharts  === 'function') renderSpcCharts();
+    if (typeof renderSidebar === 'function') renderSidebar();
+  }
+  if (STATE.qualityRecords.length && Object.keys(STATE.byOutputLot).length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
   }
 }
 
@@ -721,7 +725,13 @@ function parseFlowData() {
 /* 4-G: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
 function onFlowReady() {
   parseFlowData();
-  tryRenderAll();
+  // 흐름도만 있어도 바로 사이드바 + 계보도 렌더링
+  document.getElementById('empty-state').style.display = 'none';
+  if (typeof renderSidebar === 'function') renderSidebar();
+  // 품질 데이터도 이미 있으면 SPC 차트까지
+  if (STATE.qualityRecords.length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
