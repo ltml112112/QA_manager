@@ -235,7 +235,7 @@ html[data-theme="dark"] {
 
 ## 새 도구 추가 가이드 (Step-by-Step)
 
-> 5번째, 6번째 도구를 추가할 때 이 순서를 따르면 됩니다.
+> 현재 5개 도구(01~05)가 구현되어 있음. **6번째 이후 도구를 추가할 때** 이 순서를 따르면 됩니다.
 
 ### Step 1 — 폴더 및 파일 생성
 
@@ -243,11 +243,11 @@ html[data-theme="dark"] {
 
 ```
 apps/
-└── 05_새도구이름/
+└── 06_새도구이름/
     └── index.html
 ```
 
-> 폴더명 규칙: `숫자두자리_영문이름` (예: `05_chemical_db`)
+> 폴더명 규칙: `숫자두자리_영문이름` (예: `06_chemical_db`)
 
 ### Step 2 — index.html 기본 뼈대 작성
 
@@ -313,7 +313,7 @@ const apps = [
     label:      '새 도구 이름',              // 탭 버튼에 표시할 한글 이름
     icon:       '🔧',                       // 이모지 아이콘
     badge:      null,                       // 뱃지 없으면 null, 있으면 예: 'NEW' 또는 'GAS'
-    src:        './apps/05_새도구이름/index.html', // 상대경로 (또는 GAS 배포 URL)
+    src:        './apps/06_새도구이름/index.html', // 상대경로 (또는 GAS 배포 URL)
     loaderText: '새 도구 로딩 중...',        // 로딩 오버레이 메시지
   },
 ];
@@ -323,13 +323,13 @@ const apps = [
 
 ### Step 4 — 확인 체크리스트
 
-- [ ] `apps/05_xxx/index.html` 존재하는가?
+- [ ] `apps/06_xxx/index.html` 존재하는가?
 - [ ] `<html lang="ko" data-theme="dark">` 로 시작하는가?
 - [ ] `<link rel="preconnect">` 2개 + Google Fonts `<link>` 포함되어 있는가?
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
-- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `hplc`, `lgd`, `sdc`는 사용 중)
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `hplc`, `lgd`, `sdc`, `cpl` 사용 중)
 - [ ] GAS 외부 URL 앱이라면 `sandbox` 필드를 추가했는가?
 
 ---
