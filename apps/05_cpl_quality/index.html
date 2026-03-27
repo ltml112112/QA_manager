@@ -193,7 +193,10 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 
     <!-- Genealogy Flow -->
     <div class="card" id="flow-card" style="display:none;">
-      <div class="card-header"><span>⛓</span> Lot Genealogy Flow</div>
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <span><span>⛓</span> Lot Genealogy Flow</span>
+        <button class="btn btn-sm btn-secondary" id="btn-genealogy-excel" onclick="downloadGenealogyExcel()" style="font-size:0.75rem;">⬇ Excel</button>
+      </div>
       <div id="mermaid-viewer"></div>
     </div>
 
@@ -1367,6 +1370,81 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/* 6-G: 계보도 Excel 다운로드
+   완제품 → 원료 방향으로 DFS하여 모든 경로를 행으로 펼침
+   컬럼: 완제품(stageIdx 0) ~ 원료(stageIdx N)
+*/
+function downloadGenealogyExcel() {
+  var lot = STATE.selectedLot;
+  if (!lot) { alert('먼저 Lot을 선택하세요.'); return; }
+
+  var result  = collectFullChain(lot);
+  var nodes   = Array.from(result.nodes);
+  var edges   = result.edges;
+  if (nodes.length === 0) return;
+
+  var assigned    = assignLotColumns(nodes, edges);
+  var colMap      = assigned.colMap;
+  var maxStageIdx = assigned.maxStageIdx;
+  var numCols     = maxStageIdx + 1;
+
+  /* 완제품→원료 방향 인접 맵 (displayCol 높은 쪽 → 낮은 쪽) */
+  var children = {};
+  edges.forEach(function(e) {
+    /* e.from = 완제품측(displayCol 높음), e.to = 원료측(displayCol 낮음) */
+    if (!children[e.from]) children[e.from] = [];
+    if (children[e.from].indexOf(e.to) === -1) children[e.from].push(e.to);
+  });
+
+  /* 루트: displayCol이 가장 높은(=완제품 쪽) 노드들 */
+  var roots = nodes.filter(function(l) { return colMap[l] === maxStageIdx; });
+  if (roots.length === 0) roots = [lot]; /* fallback: 선택 Lot */
+
+  /* DFS로 완전 경로 열거 */
+  var paths = [];
+  function dfs(l, path) {
+    var p = path.concat([l]);
+    var kids = children[l] || [];
+    if (kids.length === 0) { paths.push(p); return; }
+    kids.forEach(function(child) { dfs(child, p); });
+  }
+  roots.forEach(function(r) { dfs(r, []); });
+  if (paths.length === 0) paths = [[lot]];
+
+  /* 헤더: 완제품(displayCol=maxStageIdx) → 원료(displayCol=0) */
+  var headers = [];
+  for (var dc = maxStageIdx; dc >= 0; dc--) {
+    headers.push(getColumnLabel(dc, maxStageIdx));
+  }
+
+  /* 행 구성: 경로의 각 Lot를 해당 단계 컬럼에 배치 */
+  var aoa = [headers];
+  paths.forEach(function(path) {
+    var row = new Array(numCols).fill('');
+    path.forEach(function(l) {
+      var dc     = colMap[l];
+      var colIdx = maxStageIdx - dc; /* 완제품=0번 컬럼 */
+      var meta   = STATE.lotMeta[l] || {};
+      row[colIdx] = l + (meta.remark ? ' (' + meta.remark + ')' : '');
+    });
+    aoa.push(row);
+  });
+
+  /* 열 너비 자동 조정 */
+  var colWidths = headers.map(function(h) { return { wch: Math.max(h.length, 18) }; });
+  aoa.slice(1).forEach(function(row) {
+    row.forEach(function(cell, i) {
+      if (cell.length > colWidths[i].wch) colWidths[i].wch = cell.length;
+    });
+  });
+
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = colWidths;
+  XLSX.utils.book_append_sheet(wb, ws, 'Lot 계보');
+  XLSX.writeFile(wb, lot + '_계보.xlsx');
 }
 
 /* ══════════════════════════════════════════════════════════════
