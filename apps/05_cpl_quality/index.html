@@ -30,12 +30,25 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .main-panel { flex: 1; overflow-y: auto; padding: 20px; }
 
 /* ── Sidebar ── */
-.sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.sidebar-toggle { display: flex; gap: 4px; margin-bottom: 12px; }
+.sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
 .sidebar-toggle .btn { flex: 1; font-size: 0.8rem; }
 .sidebar-toggle .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sidebar-search { position: relative; }
 .sidebar-search .form-input { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
+
+/* ── Stage Filter Tabs ── */
+.stage-filter-bar {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface);
+}
+.stage-filter-btn {
+  font-size: 0.72rem; padding: 3px 9px; border-radius: 10px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s; line-height: 1.4;
+}
+.stage-filter-btn:hover { background: var(--surface-2); color: var(--text); }
+.stage-filter-btn.sf-active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .autocomplete-list {
   position: absolute; top: 100%; left: 0; right: 0; z-index: 10;
   background: var(--surface); border: 1px solid var(--border); border-top: none;
@@ -55,7 +68,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 }
 .lot-item:hover { background: var(--surface-2); }
 .lot-item.active { background: var(--accent); color: #fff; }
-.lot-item .lot-meta { font-size: 0.72rem; opacity: 0.7; }
+.lot-remark { color: #4a7fc1; }
 .lot-count { padding: 8px 16px; font-size: 0.75rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 
 /* ── Stage Groups (사이드바 단계별 섹션) ── */
@@ -99,7 +112,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .lot-node:hover { border-color: var(--border-hover); background: var(--surface); }
 .lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
 .lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
-.lot-node-name { font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; }
+.lot-node-remark { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: #4a7fc1; margin-top: 2px; }
 .genealogy-svg {
   position: absolute; top: 0; left: 0;
   pointer-events: none; overflow: visible;
@@ -139,19 +152,19 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 
 <!-- ── Upload Bar ── -->
 <div class="upload-bar">
-  <div class="dropzone" id="drop-quality">
-    <input type="file" id="input-quality" accept=".xlsx,.xls" style="display:none">
-    <div class="dropzone-icon" id="icon-quality">📊</div>
-    <div class="dropzone-title">품질 데이터 업로드</div>
-    <div class="dropzone-hint" id="hint-quality">.xlsx 파일을 드래그하거나 클릭하세요</div>
-    <div class="upload-status" id="status-quality" style="display:none;margin-top:6px;font-size:0.82rem;text-align:center;"></div>
-  </div>
   <div class="dropzone" id="drop-flow">
     <input type="file" id="input-flow" accept=".xlsx,.xls" style="display:none">
     <div class="dropzone-icon" id="icon-flow">🔗</div>
     <div class="dropzone-title">흐름도 데이터 업로드</div>
     <div class="dropzone-hint" id="hint-flow">.xlsx 파일을 드래그하거나 클릭하세요</div>
     <div class="upload-status" id="status-flow" style="display:none;margin-top:6px;font-size:0.82rem;text-align:center;"></div>
+  </div>
+  <div class="dropzone" id="drop-quality">
+    <input type="file" id="input-quality" accept=".xlsx,.xls" style="display:none">
+    <div class="dropzone-icon" id="icon-quality">📊</div>
+    <div class="dropzone-title">품질 데이터 업로드</div>
+    <div class="dropzone-hint" id="hint-quality">.xlsx 파일을 드래그하거나 클릭하세요</div>
+    <div class="upload-status" id="status-quality" style="display:none;margin-top:6px;font-size:0.82rem;text-align:center;"></div>
   </div>
 </div>
 
@@ -166,6 +179,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
         <div class="autocomplete-list" id="ac-list"></div>
       </div>
     </div>
+    <div class="stage-filter-bar" id="stage-filter-bar" style="display:none;"></div>
     <div class="lot-count" id="lot-count">0개 Lot</div>
     <div class="lot-list" id="lot-list"></div>
   </div>
@@ -174,7 +188,7 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
   <div class="main-panel" id="main-panel">
     <div class="no-data" id="empty-state">
       <div class="no-data-icon">📁</div>
-      <div>품질 데이터와 흐름도 데이터를 업로드하면 분석이 시작됩니다.</div>
+      <div>흐름도 데이터를 업로드하면 Lot 계보도가 표시됩니다.<br><span style="font-size:0.85rem;color:var(--text-faint)">품질 데이터를 함께 올리면 SPC TREND 차트도 표시됩니다.</span></div>
     </div>
 
     <!-- Genealogy Flow -->
@@ -235,6 +249,7 @@ const STATE = {
   selectedLot:    null,
   selectedBatch:  null,
   traceDir:       'backward', // 'backward' | 'forward'
+  filterStage:    null,       // null=전체, 숫자=해당 stageIdx만 표시
   chartInstances: [],
 };
 
@@ -563,16 +578,20 @@ function parseQualityData() {
 /* 3-H: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
 function onQualityReady() {
   parseQualityData();
-  // Step 7 차트 렌더는 추후 구현
-  tryRenderAll();
+  // 흐름도 데이터가 이미 있으면 SPC 차트 추가, 없으면 대기
+  if (Object.keys(STATE.byOutputLot).length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
+  }
 }
 
 /* 두 파일 모두 준비됐을 때만 전체 렌더 시작 */
 function tryRenderAll() {
-  if (STATE.qualityRecords.length && Object.keys(STATE.byOutputLot).length) {
+  if (Object.keys(STATE.byOutputLot).length) {
     document.getElementById('empty-state').style.display = 'none';
-    if (typeof renderSidebar    === 'function') renderSidebar();
-    if (typeof renderSpcCharts  === 'function') renderSpcCharts();
+    if (typeof renderSidebar === 'function') renderSidebar();
+  }
+  if (STATE.qualityRecords.length && Object.keys(STATE.byOutputLot).length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
   }
 }
 
@@ -609,17 +628,30 @@ function parseSubCols(rows, stages) {
     var endCol = idx + 1 < stages.length ? stages[idx + 1].startCol : row1.length;
     var sub = {
       stageLabel:   stg.stageLabel,
-      lotNumCols:   [],
+      mainLotCol:   null,  // 첫 번째 LOT 컬럼 (주 Lot 번호)
+      remarkLotCol: null,  // 두 번째 LOT 컬럼 또는 "비고" 컬럼 (비고 Lot)
       itemCodeCol:  null,
       itemNameCol:  null,
-      stageNameCol: null   // "단계" 서브컬럼 (완제품/정제1차품 등 실제 공정명)
+      stageNameCol: null
     };
 
     for (var c = stg.startCol; c < endCol; c++) {
       var cell = String(row1[c] || '').trim();
       var upper = cell.toUpperCase();
-      if (upper.indexOf('LOTNUM') !== -1 || upper.indexOf('LOT') !== -1) {
-        sub.lotNumCols.push(c);
+      var isLot    = upper.indexOf('LOTNUM') !== -1 || upper.indexOf('LOT NO') !== -1 ||
+                     upper === 'LOT' || upper === 'LOTNO';
+      var isRemark = cell.indexOf('비고') !== -1;
+
+      if (isRemark && !isLot) {
+        // "비고" 단독 컬럼
+        if (sub.remarkLotCol === null) sub.remarkLotCol = c;
+      } else if (isLot) {
+        // LOT 컬럼: 첫 번째는 주 Lot, 두 번째(비고 LOTNUM 포함)는 비고
+        if (sub.mainLotCol === null) sub.mainLotCol = c;
+        else if (sub.remarkLotCol === null) sub.remarkLotCol = c;
+      } else if (isRemark) {
+        // "비고 LOTNUM" 처럼 둘 다 포함된 경우 → 비고 Lot
+        if (sub.remarkLotCol === null) sub.remarkLotCol = c;
       } else if (upper.indexOf('품목코드') !== -1 || upper.indexOf('코드') !== -1) {
         sub.itemCodeCol = c;
       } else if (upper.indexOf('품목명') !== -1 || upper.indexOf('품명') !== -1) {
@@ -650,22 +682,21 @@ function parseFlowRows(rows, subCols) {
 
     // 각 단계에서 Lot 번호 + 메타 + 공정명 추출
     var stageLots = subCols.map(function(sub, sIdx) {
-      var lot = '';
-      for (var i = 0; i < sub.lotNumCols.length; i++) {
-        var v = String(row[sub.lotNumCols[i]] || '').trim();
-        if (v) { lot = v; break; }
-      }
-      var itemCode  = sub.itemCodeCol  !== null ? String(row[sub.itemCodeCol]  || '').trim() : '';
-      var itemName  = sub.itemNameCol  !== null ? String(row[sub.itemNameCol]  || '').trim() : '';
-      var stageName = sub.stageNameCol !== null ? String(row[sub.stageNameCol] || '').trim() : '';
-      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, stageIdx: sIdx };
+      var lot       = sub.mainLotCol    !== null ? String(row[sub.mainLotCol]    || '').trim() : '';
+      var remark    = sub.remarkLotCol  !== null ? String(row[sub.remarkLotCol]  || '').trim() : '';
+      var itemCode  = sub.itemCodeCol   !== null ? String(row[sub.itemCodeCol]   || '').trim() : '';
+      var itemName  = sub.itemNameCol   !== null ? String(row[sub.itemNameCol]   || '').trim() : '';
+      var stageName = sub.stageNameCol  !== null ? String(row[sub.stageNameCol]  || '').trim() : '';
+      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, remark: remark, stageIdx: sIdx };
     });
 
     // lotMeta + lotStage 저장, stageTypeLabels 수집
     stageLots.forEach(function(s) {
       if (!s.lot) return;
       if (!lotMeta[s.lot]) {
-        lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName };
+        lotMeta[s.lot] = { itemCode: s.itemCode, itemName: s.itemName, remark: s.remark };
+      } else if (s.remark && !lotMeta[s.lot].remark) {
+        lotMeta[s.lot].remark = s.remark;
       }
       if (lotStage[s.lot] === undefined) {
         lotStage[s.lot] = s.stageIdx;
@@ -721,7 +752,13 @@ function parseFlowData() {
 /* 4-G: 콜백 — Step 2의 handleFile()이 완료 후 호출 */
 function onFlowReady() {
   parseFlowData();
-  tryRenderAll();
+  // 흐름도만 있어도 바로 사이드바 + 계보도 렌더링
+  document.getElementById('empty-state').style.display = 'none';
+  if (typeof renderSidebar === 'function') renderSidebar();
+  // 품질 데이터도 이미 있으면 SPC 차트까지
+  if (STATE.qualityRecords.length) {
+    if (typeof renderSpcCharts === 'function') renderSpcCharts();
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -752,7 +789,8 @@ function matchLot(lot, query) {
   var q = query.toLowerCase();
   if (lot.toLowerCase().indexOf(q) !== -1) return true;
   var meta = STATE.lotMeta[lot];
-  return !!(meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1);
+  if (meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1) return true;
+  return !!(meta && meta.remark && meta.remark.toLowerCase().indexOf(q) !== -1);
 }
 
 /* 5-D: 단계 그룹 목록 렌더링 */
@@ -762,26 +800,36 @@ function renderLotGroups(query) {
   listEl.innerHTML = '';
 
   var stageIdxs = getSortedStageIdxs();
+  // 단계 필터 적용
+  if (STATE.filterStage !== null) {
+    stageIdxs = stageIdxs.filter(function(si) { return si === STATE.filterStage; });
+  }
+
   var total = 0;
+  var firstGroup = true;
 
   stageIdxs.forEach(function(si) {
-    // 이 단계의 lot 목록 (필터 적용)
     var lots = Object.keys(STATE.lotMeta)
       .filter(function(l) { return STATE.lotStage[l] === si && matchLot(l, query); })
-      .sort();
+      .sort(function(a, b) { return b.localeCompare(a); });
     if (lots.length === 0) return;
     total += lots.length;
 
     /* 그룹 헤더 */
     var hdr = document.createElement('div');
     hdr.className = 'stage-group-header';
+
+    // 검색 중이거나 필터 단일 단계이거나 첫 그룹이면 펼침, 나머지는 기본 접힘
+    var startOpen = firstGroup || !!query || STATE.filterStage !== null;
+    firstGroup = false;
+
     hdr.innerHTML =
       '<span class="stage-group-label">' + escHtml(getStageLabel(si)) + '</span>' +
       '<span class="stage-group-count">' + lots.length + '</span>' +
-      '<span class="stage-group-toggle">▾</span>';
+      '<span class="stage-group-toggle">' + (startOpen ? '▾' : '▸') + '</span>';
 
     var body = document.createElement('div');
-    body.className = 'stage-group-body';
+    body.className = 'stage-group-body' + (startOpen ? '' : ' sg-collapsed');
 
     hdr.addEventListener('click', function() {
       var collapsed = body.classList.toggle('sg-collapsed');
@@ -795,7 +843,7 @@ function renderLotGroups(query) {
       item.dataset.lot = lot;
       item.innerHTML =
         '<span>' + escHtml(lot) + '</span>' +
-        '<span class="lot-meta">' + escHtml(meta.itemName || '') + '</span>';
+        (meta.remark ? '<span class="lot-remark">' + escHtml(meta.remark) + '</span>' : '');
 
       item.addEventListener('click', (function(l) { return function() {
         document.querySelectorAll('.lot-item').forEach(function(el) { el.classList.remove('active'); });
@@ -818,9 +866,44 @@ function renderLotGroups(query) {
   countEl.textContent = total + '개 Lot';
 }
 
+/* 5-E-1: 단계 필터 탭 렌더링 */
+function renderStageFilterBar() {
+  var barEl = document.getElementById('stage-filter-bar');
+  barEl.innerHTML = '';
+  barEl.style.display = '';
+
+  var stageIdxs = getSortedStageIdxs();
+  if (stageIdxs.length <= 1) { barEl.style.display = 'none'; return; }
+
+  // "전체" 버튼
+  var allBtn = document.createElement('button');
+  allBtn.className = 'stage-filter-btn' + (STATE.filterStage === null ? ' sf-active' : '');
+  allBtn.textContent = '전체';
+  allBtn.addEventListener('click', function() {
+    STATE.filterStage = null;
+    renderStageFilterBar();
+    renderLotGroups(document.getElementById('lot-search').value.trim());
+  });
+  barEl.appendChild(allBtn);
+
+  stageIdxs.forEach(function(si) {
+    var label = getStageLabel(si);
+    var btn = document.createElement('button');
+    btn.className = 'stage-filter-btn' + (STATE.filterStage === si ? ' sf-active' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', function() {
+      STATE.filterStage = (STATE.filterStage === si) ? null : si;
+      renderStageFilterBar();
+      renderLotGroups(document.getElementById('lot-search').value.trim());
+    });
+    barEl.appendChild(btn);
+  });
+}
+
 /* 5-E: 사이드바 전체 초기화 */
 function renderSidebar() {
   document.getElementById('sidebar').classList.remove('hidden');
+  renderStageFilterBar();
   renderLotGroups('');
 
   var searchInput = document.getElementById('lot-search');
@@ -989,7 +1072,7 @@ function getColumnLabel(displayCol, maxStageIdx) {
 */
 function computeLayout(nodes, edges, colMap, maxStageIdx) {
   var numCols  = maxStageIdx + 1;
-  var SLOT_H   = 52;
+  var SLOT_H   = 64;
   var SLOT_GAP = 6;
   var STEP     = SLOT_H + SLOT_GAP;
 
@@ -1234,10 +1317,10 @@ function renderGenealogy(lot) {
       node.dataset.lot = l;
       node.style.cssText =
         'left:' + colX + 'px;top:' + nodeY + 'px;' +
-        'width:' + COL_W + 'px;height:' + nodeH + 'px;';
+        'width:' + COL_W + 'px;min-height:' + nodeH + 'px;';
       node.innerHTML =
         '<div class="lot-node-id">' + escHtml(l) + '</div>' +
-        (meta.itemName ? '<div class="lot-node-name">' + escHtml(meta.itemName) + '</div>' : '');
+        (meta.remark ? '<div class="lot-node-remark">' + escHtml(meta.remark) + '</div>' : '');
       node.onclick = (function(lClosed) { return function() {
         STATE.selectedLot = lClosed;
         document.querySelectorAll('.lot-item').forEach(function(el) {
