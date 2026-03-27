@@ -200,16 +200,16 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
       <div id="mermaid-viewer"></div>
     </div>
 
-    <!-- Batch Deep Dive -->
-    <div class="card deep-dive-panel" id="deep-dive-card">
-      <div class="card-header"><span>🔍</span> Batch Deep-Dive</div>
-      <div id="deep-dive-content"></div>
-    </div>
-
     <!-- Trace Table -->
     <div class="card" id="trace-card" style="display:none;">
       <div class="card-header"><span>📋</span> 품질 데이터 추적 요약</div>
       <div class="trace-table-wrap" id="trace-result"></div>
+    </div>
+
+    <!-- Batch Deep Dive -->
+    <div class="card deep-dive-panel" id="deep-dive-card">
+      <div class="card-header"><span>🔍</span> Batch Deep-Dive</div>
+      <div id="deep-dive-content"></div>
     </div>
 
     <!-- SPC Charts -->
@@ -1778,11 +1778,11 @@ function renderDeepDive(batchNo) {
       html +=
         '<tr>' +
         '<td>' + r.itemLabel + '</td>' +
-        '<td' + cls + '>' + r.value + '</td>' +
-        '<td>' + (r.USL !== null && !isNaN(r.USL) ? r.USL : '-') + '</td>' +
-        '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? r.LSL : '-') + '</td>' +
-        '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? r.UCL : '-') + '</td>' +
-        '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? r.LCL : '-') + '</td>' +
+        '<td' + cls + '>' + fmtVal(r.value) + '</td>' +
+        '<td>' + fmtVal(r.USL) + '</td>' +
+        '<td>' + fmtVal(r.LSL) + '</td>' +
+        '<td>' + fmtVal(r.UCL) + '</td>' +
+        '<td>' + fmtVal(r.LCL) + '</td>' +
         '<td' + cls + '>' + (ng ? 'NG' : 'OK') + '</td>' +
         '</tr>';
     });
