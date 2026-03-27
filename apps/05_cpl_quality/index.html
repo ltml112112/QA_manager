@@ -949,37 +949,36 @@ function collectRelatedLots(startLot, dir) {
 */
 function collectFullChain(startLot) {
   var nodes = new Set([startLot]);
+  var edgeSeen = {};
   var edges = [];
   var MAX   = 100;
 
-  /* ① Backward BFS — byOutputLot (완제품→원료), forward 탐색 절대 금지 */
+  function pushEdge(from, to) {
+    var k = from + '\u2192' + to;
+    if (!edgeSeen[k]) { edgeSeen[k] = true; edges.push({ from: from, to: to }); }
+  }
+
+  /* ① Backward BFS — byOutputLot (완제품→원료) */
   var bQueue = [startLot];
   while (bQueue.length > 0 && nodes.size < MAX) {
     var cur = bQueue.shift();
     (STATE.byOutputLot[cur] || []).forEach(function(raw) {
-      edges.push({ from: cur, to: raw }); // cur=완제품측, raw=원료측
+      pushEdge(cur, raw);
       if (!nodes.has(raw) && nodes.size < MAX) { nodes.add(raw); bQueue.push(raw); }
     });
   }
 
-  /* ② Forward BFS — byInputLot (원료→완제품), backward 탐색 절대 금지 */
+  /* ② Forward BFS — byInputLot (원료→완제품) */
   var fQueue = [startLot];
   while (fQueue.length > 0 && nodes.size < MAX) {
     var cur = fQueue.shift();
     (STATE.byInputLot[cur] || []).forEach(function(fin) {
-      edges.push({ from: fin, to: cur }); // fin=완제품측, cur=원료측
+      pushEdge(fin, cur);
       if (!nodes.has(fin) && nodes.size < MAX) { nodes.add(fin); fQueue.push(fin); }
     });
   }
 
-  /* 중복 엣지 제거 */
-  var seen = {}, unique = [];
-  edges.forEach(function(e) {
-    var k = e.from + '\u2192' + e.to;
-    if (!seen[k]) { seen[k] = true; unique.push(e); }
-  });
-
-  return { nodes: nodes, edges: unique, truncated: nodes.size >= MAX };
+  return { nodes: nodes, edges: edges, truncated: nodes.size >= MAX };
 }
 
 /* 6-B: 각 Lot에 컬럼 인덱스 할당
@@ -1166,6 +1165,16 @@ function computeLayout(nodes, edges, colMap, maxStageIdx) {
         if (newH > h[l]) h[l] = newH;
       }
     });
+  }
+
+  /* ④-b: stretch 후 실제 h 기반 중첩 재해소 (push-down) */
+  for (var c = 0; c < numCols; c++) {
+    var sorted = byCol[c].slice().sort(function(a, b) { return y[a] - y[b]; });
+    for (var i = 1; i < sorted.length; i++) {
+      var prev = sorted[i - 1], cur = sorted[i];
+      var needed = y[prev] + h[prev] + SLOT_GAP;
+      if (y[cur] < needed) y[cur] = needed;
+    }
   }
 
   /* ⑤ 최종 압축: 센터링 드리프트로 생긴 과도한 gap 제거 (top→bottom, pull-up) */
