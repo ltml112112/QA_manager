@@ -798,7 +798,7 @@ function renderLotGroups(query) {
   stageIdxs.forEach(function(si) {
     var lots = Object.keys(STATE.lotMeta)
       .filter(function(l) { return STATE.lotStage[l] === si && matchLot(l, query); })
-      .sort();
+      .sort(si === 0 ? function(a, b) { return b.localeCompare(a); } : undefined);
     if (lots.length === 0) return;
     total += lots.length;
 
