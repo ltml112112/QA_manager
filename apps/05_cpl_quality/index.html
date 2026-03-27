@@ -1251,6 +1251,17 @@ function renderGenealogy(lot) {
 
   /* SVG 연결선 */
   drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, HDR_H);
+
+  /* 렌더 후 flow-card로 스크롤 */
+  flowCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* 6-G: 숫자 표시 헬퍼 — 소수점 3자리(4자리에서 반올림), 후행 0 제거 */
+function fmtVal(v) {
+  if (v === null || v === undefined) return '-';
+  var n = parseFloat(v);
+  if (isNaN(n)) return String(v);
+  return parseFloat(n.toFixed(3)).toString();
 }
 
 /* 6-F: HTML 이스케이프 헬퍼 */
@@ -1688,11 +1699,11 @@ function renderTrackingTable(selectedLot) {
 
         tableHtml +=
           '<td>' + r.itemLabel + '</td>' +
-          '<td' + cls + '>' + r.value + '</td>' +
-          '<td>' + (r.USL !== null && !isNaN(r.USL) ? r.USL : '-') + '</td>' +
-          '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? r.LSL : '-') + '</td>' +
-          '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? r.UCL : '-') + '</td>' +
-          '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? r.LCL : '-') + '</td>' +
+          '<td' + cls + '>' + fmtVal(r.value) + '</td>' +
+          '<td>' + (r.USL !== null && !isNaN(r.USL) ? fmtVal(r.USL) : '-') + '</td>' +
+          '<td>' + (r.LSL !== null && !isNaN(r.LSL) ? fmtVal(r.LSL) : '-') + '</td>' +
+          '<td>' + (r.UCL !== null && !isNaN(r.UCL) ? fmtVal(r.UCL) : '-') + '</td>' +
+          '<td>' + (r.LCL !== null && !isNaN(r.LCL) ? fmtVal(r.LCL) : '-') + '</td>' +
           '<td' + cls + '>' + (ng ? 'NG' : 'OK') + '</td>' +
           '</tr>';
       });
@@ -1703,7 +1714,6 @@ function renderTrackingTable(selectedLot) {
 
   container.innerHTML = summaryHtml + '<div class="trace-table-wrap">' + tableHtml + '</div>';
   card.style.display  = '';
-  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 </script>
