@@ -126,8 +126,16 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 .spc-section { margin-bottom: 24px; }
 .spc-section-title {
   background: var(--text); color: var(--bg); padding: 10px 16px;
-  border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem; margin-bottom: 12px;
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem; margin-bottom: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+  transition: opacity 0.12s;
 }
+.spc-section-title:hover { opacity: 0.85; }
+.spc-section-title .spc-fold-icon { font-size: 0.75rem; opacity: 0.7; flex-shrink: 0; margin-left: 10px; }
+.spc-section-body { overflow: hidden; }
+.spc-section-body.spc-collapsed { display: none; }
+.spc-section-body:not(.spc-collapsed) { padding-top: 12px; }
 .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 16px; }
 .chart-box { position: relative; height: 300px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .chart-box canvas { width: 100% !important; height: 100% !important; }
@@ -213,6 +221,10 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
     </div>
 
     <!-- SPC Charts -->
+    <div id="spc-ctrl-bar" style="display:none; margin-bottom:10px; gap:8px; justify-content:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="spcExpandAll()">전체 펼치기</button>
+      <button class="btn btn-secondary btn-sm" onclick="spcCollapseAll()">전체 접기</button>
+    </div>
     <div id="spc-container"></div>
   </div>
 
@@ -1642,15 +1654,33 @@ function renderSpcCharts() {
 
   if (stageList.length === 0) return;
 
+  // 전체 펼치기/접기 버튼 바 표시
+  var ctrlBar = document.getElementById('spc-ctrl-bar');
+  if (ctrlBar) ctrlBar.style.display = 'flex';
+
   stageList.forEach(function(stage) {
     // 섹션 래퍼
     var section = document.createElement('div');
     section.className = 'spc-section';
 
+    // 헤더 (클릭 시 fold/unfold)
     var title = document.createElement('div');
-    title.className   = 'spc-section-title';
-    title.textContent = stage;
+    title.className = 'spc-section-title';
+
+    var titleText = document.createElement('span');
+    titleText.textContent = stage;
+    title.appendChild(titleText);
+
+    var foldIcon = document.createElement('span');
+    foldIcon.className = 'spc-fold-icon';
+    foldIcon.textContent = '▶ 펼치기';
+    title.appendChild(foldIcon);
+
     section.appendChild(title);
+
+    // 바디 (초기 접힘)
+    var body = document.createElement('div');
+    body.className = 'spc-section-body spc-collapsed';
 
     var grid = document.createElement('div');
     grid.className = 'charts-grid';
@@ -1666,17 +1696,49 @@ function renderSpcCharts() {
         '<div class="chart-title">' + itemLabel + '</div>' +
         '<canvas id="' + canvasId + '"></canvas>';
       grid.appendChild(box);
-      section.appendChild(grid);
-
-      // 다음 프레임에 차트 생성 (DOM 삽입 후)
-      setTimeout(function() {
-        var chart = createSpcChart(canvasId, itemLabel, records);
-        if (chart) STATE.chartInstances.push(chart);
-      }, 0);
     });
 
-    section.appendChild(grid);
+    body.appendChild(grid);
+    section.appendChild(body);
     container.appendChild(section);
+
+    // fold/unfold 토글 — 펼칠 때 차트 생성 (lazy)
+    // _buildCharts: 처음 펼칠 때 한 번만 호출; 이후 null로 교체
+    body._buildCharts = function() {
+      items.forEach(function(itemLabel) {
+        var records  = groups[stage][itemLabel];
+        var canvasId = 'chart-' + (stage + '-' + itemLabel).replace(/[^a-zA-Z0-9가-힣]/g, '_');
+        setTimeout(function() {
+          var chart = createSpcChart(canvasId, itemLabel, records);
+          if (chart) STATE.chartInstances.push(chart);
+        }, 0);
+      });
+      body._buildCharts = null; // 재호출 방지
+    };
+
+    title.addEventListener('click', function() {
+      var collapsed = body.classList.toggle('spc-collapsed');
+      foldIcon.textContent = collapsed ? '▶ 펼치기' : '▼ 접기';
+      if (!collapsed && body._buildCharts) body._buildCharts();
+    });
+  });
+}
+
+/* 7-H: 전체 펼치기 / 전체 접기 */
+function spcExpandAll() {
+  document.querySelectorAll('#spc-container .spc-section-body').forEach(function(body) {
+    body.classList.remove('spc-collapsed');
+    var icon = body.closest('.spc-section').querySelector('.spc-fold-icon');
+    if (icon) icon.textContent = '▼ 접기';
+    if (body._buildCharts) body._buildCharts();
+  });
+}
+
+function spcCollapseAll() {
+  document.querySelectorAll('#spc-container .spc-section-body').forEach(function(body) {
+    body.classList.add('spc-collapsed');
+    var icon = body.closest('.spc-section').querySelector('.spc-fold-icon');
+    if (icon) icon.textContent = '▶ 펼치기';
   });
 }
 
