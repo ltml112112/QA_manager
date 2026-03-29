@@ -15,11 +15,11 @@ const apps = [
   },
   {
     id:          'hplc',
-    label:       'HPLC/DSC Report 자동생성',
+    label:       'HPLC/DSC Report 자동화',
     icon:        '🧪',
     badge:       null,
     src:         './apps/03_hplc_dsc/index.html',
-    loaderText:  'HPLC/DSC Report 자동생성 로딩 중...',
+    loaderText:  'HPLC/DSC Report 자동화 로딩 중...',
   },
   {
     id:          'lgd',
