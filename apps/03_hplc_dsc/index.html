@@ -808,14 +808,23 @@ async function processHplcPage(pageNum, scale) {
   const meta = await extractHplcMeta(page);
   const cropBox = computeHplcCropBox(meta, cvs.width, cvs.height, scale);
 
+  // tableB64: 빨간 박스 그리기 전 클린 상태로 먼저 크롭
+  const cleanTableB64 = cropB64(cvs, ...cropBox.table);
+  const [tX, tY, tW, tH] = cropBox.table;
+
   const highPeaks = meta.peakRows.filter(p => p.areaPct >= 1);
+  const peakBoxes = [];
+
   if (highPeaks.length > 0) {
     const rh = meta.rowH * scale, pad = rh * 0.15;
     ctx.save(); ctx.strokeStyle = '#DD0000'; ctx.lineWidth = Math.max(1.5, scale * 0.55);
     for (const p of highPeaks) {
       const cy = pdf2cvsY(p.pdfY, meta.pageH, scale);
-      if (p.areaPdfX !== null) ctx.strokeRect(p.areaPdfX * scale - 3 * scale, cy - rh + pad, p.areaItemW * scale + 6 * scale, rh);
-      else ctx.strokeRect(cvs.width * 0.80, cy - rh + pad, cvs.width * 0.20 - 18 * scale, rh);
+      const bx = p.areaPdfX !== null ? p.areaPdfX * scale - 3 * scale : cvs.width * 0.80;
+      const bw = p.areaPdfX !== null ? p.areaItemW * scale + 6 * scale : cvs.width * 0.20 - 18 * scale;
+      const by = cy - rh + pad;
+      ctx.strokeRect(bx, by, bw, rh);
+      peakBoxes.push({ relX: (bx - tX) / tW, relY: (by - tY) / tH, relW: bw / tW, relH: rh / tH });
     }
     ctx.restore();
   }
@@ -825,7 +834,8 @@ async function processHplcPage(pageNum, scale) {
   return {
     chartB64: rawChart,
     peakSum: highPeaks.length > 0 ? peakSum : null,
-    tableB64: cropB64(cvs, ...cropBox.table),
+    tableB64: cleanTableB64,
+    peakBoxes,
     chartNatW: cropBox.chart[2], chartNatH: cropBox.chart[3],
     tableNatW: cropBox.table[2], tableNatH: cropBox.table[3],
     sampleName: meta.sampleName, sampleInfo: meta.sampleInfo,
@@ -1169,6 +1179,20 @@ async function addSumBoxToChart(chartB64, sumValue) {
   });
 }
 
+function addPeakBoxShapes(slide, pres, peakBoxes, imgX, imgY, imgW, imgH) {
+  if (!peakBoxes || !peakBoxes.length) return;
+  for (const pb of peakBoxes) {
+    slide.addShape(pres.ShapeType.rect, {
+      x: imgX + pb.relX * imgW,
+      y: imgY + pb.relY * imgH,
+      w: Math.max(0.01, pb.relW * imgW),
+      h: Math.max(0.01, pb.relH * imgH),
+      fill: { type: 'none' },
+      line: { color: 'DD0000', width: 1.5 }
+    });
+  }
+}
+
 async function buildPptx() {
   const scale = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
@@ -1257,6 +1281,7 @@ async function buildPptx() {
         }
         const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
         slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: tblH1 });
+        addPeakBoxShapes(slide, pres, r1.peakBoxes, offX1, offY + zPH, zPW, tblH1);
 
         const offX2 = PW + (PW - zPW) / 2;
         const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
@@ -1272,6 +1297,7 @@ async function buildPptx() {
         }
         const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
         slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: tblH2 });
+        addPeakBoxShapes(slide, pres, r2.peakBoxes, offX2, offY + zPH, zPW, tblH2);
 
         // 가운데 점선
         const lineTop = offY;
@@ -1307,7 +1333,9 @@ async function buildPptx() {
           const tbW = 1.5 / 2.54, tbH = 0.22, tbMargin = 0.05;
           slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
         }
-        slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
+        const tblH1col = zW * (r1.tableNatH / r1.tableNatW);
+        slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: tblH1col });
+        addPeakBoxShapes(slide, pres, r1.peakBoxes, offX, offY + TXT + chartH, zW, tblH1col);
       }
 
       done++; setProgress(done/totalWork*100, `HPLC 처리 중... p${p1}`);
@@ -2187,14 +2215,23 @@ async function processHplcPage(pageNum, scale) {
   const meta = await extractHplcMeta(page);
   const cropBox = computeHplcCropBox(meta, cvs.width, cvs.height, scale);
 
+  // tableB64: 빨간 박스 그리기 전 클린 상태로 먼저 크롭
+  const cleanTableB64 = cropB64(cvs, ...cropBox.table);
+  const [tX, tY, tW, tH] = cropBox.table;
+
   const highPeaks = meta.peakRows.filter(p => p.areaPct >= 1);
+  const peakBoxes = [];
+
   if (highPeaks.length > 0) {
     const rh = meta.rowH * scale, pad = rh * 0.15;
     ctx.save(); ctx.strokeStyle = '#DD0000'; ctx.lineWidth = Math.max(1.5, scale * 0.55);
     for (const p of highPeaks) {
       const cy = pdf2cvsY(p.pdfY, meta.pageH, scale);
-      if (p.areaPdfX !== null) ctx.strokeRect(p.areaPdfX * scale - 3 * scale, cy - rh + pad, p.areaItemW * scale + 6 * scale, rh);
-      else ctx.strokeRect(cvs.width * 0.80, cy - rh + pad, cvs.width * 0.20 - 18 * scale, rh);
+      const bx = p.areaPdfX !== null ? p.areaPdfX * scale - 3 * scale : cvs.width * 0.80;
+      const bw = p.areaPdfX !== null ? p.areaItemW * scale + 6 * scale : cvs.width * 0.20 - 18 * scale;
+      const by = cy - rh + pad;
+      ctx.strokeRect(bx, by, bw, rh);
+      peakBoxes.push({ relX: (bx - tX) / tW, relY: (by - tY) / tH, relW: bw / tW, relH: rh / tH });
     }
     ctx.restore();
   }
@@ -2204,7 +2241,8 @@ async function processHplcPage(pageNum, scale) {
   return {
     chartB64: rawChart,
     peakSum: highPeaks.length > 0 ? peakSum : null,
-    tableB64: cropB64(cvs, ...cropBox.table),
+    tableB64: cleanTableB64,
+    peakBoxes,
     chartNatW: cropBox.chart[2], chartNatH: cropBox.chart[3],
     tableNatW: cropBox.table[2], tableNatH: cropBox.table[3],
     sampleName: meta.sampleName, sampleInfo: meta.sampleInfo,
@@ -2548,6 +2586,20 @@ async function addSumBoxToChart(chartB64, sumValue) {
   });
 }
 
+function addPeakBoxShapes(slide, pres, peakBoxes, imgX, imgY, imgW, imgH) {
+  if (!peakBoxes || !peakBoxes.length) return;
+  for (const pb of peakBoxes) {
+    slide.addShape(pres.ShapeType.rect, {
+      x: imgX + pb.relX * imgW,
+      y: imgY + pb.relY * imgH,
+      w: Math.max(0.01, pb.relW * imgW),
+      h: Math.max(0.01, pb.relH * imgH),
+      fill: { type: 'none' },
+      line: { color: 'DD0000', width: 1.5 }
+    });
+  }
+}
+
 async function buildPptx() {
   const scale = parseInt(document.getElementById('cfgScale').value);
   const pairMode = parseInt(document.getElementById('cfgPair').value);
@@ -2636,6 +2688,7 @@ async function buildPptx() {
         }
         const tblH1 = zPW * (r1.tableNatH / r1.tableNatW);
         slide.addImage({ data: r1.tableB64, x: offX1, y: offY + zPH, w: zPW, h: tblH1 });
+        addPeakBoxShapes(slide, pres, r1.peakBoxes, offX1, offY + zPH, zPW, tblH1);
 
         const offX2 = PW + (PW - zPW) / 2;
         const lbl2 = [r2.sampleName, r2.sampleInfo].filter(Boolean).join('  |  ');
@@ -2651,6 +2704,7 @@ async function buildPptx() {
         }
         const tblH2 = zPW * (r2.tableNatH / r2.tableNatW);
         slide.addImage({ data: r2.tableB64, x: offX2, y: offY + zPH, w: zPW, h: tblH2 });
+        addPeakBoxShapes(slide, pres, r2.peakBoxes, offX2, offY + zPH, zPW, tblH2);
 
         // 가운데 점선
         const lineTop = offY;
@@ -2686,7 +2740,9 @@ async function buildPptx() {
           const tbW = 1.5 / 2.54, tbH = 0.22, tbMargin = 0.05;
           slide.addText(r1.peakSum.toFixed(3) + '%', { x: offX + zW - tbW - tbMargin, y: offY + TXT + tbMargin, w: tbW, h: tbH, fontSize: 9, bold: true, color: '000000', fill: { color: 'FFFFFF' }, line: { color: '000000', pt: 0.5 }, align: 'center', valign: 'middle' });
         }
-        slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: zW * (r1.tableNatH/r1.tableNatW) });
+        const tblH1col = zW * (r1.tableNatH / r1.tableNatW);
+        slide.addImage({ data: r1.tableB64, x: offX, y: offY + TXT + chartH, w: zW, h: tblH1col });
+        addPeakBoxShapes(slide, pres, r1.peakBoxes, offX, offY + TXT + chartH, zW, tblH1col);
       }
 
       done++; setProgress(done/totalWork*100, `HPLC 처리 중... p${p1}`);
