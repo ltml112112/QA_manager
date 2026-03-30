@@ -301,6 +301,41 @@ html, body {
   text-decoration: line-through;
 }
 
+/* ── D+N 뱃지 ────────────────────────────────────────────────────────── */
+.dn-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-left: 3px;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+/* 일반 — 회색 */
+.dn-badge.dn-normal {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* 7일 이상 또는 긴급 — 빨간색 */
+.dn-badge.dn-alert {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* 완료 — 초록색 */
+.dn-badge.dn-done {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  text-decoration: none;
+}
+
 /* 더보기 */
 .cell-more {
   font-size: 10px;
@@ -565,6 +600,28 @@ function saveItems(items) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
+/* ── D+N 계산 ────────────────────────────────────────────────────────── */
+// 이관일 기준 경과 일수 반환 (D+0 = 이관 당일, 음수 = 미래)
+function calcDN(transferDateStr) {
+  if (!transferDateStr) return null;
+  var t = new Date(transferDateStr + 'T00:00:00');
+  var n = new Date(todayStr + 'T00:00:00');
+  return Math.floor((n - t) / 86400000);
+}
+
+// 뱃지 HTML 반환
+function dnBadgeHTML(item) {
+  if (item.completed) {
+    return '<span class="dn-badge dn-done">완료</span>';
+  }
+  var dn = calcDN(item.transferDate);
+  if (dn === null) return '';
+
+  var label = dn === 0 ? 'D+0' : (dn > 0 ? 'D+' + dn : 'D' + dn);
+  var cls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
+  return '<span class="dn-badge ' + cls + '">' + label + '</span>';
+}
+
 /* ── HTML 이스케이프 ─────────────────────────────────────────────────── */
 function esc(s) {
   return String(s)
@@ -579,17 +636,18 @@ function toMD(dateStr) {
   return (d.getMonth() + 1) + '/' + d.getDate();
 }
 
-/* ── 카드 innerHTML 생성 (부서별 포맷) ───────────────────────────────── */
+/* ── 카드 innerHTML 생성 (부서별 포맷 + D+N 뱃지) ────────────────────── */
 function buildCardHTML(item) {
-  var mat = esc(item.material || '');
+  var mat   = esc(item.material || '');
+  var badge = dnBadgeHTML(item);
 
   if (item.dept === '합성생산') {
-    return mat;
+    return mat + badge;
   }
   if (item.dept === '공정개발') {
-    return mat;
+    return mat + badge;
   }
-  // 정제생산/소자이관 — (자주색 이관일) 검정재료명 <파란색 소자평가시작일>
+  // 정제생산/소자이관 — (자주색 이관일) 검정재료명 <파란색 소자평가시작일> D+N
   var parts = '';
   if (item.transferDate) {
     parts += '<span class="c-purple">(' + toMD(item.transferDate) + ')</span> ';
@@ -598,6 +656,7 @@ function buildCardHTML(item) {
   if (item.evalStart) {
     parts += ' <span class="c-blue">&lt;' + toMD(item.evalStart) + '&gt;</span>';
   }
+  parts += badge;
   return parts;
 }
 
