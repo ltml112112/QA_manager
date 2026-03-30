@@ -601,6 +601,45 @@ textarea.form-input {
   font-size: 13px;
 }
 
+/* ── 재료명 자동완성 ─────────────────────────────────────────────────── */
+.ac-wrap {
+  position: relative;
+}
+
+.ac-dropdown {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  display: none;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.ac-dropdown.open { display: block; }
+
+.ac-item {
+  padding: 7px 11px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item.ac-active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.ac-item .ac-match { font-weight: 700; color: var(--accent); }
+
 /* ── 요약 스트립 ─────────────────────────────────────────────────────── */
 .summary-strip {
   display: flex;
@@ -704,11 +743,28 @@ textarea.form-input {
           </select>
         </div>
 
-        <!-- 재료명 / Lot / 요청사항 -->
+        <!-- 재료명 (자동완성) -->
         <div class="form-group">
-          <label class="fld-label" for="fMaterial">재료명 · Lot · 요청사항<span class="req">*</span></label>
-          <textarea class="form-input" id="fMaterial" rows="3"
-            placeholder="예) PG1088 : P-NC05-Tol&#10;Lot 평가(미정)" required></textarea>
+          <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input class="form-input" type="text" id="fMaterial"
+              placeholder="예) PG1088" autocomplete="off" required>
+            <div class="ac-dropdown" id="acDropdown"></div>
+          </div>
+        </div>
+
+        <!-- Lot 번호 -->
+        <div class="form-group">
+          <label class="fld-label" for="fLot">Lot 번호</label>
+          <input class="form-input" type="text" id="fLot"
+            placeholder="예) P-NC05-Tol">
+        </div>
+
+        <!-- 요청사항 -->
+        <div class="form-group">
+          <label class="fld-label" for="fRequest">요청사항</label>
+          <input class="form-input" type="text" id="fRequest"
+            placeholder="예) Lot 평가(미정)">
         </div>
 
         <hr class="form-divider">
@@ -922,9 +978,20 @@ function toMD(dateStr) {
   return (d.getMonth() + 1) + '/' + d.getDate();
 }
 
+/* ── 재료명 + Lot + 요청사항 조합 텍스트 생성 ───────────────────────── */
+function buildMatText(item) {
+  // 구 데이터: material 하나에 다 들어있는 경우 그대로 사용
+  // 신 데이터: material + lot + request 조합
+  var parts = [];
+  if (item.material) parts.push(item.material);
+  if (item.lot)      parts.push(item.lot);
+  if (item.request)  parts.push(item.request);
+  return parts.join(' ');
+}
+
 /* ── 카드 innerHTML 생성 (부서별 포맷 + D+N 뱃지) ────────────────────── */
 function buildCardHTML(item) {
-  var mat   = esc(item.material || '');
+  var mat   = esc(buildMatText(item));
   var badge = dnBadgeHTML(item);
 
   if (item.dept === '합성생산') {
@@ -1108,6 +1175,66 @@ document.getElementById('btnToday').addEventListener('click', function () {
   openModal(todayStr);
 });
 
+/* ── 재료명 자동완성 ─────────────────────────────────────────────────── */
+function getUniqueMaterials() {
+  var items = loadItems();
+  var seen  = {};
+  var list  = [];
+  // 최신 등록 순으로 유니크 재료명 수집
+  items.slice().reverse().forEach(function (it) {
+    var name = (it.material || '').trim();
+    if (name && !seen[name]) { seen[name] = true; list.push(name); }
+  });
+  return list;
+}
+
+function renderAC(query) {
+  var drop  = document.getElementById('acDropdown');
+  var names = getUniqueMaterials();
+  var q     = query.trim().toLowerCase();
+  var filtered = q
+    ? names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; })
+    : names;
+
+  if (!filtered.length) { drop.classList.remove('open'); return; }
+
+  drop.innerHTML = filtered.map(function (n) {
+    var display = esc(n);
+    if (q) {
+      // 매칭 부분 굵게 표시
+      var idx = n.toLowerCase().indexOf(q);
+      display = esc(n.slice(0, idx))
+        + '<span class="ac-match">' + esc(n.slice(idx, idx + q.length)) + '</span>'
+        + esc(n.slice(idx + q.length));
+    }
+    return '<div class="ac-item" data-val="' + esc(n) + '">' + display + '</div>';
+  }).join('');
+  drop.classList.add('open');
+
+  drop.querySelectorAll('.ac-item').forEach(function (el) {
+    el.addEventListener('mousedown', function (e) {
+      e.preventDefault(); // blur 방지
+      document.getElementById('fMaterial').value = this.dataset.val;
+      drop.classList.remove('open');
+    });
+  });
+}
+
+(function initAC() {
+  var input = document.getElementById('fMaterial');
+  var drop  = document.getElementById('acDropdown');
+
+  input.addEventListener('focus', function () { renderAC(this.value); });
+  input.addEventListener('input', function () { renderAC(this.value); });
+  input.addEventListener('blur',  function () {
+    setTimeout(function () { drop.classList.remove('open'); }, 150);
+  });
+  // ESC로 드롭다운 닫기
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') drop.classList.remove('open');
+  });
+})();
+
 /* ── 폼 기본값 세팅 (리셋 후 날짜 기본값 채우기) ────────────────────── */
 function setFormDefaults() {
   document.getElementById('fTransferDate').value = todayStr;
@@ -1129,6 +1256,8 @@ function readFormData() {
   return {
     dept:         document.getElementById('fDept').value,
     material:     document.getElementById('fMaterial').value.trim(),
+    lot:          document.getElementById('fLot').value.trim(),
+    request:      document.getElementById('fRequest').value.trim(),
     transferDate: document.getElementById('fTransferDate').value,
     evalStart:    document.getElementById('fEvalStart').value,
     evalTarget:   document.getElementById('fEvalTarget').value,
@@ -1140,14 +1269,15 @@ function readFormData() {
 function fillForm(item) {
   document.getElementById('fEditId').value          = item.id;
   document.getElementById('fDept').value            = item.dept;
-  document.getElementById('fMaterial').value        = item.material;
+  document.getElementById('fMaterial').value        = item.material || '';
+  document.getElementById('fLot').value             = item.lot      || '';
+  document.getElementById('fRequest').value         = item.request  || '';
   document.getElementById('fTransferDate').value    = item.transferDate;
   document.getElementById('fEvalStart').value       = item.evalStart  || '';
   document.getElementById('fEvalTarget').value      = item.evalTarget || '';
   document.getElementById('fUrgent').checked        = !!item.urgent;
   document.getElementById('btnSubmit').textContent  = '수정 저장';
   document.getElementById('btnCancelEdit').style.display = 'block';
-  // 폼 패널이 접혀있으면 펼침
   formPanel.classList.remove('collapsed');
   btnToggleForm.textContent = '◀ 폼';
 }
