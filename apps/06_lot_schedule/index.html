@@ -1149,11 +1149,26 @@ function renderCalendar() {
   renderSummary(items);
 
   // 날짜별 아이템 인덱싱
+  // 미완료 항목은 이관월 이후의 달에서도 ��속 표시 (D+N 누적 반영)
+  //  - 현재 달 보기: 이전 달 이관 항목 → 오늘 셀에 표시
+  //  - 미래 달 보기: 이전 달 이관 항목 → 해당 달 1일 셀에 표시
+  //  - 과거 달 보기: 원래 이관일에만 표시
+  var viewMonthStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-01';
+  var isCurMonth   = (curYear === today.getFullYear() && curMonth === today.getMonth());
+  var isCurrentOrFutureMonth =
+    curYear > today.getFullYear() ||
+    (curYear === today.getFullYear() && curMonth >= today.getMonth());
+
   var byDate = {};
   items.forEach(function (it) {
     if (!it.transferDate) return;
-    if (!byDate[it.transferDate]) byDate[it.transferDate] = [];
-    byDate[it.transferDate].push(it);
+    var displayDate = it.transferDate;
+    // 미완료 항목만 carry-forward (완료는 이관일 고정)
+    if (!it.completed && isCurrentOrFutureMonth && it.transferDate < viewMonthStr) {
+      displayDate = isCurMonth ? todayStr : viewMonthStr;
+    }
+    if (!byDate[displayDate]) byDate[displayDate] = [];
+    byDate[displayDate].push(it);
   });
 
   var firstDay = new Date(curYear, curMonth, 1);
