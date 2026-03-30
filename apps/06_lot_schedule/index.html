@@ -584,6 +584,14 @@ textarea.form-input {
   flex-wrap: wrap;
   padding-top: 4px;
 }
+.btn-del {
+  color: var(--danger) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+.btn-del:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: var(--danger) !important;
+}
 
 /* 빈 상태 */
 .modal-empty {
@@ -1069,7 +1077,7 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 
   saveItems(items);
   resetForm();
-  renderCalendar(); // STEP 5 이전에는 셀만 재렌더링
+  renderCalendar();
 });
 
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
@@ -1202,9 +1210,40 @@ function buildDetailCard(item) {
     actions.appendChild(btnUndo);
   }
 
-  // STEP 8에서 수정/삭제 버튼 추가 예정
+  var btnEdit = document.createElement('button');
+  btnEdit.className = 'btn btn-secondary btn-sm';
+  btnEdit.textContent = '✎ 수정';
+  btnEdit.addEventListener('click', function () { editItem(item.id); });
+  actions.appendChild(btnEdit);
+
+  var btnDel = document.createElement('button');
+  btnDel.className = 'btn btn-secondary btn-sm btn-del';
+  btnDel.textContent = '✕ 삭제';
+  btnDel.addEventListener('click', function () { deleteItem(item.id); });
+  actions.appendChild(btnDel);
+
   wrap.appendChild(actions);
   return wrap;
+}
+
+/* ── 수정 ────────────────────────────────────────────────────────────── */
+function editItem(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  closeModal();
+  fillForm(item);
+  // 폼 상단으로 스크롤
+  document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── 삭제 ────────────────────────────────────────────────────────────── */
+function deleteItem(id) {
+  if (!confirm('이 항목을 삭제하시겠습니까?')) return;
+  var items = loadItems().filter(function (it) { return it.id !== id; });
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
 }
 
 /* ── 완료 / 완료 취소 처리 ───────────────────────────────────────────── */
