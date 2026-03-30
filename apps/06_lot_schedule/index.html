@@ -459,10 +459,13 @@ window.addEventListener('message', function (e) {
   if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
 });
 
+/* ── 상수 ────────────────────────────────────────────────────────────── */
+var STORAGE_KEY = 'qa_lot_schedule_v1';
+
 /* ── 상태 ────────────────────────────────────────────────────────────── */
-var today     = new Date();
-var curYear   = today.getFullYear();
-var curMonth  = today.getMonth(); // 0-indexed
+var today    = new Date();
+var curYear  = today.getFullYear();
+var curMonth = today.getMonth(); // 0-indexed
 
 /* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
 function toDateStr(d) {
@@ -471,6 +474,39 @@ function toDateStr(d) {
     + String(d.getDate()).padStart(2, '0');
 }
 var todayStr = toDateStr(today);
+
+/* ── 고유 ID 생성 ─────────────────────────────────────────────────────── */
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ── localStorage 데이터 관리 ────────────────────────────────────────── */
+/*
+  아이템 스키마:
+  {
+    id:           string,        // 고유 ID
+    dept:         string,        // 합성생산 | 공정개발 | 정제생산/소자이관
+    material:     string,        // 재료명·Lot·요청사항
+    transferDate: 'YYYY-MM-DD',  // 샘플 이관/시작일 (필수)
+    evalStart:    'YYYY-MM-DD',  // 소자평가 시작일 (선택)
+    evalTarget:   'YYYY-MM-DD',  // 소자평가 목표일 (선택)
+    urgent:       boolean,       // 긴급 출하 대응 여부
+    completed:    boolean,       // 소자평가 완료 여부
+    completedAt:  'YYYY-MM-DD' | null,
+    createdAt:    'YYYY-MM-DD',
+  }
+*/
+function loadItems() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveItems(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
 
 /* ── 달력 타이틀 업데이트 ────────────────────────────────────────────── */
 function updateTitle() {
@@ -559,26 +595,86 @@ document.getElementById('btnToday').addEventListener('click', function () {
   renderCalendar();
 });
 
-/* ── 폼 제출 (STEP 3에서 저장 로직 연결 예정) ───────────────────────── */
-document.getElementById('scheduleForm').addEventListener('submit', function (e) {
-  e.preventDefault();
-  var dept     = document.getElementById('fDept').value;
-  var material = document.getElementById('fMaterial').value.trim();
-  var transfer = document.getElementById('fTransferDate').value;
-  if (!dept || !material || !transfer) {
-    alert('부서/상태, 재료명, 이관일은 필수 항목입니다.');
-    return;
-  }
-  // STEP 3에서 실제 저장 처리
-  alert('[STEP 3 연결 전] 등록 클릭 확인\n부서: ' + dept + '\n이관일: ' + transfer);
-});
-
-document.getElementById('btnCancelEdit').addEventListener('click', function () {
+/* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
+function resetForm() {
   document.getElementById('scheduleForm').reset();
   document.getElementById('fEditId').value = '';
   document.getElementById('btnSubmit').textContent = '등록하기';
   document.getElementById('btnCancelEdit').style.display = 'none';
+}
+
+/* ── 폼 → 아이템 객체 변환 ───────────────────────────────────────────── */
+function readFormData() {
+  return {
+    dept:         document.getElementById('fDept').value,
+    material:     document.getElementById('fMaterial').value.trim(),
+    transferDate: document.getElementById('fTransferDate').value,
+    evalStart:    document.getElementById('fEvalStart').value,
+    evalTarget:   document.getElementById('fEvalTarget').value,
+    urgent:       document.getElementById('fUrgent').checked,
+  };
+}
+
+/* ── 폼 ← 아이템 객체 채우기 (수정 모드) ────────────────────────────── */
+function fillForm(item) {
+  document.getElementById('fEditId').value          = item.id;
+  document.getElementById('fDept').value            = item.dept;
+  document.getElementById('fMaterial').value        = item.material;
+  document.getElementById('fTransferDate').value    = item.transferDate;
+  document.getElementById('fEvalStart').value       = item.evalStart  || '';
+  document.getElementById('fEvalTarget').value      = item.evalTarget || '';
+  document.getElementById('fUrgent').checked        = !!item.urgent;
+  document.getElementById('btnSubmit').textContent  = '수정 저장';
+  document.getElementById('btnCancelEdit').style.display = 'block';
+  // 폼 패널이 접혀있으면 펼침
+  formPanel.classList.remove('collapsed');
+  btnToggleForm.textContent = '◀ 폼';
+}
+
+/* ── 폼 제출 (신규 등록 + 수정 저장 통합) ───────────────────────────── */
+document.getElementById('scheduleForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  var fd = readFormData();
+  if (!fd.dept || !fd.material || !fd.transferDate) {
+    alert('부서/상태, 재료명, 이관일은 필수 항목입니다.');
+    return;
+  }
+
+  var items  = loadItems();
+  var editId = document.getElementById('fEditId').value;
+
+  if (editId) {
+    // ── 수정 ──
+    var idx = items.findIndex(function (it) { return it.id === editId; });
+    if (idx !== -1) {
+      // completed / completedAt 은 유지
+      items[idx] = Object.assign(items[idx], fd);
+    }
+  } else {
+    // ── 신규 등록 ──
+    var newItem = Object.assign(fd, {
+      id:          genId(),
+      completed:   false,
+      completedAt: null,
+      createdAt:   todayStr,
+    });
+    items.push(newItem);
+
+    // 등록된 달로 이동
+    var d = new Date(fd.transferDate + 'T00:00:00');
+    if (!isNaN(d)) {
+      curYear  = d.getFullYear();
+      curMonth = d.getMonth();
+    }
+  }
+
+  saveItems(items);
+  resetForm();
+  renderCalendar(); // STEP 5 이전에는 셀만 재렌더링
 });
+
+document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 renderCalendar();
