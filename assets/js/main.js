@@ -7,11 +7,11 @@
 const apps = [
   {
     id:          'oled',
-    label:       'OLED IVL & LT 분석기',
+    label:       'OLED IVL & LT data 시각화',
     icon:        '📊',
     badge:       null,
     src:         './apps/01_oled_ivl_lt/index.html',
-    loaderText:  'OLED IVL & LT 분석기 로딩 중...',
+    loaderText:  'OLED IVL & LT data 시각화 로딩 중...',
   },
   {
     id:          'hplc',
