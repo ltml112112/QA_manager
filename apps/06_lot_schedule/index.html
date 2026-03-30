@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<title>소자평가 Lot test 일정 관리</title>
+<style>
+
+/* ── 전체 레이아웃 ───────────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── 좌측 폼 패널 ────────────────────────────────────────────────────── */
+.form-panel {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.25s ease, min-width 0.25s ease;
+}
+
+.form-panel.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+/* 패널 내부 (width 고정 — 접힐 때 콘텐츠가 안 찌그러지게) */
+.form-panel-inner {
+  width: 280px;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-panel-header {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+  padding: 14px 0 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+/* ── 우측 캘린더 메인 ────────────────────────────────────────────────── */
+.cal-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  min-width: 0;
+}
+
+/* 캘린더 상단 헤더 바 */
+.cal-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+/* 네비게이션 버튼 공통 */
+.nav-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+  line-height: 1;
+}
+.nav-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-hover);
+}
+
+/* 오늘 버튼 */
+.btn-today {
+  padding: 0 11px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-today:hover { background: var(--accent-glow); }
+
+/* 폼 토글 버튼 */
+.btn-toggle-form {
+  padding: 0 10px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-toggle-form:hover { background: var(--surface-2); }
+
+/* ── 달력 본문 영역 ──────────────────────────────────────────────────── */
+.cal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 요일 헤더 */
+.cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 0;
+  letter-spacing: 0.02em;
+}
+.cal-dow.sun { color: #ef4444; }
+.cal-dow.sat { color: #3b82f6; }
+
+/* 달력 그리드 */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* 날짜 셀 */
+.cal-cell {
+  min-height: 110px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+  overflow: hidden;
+}
+.cal-cell:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+
+/* 다른 달 셀 */
+.cal-cell.other-month {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* 오늘 셀 */
+.cal-cell.is-today {
+  border: 2px solid var(--accent);
+}
+
+/* 날짜 숫자 */
+.cell-daynum {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cell-daynum.sun { color: #ef4444; }
+.cell-daynum.sat { color: #3b82f6; }
+
+/* 오늘 날짜 강조 원 */
+.cal-cell.is-today .cell-daynum {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* "+N개" 더보기 텍스트 */
+.cell-more {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 4px;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* ── 플레이스홀더 텍스트 (STEP 완료 전 임시) ─────────────────────────── */
+.placeholder-msg {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ━━━━━━━━━━━━━━━━  좌측: 폼 패널  ━━━━━━━━━━━━━━━━ -->
+  <aside class="form-panel" id="formPanel">
+    <div class="form-panel-inner">
+
+      <div class="form-panel-header">
+        <span>📝</span>
+        <span class="form-panel-title">소자평가 일정 등록</span>
+      </div>
+
+      <!-- STEP 2에서 폼 필드 추가 예정 -->
+      <div class="placeholder-msg" style="min-height:120px; font-size:12px; color:var(--text-faint);">
+        ← STEP 2: 폼 구현 예정
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ━━━━━━━━━━━━━━━━  우측: 캘린더 메인  ━━━━━━━━━━━━━━━━ -->
+  <main class="cal-main">
+
+    <!-- 상단 헤더 바 -->
+    <div class="cal-topbar">
+      <button class="btn-toggle-form" id="btnToggleForm">◀ 폼</button>
+      <button class="nav-btn" id="btnPrevMonth" title="이전 달">&#8249;</button>
+      <h2 class="cal-title" id="calTitle">— 년 — 월</h2>
+      <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
+      <button class="btn-today" id="btnToday">오늘</button>
+    </div>
+
+    <!-- 달력 본문 -->
+    <div class="cal-body">
+
+      <!-- 요일 헤더 -->
+      <div class="cal-dow-row">
+        <div class="cal-dow sun">일</div>
+        <div class="cal-dow">월</div>
+        <div class="cal-dow">화</div>
+        <div class="cal-dow">수</div>
+        <div class="cal-dow">목</div>
+        <div class="cal-dow">금</div>
+        <div class="cal-dow sat">토</div>
+      </div>
+
+      <!-- 날짜 그리드 (JS가 채움) -->
+      <div class="cal-grid" id="calGrid">
+        <!-- STEP 4에서 렌더링 예정 -->
+      </div>
+
+    </div>
+  </main>
+
+</div><!-- /.app-layout -->
+
+<script>
+(function () {
+'use strict';
+
+/* ── 테마 동기화 ─────────────────────────────────────────────────────── */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('qa_theme', t);
+}
+applyTheme(localStorage.getItem('qa_theme') || 'dark');
+window.addEventListener('message', function (e) {
+  if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+});
+
+/* ── 상태 ────────────────────────────────────────────────────────────── */
+var today     = new Date();
+var curYear   = today.getFullYear();
+var curMonth  = today.getMonth(); // 0-indexed
+
+/* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
+function toDateStr(d) {
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+}
+var todayStr = toDateStr(today);
+
+/* ── 달력 타이틀 업데이트 ────────────────────────────────────────────── */
+function updateTitle() {
+  document.getElementById('calTitle').textContent =
+    curYear + '년 ' + (curMonth + 1) + '월';
+}
+
+/* ── 달력 그리드 렌더링 (셀 골격만, 카드는 STEP 5) ──────────────────── */
+function renderCalendar() {
+  updateTitle();
+  var grid     = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  var firstDay = new Date(curYear, curMonth, 1);
+  var lastDay  = new Date(curYear, curMonth + 1, 0);
+  var startDow = firstDay.getDay();               // 0=일
+  var prevLast = new Date(curYear, curMonth, 0).getDate();
+  var total    = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
+
+  for (var i = 0; i < total; i++) {
+    var dayNum, dateStr, otherMonth = false;
+
+    if (i < startDow) {
+      // 이전 달
+      dayNum = prevLast - startDow + i + 1;
+      var py = curMonth === 0 ? curYear - 1 : curYear;
+      var pm = curMonth === 0 ? 11 : curMonth - 1;
+      dateStr = py + '-' + String(pm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+      otherMonth = true;
+    } else if (i >= startDow + lastDay.getDate()) {
+      // 다음 달
+      dayNum = i - startDow - lastDay.getDate() + 1;
+      var ny = curMonth === 11 ? curYear + 1 : curYear;
+      var nm = curMonth === 11 ? 0 : curMonth + 1;
+      dateStr = ny + '-' + String(nm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+      otherMonth = true;
+    } else {
+      dayNum  = i - startDow + 1;
+      dateStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+    }
+
+    var dow  = i % 7; // 0=일, 6=토
+    var cell = document.createElement('div');
+    cell.className = 'cal-cell'
+      + (otherMonth ? ' other-month' : '')
+      + (dateStr === todayStr ? ' is-today' : '');
+    cell.dataset.date = dateStr;
+
+    // 날짜 숫자
+    var dn = document.createElement('div');
+    dn.className = 'cell-daynum'
+      + (dow === 0 ? ' sun' : '')
+      + (dow === 6 ? ' sat' : '');
+    dn.textContent = dayNum;
+    cell.appendChild(dn);
+
+    grid.appendChild(cell);
+  }
+}
+
+/* ── 폼 패널 토글 ────────────────────────────────────────────────────── */
+var formPanel      = document.getElementById('formPanel');
+var btnToggleForm  = document.getElementById('btnToggleForm');
+
+btnToggleForm.addEventListener('click', function () {
+  var collapsed = formPanel.classList.toggle('collapsed');
+  btnToggleForm.textContent = collapsed ? '▶ 폼' : '◀ 폼';
+});
+
+/* ── 월 네비게이션 ───────────────────────────────────────────────────── */
+document.getElementById('btnPrevMonth').addEventListener('click', function () {
+  curMonth--;
+  if (curMonth < 0) { curMonth = 11; curYear--; }
+  renderCalendar();
+});
+
+document.getElementById('btnNextMonth').addEventListener('click', function () {
+  curMonth++;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  renderCalendar();
+});
+
+document.getElementById('btnToday').addEventListener('click', function () {
+  curYear  = today.getFullYear();
+  curMonth = today.getMonth();
+  renderCalendar();
+});
+
+/* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+renderCalendar();
+
+})();
+</script>
+</body>
+</html>
