@@ -462,7 +462,7 @@ textarea.form-input {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 560px;
+  max-width: 920px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -511,7 +511,12 @@ textarea.form-input {
   padding: 14px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+.modal-body.is-2col {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
 }
 
 /* 모달 섹션 제목 (부서 그룹) */
@@ -527,81 +532,143 @@ textarea.form-input {
 }
 .modal-section-title:first-child { margin-top: 0; }
 
-/* 디테일 카드 */
+/* ── 2컬럼 모달 레이아웃 ─────────────────────────────────────────────── */
+.modal-2col {
+  display: flex;
+  height: 100%;
+}
+.modal-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+.modal-col + .modal-col {
+  border-left: 1px solid var(--border);
+}
+.modal-col-hd {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding-bottom: 6px;
+  border-bottom: 2px solid currentColor;
+  flex-shrink: 0;
+}
+.modal-col-hd.hd-synth  { color: #ef4444; }
+.modal-col-hd.hd-refine { color: #9333ea; }
+@media (max-width: 580px) {
+  .modal-2col { flex-direction: column; }
+  .modal-col + .modal-col { border-left: none; border-top: 1px solid var(--border); }
+}
+
+/* ── 디테일 카드 (compact) ───────────────────────────────────────────── */
 .detail-card {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 11px 13px;
+  border-radius: 6px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  flex-shrink: 0;
 }
-.detail-card.is-done { opacity: 0.55; }
+.detail-card.is-done { opacity: 0.6; }
 
-/* 카드 상단 행 (뱃지 + D+N) */
-.detail-card-top {
+/* 메인 행: D+N 왼쪽 | 정보 오른쪽 */
+.dc-main {
   display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* D+N 블록 */
+.dc-dn-wrap {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  min-width: 38px;
+  flex-shrink: 0;
+  padding-top: 1px;
+  gap: 2px;
+}
+.dc-dn {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.dc-dn.dn-normal { color: var(--text-muted); }
+.dc-dn.dn-alert  { color: #ef4444; }
+.dc-dn.dn-done   { color: #10b981; }
+.dc-urg {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* 정보 블록 */
+.dc-info { flex: 1; min-width: 0; }
+
+/* 재료명 + LOT 행 */
+.dc-name-row {
+  display: flex;
+  align-items: baseline;
   gap: 7px;
   flex-wrap: wrap;
 }
-.detail-dept-badge {
-  font-size: 10px;
+.dc-mat {
+  font-size: 15px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
+  color: var(--text);
+  white-space: nowrap;
 }
-.badge-synth  { background: rgba(239,68,68,0.12);  color: #ef4444; }
-.badge-proc   { background: rgba(16,185,129,0.12); color: #10b981; }
-.badge-refine { background: rgba(147,51,234,0.12); color: #9333ea; }
-.badge-urgent {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background: rgba(239,68,68,0.12);
-  color: #ef4444;
-}
-
-/* D+N 큰 표시 */
-.detail-dn {
-  font-size: 13px;
-  font-weight: 700;
-  margin-left: auto;
-}
-.detail-dn.dn-normal { color: var(--text-muted); }
-.detail-dn.dn-alert  { color: #ef4444; }
-.detail-dn.dn-done   { color: #10b981; }
-
-/* 카드 재료명 */
-.detail-material {
+.dc-lot {
   font-size: 12px;
-  line-height: 1.5;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* 날짜 메타 */
+.dc-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.dc-meta span {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.dc-meta b {
+  font-weight: 600;
   color: var(--text);
 }
 
-/* 카드 날짜 메타 */
-.detail-dates {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.detail-date-item {
+/* 요청사항 */
+.dc-req {
+  margin-top: 1px;
   font-size: 11px;
   color: var(--text-muted);
-}
-.detail-date-item strong {
-  color: var(--text);
-  font-weight: 600;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 액션 버튼 영역 */
 .detail-actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
-  padding-top: 4px;
 }
 .btn-del {
   color: var(--danger) !important;
@@ -615,7 +682,7 @@ textarea.form-input {
 /* 빈 상태 */
 .modal-empty {
   text-align: center;
-  padding: 28px 0;
+  padding: 24px 0;
   color: var(--text-faint);
   font-size: 13px;
 }
@@ -1357,73 +1424,42 @@ function openModal(dateStr) {
   var items   = loadItems();
   var isToday = (dateStr === todayStr);
 
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
   if (isToday) {
-    // 오늘 클릭 → 전체 진행 현황 (미완료 항목 전체, D+N 내림차순)
+    // 오늘 클릭 → 전체 진행 현황 (미완료 전체, D+N 내림차순)
     titleEl.textContent = '📊 오늘 기준 전체 진행 현황';
     var active = items.filter(function (it) { return !it.completed; });
     active.sort(function (a, b) {
       return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
     });
-    bodyEl.innerHTML = '';
     if (!active.length) {
       bodyEl.innerHTML = '<div class="modal-empty">진행 중인 항목이 없습니다.</div>';
     } else {
-      // 부서별 그룹
-      var depts = ['합성생산', '정제생산/소자이관'];
-      depts.forEach(function (dept) {
-        var group = active.filter(function (it) { return it.dept === dept; });
-        if (!group.length) return;
-        var sec = document.createElement('div');
-        sec.className = 'modal-section-title';
-        sec.textContent = dept + ' (' + group.length + '건)';
-        bodyEl.appendChild(sec);
-        group.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it)); });
-      });
+      renderBodyTwoCols(bodyEl, active, null);
     }
   } else {
-    // 다른 날 클릭 → 그 날 기준 경과 현황 (이관일 ≤ 클릭일, 아직 미완료이거나 클릭일 이후 완료)
-    var d   = new Date(dateStr + 'T00:00:00');
+    var d      = new Date(dateStr + 'T00:00:00');
+    var lbl    = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
     var isPast = dateStr < todayStr;
-    var lbl = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
-    // 이관 항목 (이관일 = 클릭일)
-    var newItems = items.filter(function (it) { return it.transferDate === dateStr && !it.completed; });
-    // 경과 현황 (이관일 < 클릭일, 해당 시점에 미완료)
-    var prevItems = isPast
-      ? items.filter(function (it) {
-          if (it.transferDate >= dateStr) return false;      // 아직 안 이관
-          if (!it.completed) return true;                    // 현재도 미완료
-          return it.completedAt && it.completedAt > dateStr; // 클릭 당시엔 진행 중
-        })
-      : [];
 
-    bodyEl.innerHTML = '';
+    // 그 날 기준 활성 항목: 이관일 ≤ 클릭일, 미완료이거나 클릭일 이후 완료
+    var activeOnDate = items.filter(function (it) {
+      if (it.transferDate > dateStr) return false;
+      if (!it.completed) return true;
+      return it.completedAt && it.completedAt > dateStr;
+    });
+    activeOnDate.sort(function (a, b) {
+      return (calcDN(b.transferDate, dateStr) || 0) - (calcDN(a.transferDate, dateStr) || 0);
+    });
 
-    if (!newItems.length && !prevItems.length) {
+    if (!activeOnDate.length) {
       titleEl.textContent = lbl + ' 이관/진행 항목';
       bodyEl.innerHTML = '<div class="modal-empty">이 날짜에 등록된 항목이 없습니다.</div>';
     } else {
-      titleEl.textContent = lbl + ' 기준 현황';
-
-      // ① 그 날 이관 항목
-      if (newItems.length) {
-        var sec1 = document.createElement('div');
-        sec1.className = 'modal-section-title';
-        sec1.textContent = '📦 ' + lbl + ' 이관 항목 (' + newItems.length + '건)';
-        bodyEl.appendChild(sec1);
-        newItems.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, dateStr)); });
-      }
-
-      // ② 그 날 기준 진행 중이던 이전 이관 항목 (D+N 내림차순)
-      if (prevItems.length) {
-        prevItems.sort(function (a, b) {
-          return (calcDN(b.transferDate, dateStr) || 0) - (calcDN(a.transferDate, dateStr) || 0);
-        });
-        var sec2 = document.createElement('div');
-        sec2.className = 'modal-section-title';
-        sec2.textContent = '📊 ' + lbl + ' 기준 진행 중이던 항목 (' + prevItems.length + '건)';
-        bodyEl.appendChild(sec2);
-        prevItems.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, dateStr)); });
-      }
+      titleEl.textContent = lbl + (isPast ? ' 기준 현황' : ' 이관 예정');
+      renderBodyTwoCols(bodyEl, activeOnDate, isPast ? dateStr : null);
     }
   }
 
@@ -1432,6 +1468,7 @@ function openModal(dateStr) {
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalBody').classList.remove('is-2col');
   modalCurrentDate = null;
 }
 
@@ -1458,12 +1495,17 @@ function openFilterModal(filter) {
 
   modalCurrentDate = null;
   var overlay = document.getElementById('modalOverlay');
+  var bodyEl  = document.getElementById('modalBody');
   document.getElementById('modalTitle').textContent =
     (FILTER_TITLES[filter] || '목록') + ' (' + filtered.length + '건)';
-  var bodyEl = document.getElementById('modalBody');
   bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
   if (!filtered.length) {
     bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
+  } else if (filter === 'active' || filter === 'alert') {
+    // 합성/정제 2컬럼
+    renderBodyTwoCols(bodyEl, filtered, null);
   } else {
     filtered.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it)); });
   }
@@ -1484,75 +1526,144 @@ function openItemModal(itemId) {
   var mat = buildMatText(item);
   titleEl.textContent = (item.completed ? '✓ 완료 — ' : '') + (mat.length > 30 ? mat.slice(0, 30) + '…' : mat);
   bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
   bodyEl.appendChild(buildDetailCard(item));
   overlay.classList.add('open');
 }
 
-/* ── 모달 디테일 카드 생성 ────────────────────────────────────────────── */
+/* ── 2컬럼 렌더링 헬퍼 ───────────────────────────────────────────────── */
+// allItems를 합성/정제 두 컬럼으로 렌더링. 한 종류만 있으면 단일 컬럼.
+function renderBodyTwoCols(bodyEl, allItems, asOf) {
+  var synth  = allItems.filter(function (it) { return it.dept === '합성생산'; });
+  var refine = allItems.filter(function (it) { return it.dept === '정제생산/소자이관'; });
+
+  if (!synth.length && !refine.length) {
+    bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
+    return;
+  }
+
+  // 한 종류만 있으면 단일 컬럼 (bodyEl padding 유지)
+  if (!synth.length || !refine.length) {
+    var single = synth.length ? synth : refine;
+    single.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, asOf)); });
+    return;
+  }
+
+  // 두 종류 모두 → 2컬럼
+  bodyEl.classList.add('is-2col');
+  var twoCol = document.createElement('div');
+  twoCol.className = 'modal-2col';
+
+  var lCol = document.createElement('div');
+  lCol.className = 'modal-col';
+  var lHd = document.createElement('div');
+  lHd.className = 'modal-col-hd hd-synth';
+  lHd.textContent = '합성생산 ' + synth.length + '건';
+  lCol.appendChild(lHd);
+  synth.forEach(function (it) { lCol.appendChild(buildDetailCard(it, asOf)); });
+  twoCol.appendChild(lCol);
+
+  var rCol = document.createElement('div');
+  rCol.className = 'modal-col';
+  var rHd = document.createElement('div');
+  rHd.className = 'modal-col-hd hd-refine';
+  rHd.textContent = '정제생산/소자이관 ' + refine.length + '건';
+  rCol.appendChild(rHd);
+  refine.forEach(function (it) { rCol.appendChild(buildDetailCard(it, asOf)); });
+  twoCol.appendChild(rCol);
+
+  bodyEl.appendChild(twoCol);
+}
+
+/* ── 모달 디테일 카드 생성 (compact) ─────────────────────────────────── */
 // asOf: 기준일 문자열 (없으면 오늘) — 과거 날짜 클릭 시 그 날 기준 경과일 표시
 function buildDetailCard(item, asOf) {
   var wrap = document.createElement('div');
   wrap.className = 'detail-card' + (item.completed ? ' is-done' : '');
   wrap.dataset.id = item.id;
 
-  // 상단: 뱃지 + D+N
-  var top = document.createElement('div');
-  top.className = 'detail-card-top';
+  // ── 메인 행: D+N 블록 + 정보 블록 ──
+  var main = document.createElement('div');
+  main.className = 'dc-main';
 
-  var deptBadge = document.createElement('span');
-  deptBadge.className = 'detail-dept-badge '
-    + (item.dept === '합성생산' ? 'badge-synth'
-     : item.dept === '공정개발' ? 'badge-proc' : 'badge-refine');
-  deptBadge.textContent = item.dept;
-  top.appendChild(deptBadge);
+  // D+N 블록
+  var dnWrap = document.createElement('div');
+  dnWrap.className = 'dc-dn-wrap';
 
-  if (item.urgent && !item.completed) {
-    var urg = document.createElement('span');
-    urg.className = 'badge-urgent';
-    urg.textContent = '⚡ 시급';
-    top.appendChild(urg);
-  }
-
-  // D+N 큰 표시
-  var dnEl = document.createElement('span');
+  var dnEl = document.createElement('div');
   if (item.completed) {
-    dnEl.className = 'detail-dn dn-done';
+    dnEl.className = 'dc-dn dn-done';
     dnEl.textContent = '완료';
   } else {
     var dn = calcDN(item.transferDate, asOf);
     var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
     var dnCls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
-    dnEl.className = 'detail-dn ' + dnCls;
-    // 과거 날짜 기준이면 "(X월Y일 기준)" 부제목 추가
+    dnEl.className = 'dc-dn ' + dnCls;
+    dnEl.textContent = dnLabel;
     if (asOf && asOf !== todayStr) {
       var asOfD = new Date(asOf + 'T00:00:00');
       dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
     }
-    dnEl.textContent = dnLabel;
   }
-  top.appendChild(dnEl);
-  wrap.appendChild(top);
+  dnWrap.appendChild(dnEl);
 
-  // 재료명 (부서별 색상 포맷 그대로)
-  var matEl = document.createElement('div');
-  matEl.className = 'detail-material';
-  matEl.innerHTML = buildCardHTML(item).replace(/<span class="dn-badge[^"]*">[^<]*<\/span>/g, ''); // 뱃지 제외
-  wrap.appendChild(matEl);
+  if (item.urgent && !item.completed) {
+    var urgEl = document.createElement('div');
+    urgEl.className = 'dc-urg';
+    urgEl.textContent = '⚡';
+    dnWrap.appendChild(urgEl);
+  }
+  main.appendChild(dnWrap);
+
+  // 정보 블록
+  var info = document.createElement('div');
+  info.className = 'dc-info';
+
+  // 재료명 + LOT 행
+  var nameRow = document.createElement('div');
+  nameRow.className = 'dc-name-row';
+
+  var matEl = document.createElement('span');
+  matEl.className = 'dc-mat';
+  matEl.textContent = item.material || '-';
+  nameRow.appendChild(matEl);
+
+  if (item.lot) {
+    var lotEl = document.createElement('span');
+    lotEl.className = 'dc-lot';
+    lotEl.textContent = item.lot;
+    lotEl.title = item.lot;
+    nameRow.appendChild(lotEl);
+  }
+  info.appendChild(nameRow);
 
   // 날짜 메타
-  var dates = document.createElement('div');
-  dates.className = 'detail-dates';
-  dates.innerHTML =
-    '<span class="detail-date-item"><strong>이관일</strong> ' + (item.transferDate || '-') + '</span>' +
-    (item.evalStart  ? '<span class="detail-date-item"><strong>평가시작</strong> ' + item.evalStart  + '</span>' : '') +
-    (item.evalTarget ? '<span class="detail-date-item"><strong>목표일</strong> '   + item.evalTarget + '</span>' : '');
-  wrap.appendChild(dates);
+  var meta = document.createElement('div');
+  meta.className = 'dc-meta';
+  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b></span>';
+  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart)  + '</b></span>';
+  if (item.evalTarget) mh += '<span>요청일 <b>'   + toMD(item.evalTarget) + '</b></span>';
+  if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
+  meta.innerHTML = mh;
+  info.appendChild(meta);
 
-  // ── 액션 버튼 영역 ──
+  // 요청사항
+  if (item.request) {
+    var reqEl = document.createElement('div');
+    reqEl.className = 'dc-req';
+    reqEl.textContent = item.request;
+    reqEl.title = item.request;
+    info.appendChild(reqEl);
+  }
+
+  main.appendChild(info);
+  wrap.appendChild(main);
+
+  // ── 액션 버튼 ──
   var actions = document.createElement('div');
   actions.className = 'detail-actions';
 
-  // 정제생산/소자이관만 완료 처리 (합성생산은 이관 기록용이므로 완료 버튼 없음)
+  // 정제생산/소자이관만 완료 처리
   var isRefine = item.dept === '정제생산/소자이관';
   if (isRefine) {
     if (!item.completed) {
@@ -1646,20 +1757,42 @@ document.addEventListener('keydown', function (e) {
 function loadSampleData() {
   if (!confirm('기존 데이터를 모두 지우고 샘플 데이터를 불러오시겠습니까?')) return;
   var sample = [
-    // ── 합성생산 (3/10 이관) ──────────────────────────────────────────
-    { id:'s1',  dept:'합성생산',          material:'H811',      lot:'P-NC03-TolACT',       request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s2',  dept:'합성생산',          material:'LT359',     lot:'CMWLT359P2602001',     request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s3',  dept:'합성생산',          material:'LTM968',    lot:'F260305-82-001-5,000g',request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    // ── 정제생산/소자이관 (3/11 이관) ────────────────────────────────
-    { id:'s4',  dept:'정제생산/소자이관', material:'PH1524',    lot:'P-NB23-DCB',           request:'PH1524 Lot 평가(미정) 3/17 출하대응을 위한 시급 요청', transferDate:'2026-03-11', evalStart:'2026-03-11', evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s5',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB08-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s6',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB22-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s7',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB23-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
-    // ── 정제생산/소자이관 (3/10 이관, 시급) ──────────────────────────
-    { id:'s8',  dept:'정제생산/소자이관', material:'LT-PHM248', lot:'P-NA20-DCB2',          request:'PG1088 Lot 평가(미정) 출하대응을 위한 시급 요청',     transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s9',  dept:'정제생산/소자이관', material:'PG1088',    lot:'L26B-301-107(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s10', dept:'정제생산/소자이관', material:'PG1088-1',  lot:'L26B-327-103(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
-    { id:'s11', dept:'정제생산/소자이관', material:'PG2464',    lot:'L26B-320-205(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+    // ── 3/3 합성생산 (완료 3/15) ─────────────────────────────────────
+    { id:'s1',  dept:'합성생산',          material:'H522',      lot:'P-NC07-DMA',           request:'',                                                   transferDate:'2026-03-03', evalStart:'',           evalTarget:'',           urgent:false, completed:true,  completedAt:'2026-03-15', createdAt:'2026-03-03' },
+    // ── 3/5 정제생산 (완료 3/20) ─────────────────────────────────────
+    { id:'s2',  dept:'정제생산/소자이관', material:'PG267',     lot:'L26B-315-207',         request:'3/18 출하대응',                                       transferDate:'2026-03-05', evalStart:'2026-03-05', evalTarget:'2026-03-18', urgent:false, completed:true,  completedAt:'2026-03-20', createdAt:'2026-03-05' },
+    // ── 3/7 합성생산 + 정제생산 ──────────────────────────────────────
+    { id:'s3',  dept:'합성생산',          material:'LT523',     lot:'CMWLT523P2602003',     request:'',                                                   transferDate:'2026-03-07', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-07' },
+    { id:'s4',  dept:'정제생산/소자이관', material:'PG1088-2',  lot:'L26B-303-109',         request:'3/21 내 결과 확인 요청',                              transferDate:'2026-03-07', evalStart:'2026-03-07', evalTarget:'2026-03-21', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-07' },
+    // ── 3/10 합성생산 ─────────────────────────────────────────────────
+    { id:'s5',  dept:'합성생산',          material:'H811',      lot:'P-NC03-TolACT',        request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s6',  dept:'합성생산',          material:'LT359',     lot:'CMWLT359P2602001',     request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s7',  dept:'합성생산',          material:'LTM968',    lot:'F260305-82-001-5,000g',request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/10 정제생산 (시급) ──────────────────────────────────────────
+    { id:'s8',  dept:'정제생산/소자이관', material:'LT-PHM248', lot:'P-NA20-DCB2',          request:'PG1088 Lot 평가(미정) 출하대응을 위한 시급 요청',     transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s9',  dept:'정제생산/소자이관', material:'PG1088',    lot:'L26B-301-107(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s10', dept:'정제생산/소자이관', material:'PG1088-1',  lot:'L26B-327-103(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s11', dept:'정제생산/소자이관', material:'PG2464',    lot:'L26B-320-205(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/11 정제생산 ─────────────────────────────────────────────────
+    { id:'s12', dept:'정제생산/소자이관', material:'PH1524',    lot:'P-NB23-DCB',           request:'3/17 출하대응을 위한 시급 요청',                      transferDate:'2026-03-11', evalStart:'2026-03-11', evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s13', dept:'정제생산/소자이관', material:'G22',       lot:'P-NB08-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'2026-03-25', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s14', dept:'정제생산/소자이관', material:'G22',       lot:'P-NB22-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'2026-03-25', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/14 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s15', dept:'합성생산',          material:'LTM970',    lot:'F260314-82-002-3,000g',request:'',                                                   transferDate:'2026-03-14', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    { id:'s16', dept:'정제생산/소자이관', material:'PH633',     lot:'P-NA25-DCB',           request:'3/28 출하대응을 위한 시급 요청',                      transferDate:'2026-03-14', evalStart:'2026-03-14', evalTarget:'2026-03-28', urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    { id:'s17', dept:'정제생산/소자이관', material:'G22-P',     lot:'P-NB25-DCE',           request:'3/31 내 결과 확인 요청',                              transferDate:'2026-03-14', evalStart:'2026-03-14', evalTarget:'2026-03-31', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    // ── 3/17 합성(완료 3/25) + 정제 ──────────────────────────────────
+    { id:'s18', dept:'합성생산',          material:'H811-V2',   lot:'P-NC05-TolACT2',       request:'',                                                   transferDate:'2026-03-17', evalStart:'',           evalTarget:'',           urgent:false, completed:true,  completedAt:'2026-03-25', createdAt:'2026-03-17' },
+    { id:'s19', dept:'정제생산/소자이관', material:'LT-PHM250', lot:'P-NA22-DCB',           request:'4/3 출하 예정',                                       transferDate:'2026-03-17', evalStart:'2026-03-18', evalTarget:'2026-04-03', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-17' },
+    { id:'s20', dept:'정제생산/소자이관', material:'PH1524-B',  lot:'P-NB25-DCB2',          request:'시급 요청',                                           transferDate:'2026-03-17', evalStart:'2026-03-17', evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-17' },
+    // ── 3/20 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s21', dept:'합성생산',          material:'LT398',     lot:'CMWLT398P2603001',     request:'',                                                   transferDate:'2026-03-20', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-20' },
+    { id:'s22', dept:'정제생산/소자이관', material:'PH1050',    lot:'P-NA28-DCB',           request:'3/31 출하대응 시급',                                  transferDate:'2026-03-20', evalStart:'2026-03-21', evalTarget:'2026-03-31', urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-20' },
+    // ── 3/25 정제 ────────────────────────────────────────────────────
+    { id:'s23', dept:'정제생산/소자이관', material:'PG2464-2',  lot:'L26B-322-207',         request:'4/7 내 결과 확인 요청',                               transferDate:'2026-03-25', evalStart:'2026-03-25', evalTarget:'2026-04-07', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-25' },
+    // ── 3/28 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s24', dept:'합성생산',          material:'SGH306-28', lot:'F260328-82-003-2,000g',request:'',                                                   transferDate:'2026-03-28', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-28' },
+    { id:'s25', dept:'정제생산/소자이관', material:'PH1524-C',  lot:'P-NB26-DCB',           request:'4/4 출하대응',                                        transferDate:'2026-03-28', evalStart:'2026-03-28', evalTarget:'2026-04-04', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-28' },
   ];
   saveItems(sample);
   curYear = 2026; curMonth = 2; // 2026년 3월
