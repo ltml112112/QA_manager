@@ -517,6 +517,8 @@ textarea.form-input {
   padding: 0;
   gap: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 모달 섹션 제목 (부서 그룹) */
@@ -535,7 +537,8 @@ textarea.form-input {
 /* ── 2컬럼 모달 레이아웃 ─────────────────────────────────────────────── */
 .modal-2col {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 .modal-col {
   flex: 1;
@@ -627,13 +630,12 @@ textarea.form-input {
   white-space: nowrap;
 }
 .dc-lot {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 200px;
 }
 
 /* 날짜 메타 */
@@ -1428,9 +1430,12 @@ function openModal(dateStr) {
   bodyEl.classList.remove('is-2col');
 
   if (isToday) {
-    // 오늘 클릭 → 전체 진행 현황 (미완료 전체, D+N 내림차순)
+    // 오늘 클릭 → 합성생산: 오늘 이관만 / 정제생산: 전체 미완료
     titleEl.textContent = '📊 오늘 기준 전체 진행 현황';
-    var active = items.filter(function (it) { return !it.completed; });
+    var active = items.filter(function (it) {
+      if (it.dept === '합성생산') return it.transferDate === todayStr && !it.completed;
+      return !it.completed;
+    });
     active.sort(function (a, b) {
       return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
     });
@@ -1444,8 +1449,9 @@ function openModal(dateStr) {
     var lbl    = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
     var isPast = dateStr < todayStr;
 
-    // 그 날 기준 활성 항목: 이관일 ≤ 클릭일, 미완료이거나 클릭일 이후 완료
+    // 합성생산: 클릭 당일 이관만 / 정제생산: 그 날 기준 활성 전체
     var activeOnDate = items.filter(function (it) {
+      if (it.dept === '합성생산') return it.transferDate === dateStr && !it.completed;
       if (it.transferDate > dateStr) return false;
       if (!it.completed) return true;
       return it.completedAt && it.completedAt > dateStr;
@@ -1533,9 +1539,18 @@ function openItemModal(itemId) {
 
 /* ── 2컬럼 렌더링 헬퍼 ───────────────────────────────────────────────── */
 // allItems를 합성/정제 두 컬럼으로 렌더링. 한 종류만 있으면 단일 컬럼.
+// 각 컬럼 내부: 미완료 먼저 (D+N 내림차순), 완료 나중.
 function renderBodyTwoCols(bodyEl, allItems, asOf) {
-  var synth  = allItems.filter(function (it) { return it.dept === '합성생산'; });
-  var refine = allItems.filter(function (it) { return it.dept === '정제생산/소자이관'; });
+  function sortCol(arr) {
+    return arr.slice().sort(function (a, b) {
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+      return (calcDN(b.transferDate, asOf) || 0) - (calcDN(a.transferDate, asOf) || 0);
+    });
+  }
+
+  var synth  = sortCol(allItems.filter(function (it) { return it.dept === '합성생산'; }));
+  var refine = sortCol(allItems.filter(function (it) { return it.dept === '정제생산/소자이관'; }));
 
   if (!synth.length && !refine.length) {
     bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
@@ -1582,38 +1597,40 @@ function buildDetailCard(item, asOf) {
   wrap.className = 'detail-card' + (item.completed ? ' is-done' : '');
   wrap.dataset.id = item.id;
 
-  // ── 메인 행: D+N 블록 + 정보 블록 ──
+  // ── 메인 행: D+N 블록(정제생산만) + 정보 블록 ──
   var main = document.createElement('div');
   main.className = 'dc-main';
 
-  // D+N 블록
-  var dnWrap = document.createElement('div');
-  dnWrap.className = 'dc-dn-wrap';
+  // 합성생산은 D+N 불필요 (당일 이관 추적만)
+  if (item.dept !== '합성생산') {
+    var dnWrap = document.createElement('div');
+    dnWrap.className = 'dc-dn-wrap';
 
-  var dnEl = document.createElement('div');
-  if (item.completed) {
-    dnEl.className = 'dc-dn dn-done';
-    dnEl.textContent = '완료';
-  } else {
-    var dn = calcDN(item.transferDate, asOf);
-    var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
-    var dnCls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
-    dnEl.className = 'dc-dn ' + dnCls;
-    dnEl.textContent = dnLabel;
-    if (asOf && asOf !== todayStr) {
-      var asOfD = new Date(asOf + 'T00:00:00');
-      dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
+    var dnEl = document.createElement('div');
+    if (item.completed) {
+      dnEl.className = 'dc-dn dn-done';
+      dnEl.textContent = '완료';
+    } else {
+      var dn = calcDN(item.transferDate, asOf);
+      var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
+      var dnCls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
+      dnEl.className = 'dc-dn ' + dnCls;
+      dnEl.textContent = dnLabel;
+      if (asOf && asOf !== todayStr) {
+        var asOfD = new Date(asOf + 'T00:00:00');
+        dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
+      }
     }
-  }
-  dnWrap.appendChild(dnEl);
+    dnWrap.appendChild(dnEl);
 
-  if (item.urgent && !item.completed) {
-    var urgEl = document.createElement('div');
-    urgEl.className = 'dc-urg';
-    urgEl.textContent = '⚡';
-    dnWrap.appendChild(urgEl);
+    if (item.urgent && !item.completed) {
+      var urgEl = document.createElement('div');
+      urgEl.className = 'dc-urg';
+      urgEl.textContent = '⚡';
+      dnWrap.appendChild(urgEl);
+    }
+    main.appendChild(dnWrap);
   }
-  main.appendChild(dnWrap);
 
   // 정보 블록
   var info = document.createElement('div');
@@ -1684,7 +1701,7 @@ function buildDetailCard(item, asOf) {
   var btnEdit = document.createElement('button');
   btnEdit.className = 'btn btn-secondary btn-sm';
   btnEdit.textContent = '✎ 수정';
-  btnEdit.addEventListener('click', function () { editItem(item.id); });
+  btnEdit.addEventListener('click', function () { editInModal(item.id, wrap); });
   actions.appendChild(btnEdit);
 
   var btnDel = document.createElement('button');
@@ -1697,15 +1714,123 @@ function buildDetailCard(item, asOf) {
   return wrap;
 }
 
-/* ── 수정 ────────────────────────────────────────────────────────────── */
+/* ── 수정 (왼쪽 패널 — 사용되지 않지만 외부 호출 호환 유지) ─────────── */
 function editItem(id) {
   var items = loadItems();
   var item  = items.find(function (it) { return it.id === id; });
   if (!item) return;
   closeModal();
   fillForm(item);
-  // 폼 상단으로 스크롤
   document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── 인라인 수정 (모달 내 카드 → 폼 변환) ───────────────────────────── */
+function editInModal(itemId, cardEl) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === itemId; });
+  if (!item) return;
+
+  var parent = cardEl.parentNode;
+
+  var form = document.createElement('div');
+  form.className = 'detail-card';
+  form.style.gap = '8px';
+  form.style.background = 'var(--surface)';
+  form.style.borderColor = 'var(--accent)';
+
+  // 재료명 + LOT
+  var r1 = document.createElement('div');
+  r1.style.cssText = 'display:flex;gap:6px;';
+  var inpMat = document.createElement('input');
+  inpMat.className = 'form-input';
+  inpMat.style.cssText = 'flex:1;font-size:13px;padding:5px 8px;';
+  inpMat.placeholder = '재료명';
+  inpMat.value = item.material || '';
+  var inpLot = document.createElement('input');
+  inpLot.className = 'form-input';
+  inpLot.style.cssText = 'flex:1;font-size:13px;padding:5px 8px;';
+  inpLot.placeholder = 'LOT 번호';
+  inpLot.value = item.lot || '';
+  r1.appendChild(inpMat);
+  r1.appendChild(inpLot);
+  form.appendChild(r1);
+
+  // 요청사항
+  var inpReq = document.createElement('input');
+  inpReq.className = 'form-input';
+  inpReq.style.cssText = 'font-size:12px;padding:4px 8px;';
+  inpReq.placeholder = '요청사항';
+  inpReq.value = item.request || '';
+  form.appendChild(inpReq);
+
+  // 날짜 row
+  var r2 = document.createElement('div');
+  r2.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  function mkD(val, lbl) {
+    var w = document.createElement('div');
+    w.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:100px;';
+    var l = document.createElement('div');
+    l.style.cssText = 'font-size:10px;color:var(--text-muted);';
+    l.textContent = lbl;
+    var i = document.createElement('input');
+    i.type = 'date'; i.className = 'form-input';
+    i.style.cssText = 'font-size:12px;padding:4px 6px;';
+    i.value = val || '';
+    w.appendChild(l); w.appendChild(i);
+    return { w: w, i: i };
+  }
+  var dTf = mkD(item.transferDate, '이관일');
+  var dEs = mkD(item.evalStart,    '평가시작');
+  var dEt = mkD(item.evalTarget,   '완료 요청일');
+  r2.appendChild(dTf.w); r2.appendChild(dEs.w); r2.appendChild(dEt.w);
+  form.appendChild(r2);
+
+  // 시급 + 저장/취소
+  var r3 = document.createElement('div');
+  r3.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+  var ckId  = 'ck_' + itemId;
+  var ckUrg = document.createElement('input');
+  ckUrg.type = 'checkbox'; ckUrg.id = ckId; ckUrg.checked = !!item.urgent;
+  var lbUrg = document.createElement('label');
+  lbUrg.htmlFor = ckId;
+  lbUrg.style.cssText = 'font-size:12px;cursor:pointer;user-select:none;';
+  lbUrg.textContent = '⚡ 시급 요청';
+  r3.appendChild(ckUrg); r3.appendChild(lbUrg);
+  var sp = document.createElement('div'); sp.style.flex = '1';
+  r3.appendChild(sp);
+
+  var btnSave = document.createElement('button');
+  btnSave.className = 'btn btn-primary btn-sm';
+  btnSave.textContent = '저장';
+  btnSave.addEventListener('click', function () {
+    var all = loadItems();
+    var idx = -1;
+    for (var i = 0; i < all.length; i++) { if (all[i].id === itemId) { idx = i; break; } }
+    if (idx === -1) return;
+    all[idx].material    = inpMat.value.trim();
+    all[idx].lot         = inpLot.value.trim();
+    all[idx].request     = inpReq.value.trim();
+    all[idx].transferDate = dTf.i.value;
+    all[idx].evalStart   = dEs.i.value;
+    all[idx].evalTarget  = dEt.i.value;
+    all[idx].urgent      = ckUrg.checked;
+    saveItems(all);
+    renderCalendar();
+    if (parent) parent.replaceChild(buildDetailCard(all[idx]), form);
+  });
+
+  var btnCancel = document.createElement('button');
+  btnCancel.className = 'btn btn-secondary btn-sm';
+  btnCancel.textContent = '취소';
+  btnCancel.addEventListener('click', function () {
+    if (parent) parent.replaceChild(cardEl, form);
+  });
+
+  r3.appendChild(btnSave); r3.appendChild(btnCancel);
+  form.appendChild(r3);
+
+  if (parent) parent.replaceChild(form, cardEl);
+  inpMat.focus();
 }
 
 /* ── 삭제 ────────────────────────────────────────────────────────────── */
