@@ -946,10 +946,11 @@ function saveItems(items) {
 
 /* ── D+N 계산 ────────────────────────────────────────────────────────── */
 // 이관일 기준 경과 일수 반환 (D+0 = 이관 당일, 음수 = 미래)
-function calcDN(transferDateStr) {
+// asOf: 기준일 문자열 (없으면 오늘)
+function calcDN(transferDateStr, asOf) {
   if (!transferDateStr) return null;
   var t = new Date(transferDateStr + 'T00:00:00');
-  var n = new Date(todayStr + 'T00:00:00');
+  var n = new Date((asOf || todayStr) + 'T00:00:00');
   return Math.floor((n - t) / 86400000);
 }
 
@@ -1044,14 +1045,27 @@ function renderSummary(items) {
   var alerts  = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; });
   var done    = items.filter(function (it) { return it.completed; });
 
-  var html = '<span class="sum-chip chip-total">진행 중 ' + active.length + '건</span>'
-    + '<span class="sum-sep">|</span>';
-  if (synth.length)  html += '<span class="sum-chip chip-synth">합성 ' + synth.length + '</span>';
-  if (refine.length) html += '<span class="sum-chip chip-refine">정제/소자 ' + refine.length + '</span>';
-  if (alerts.length) html += '<span class="sum-sep">|</span><span class="sum-chip chip-alert">⚡ 시급·지연 ' + alerts.length + '</span>';
-  if (done.length)   html += '<span class="sum-sep">|</span><span class="sum-chip chip-done">완료 ' + done.length + '</span>';
+  function chip(cls, filter, label) {
+    return '<span class="sum-chip ' + cls + '" data-filter="' + filter + '" style="cursor:pointer">' + label + '</span>';
+  }
+
+  var html = chip('chip-total', 'active',  '진행 중 ' + active.length + '건')
+           + '<span class="sum-sep">|</span>';
+  if (synth.length)  html += chip('chip-synth',  'synth',  '합성 '      + synth.length);
+  if (refine.length) html += chip('chip-refine', 'refine', '정제/소자 ' + refine.length);
+  if (alerts.length) html += '<span class="sum-sep">|</span>'
+                           + chip('chip-alert', 'alert', '⚡ 시급·지연 ' + alerts.length);
+  if (done.length)   html += '<span class="sum-sep">|</span>'
+                           + chip('chip-done', 'done', '완료 ' + done.length);
 
   strip.innerHTML = html;
+
+  // 칩 클릭 → 필터 모달
+  strip.querySelectorAll('.sum-chip[data-filter]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      openFilterModal(this.dataset.filter);
+    });
+  });
 }
 
 /* ── 달력 그리드 렌더링 ──────────────────────────────────────────────── */
@@ -1367,16 +1381,49 @@ function openModal(dateStr) {
       });
     }
   } else {
-    // 다른 날 클릭 → 해당 날짜 이관 항목
+    // 다른 날 클릭 → 그 날 기준 경과 현황 (이관일 ≤ 클릭일, 아직 미완료이거나 클릭일 이후 완료)
     var d   = new Date(dateStr + 'T00:00:00');
-    var lbl = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 이관 항목';
-    titleEl.textContent = lbl;
-    var dayItems = items.filter(function (it) { return it.transferDate === dateStr && !it.completed; });
+    var isPast = dateStr < todayStr;
+    var lbl = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+    // 이관 항목 (이관일 = 클릭일)
+    var newItems = items.filter(function (it) { return it.transferDate === dateStr && !it.completed; });
+    // 경과 현황 (이관일 < 클릭일, 해당 시점에 미완료)
+    var prevItems = isPast
+      ? items.filter(function (it) {
+          if (it.transferDate >= dateStr) return false;      // 아직 안 이관
+          if (!it.completed) return true;                    // 현재도 미완료
+          return it.completedAt && it.completedAt > dateStr; // 클릭 당시엔 진행 중
+        })
+      : [];
+
     bodyEl.innerHTML = '';
-    if (!dayItems.length) {
+
+    if (!newItems.length && !prevItems.length) {
+      titleEl.textContent = lbl + ' 이관/진행 항목';
       bodyEl.innerHTML = '<div class="modal-empty">이 날짜에 등록된 항목이 없습니다.</div>';
     } else {
-      dayItems.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it)); });
+      titleEl.textContent = lbl + ' 기준 현황';
+
+      // ① 그 날 이관 항목
+      if (newItems.length) {
+        var sec1 = document.createElement('div');
+        sec1.className = 'modal-section-title';
+        sec1.textContent = '📦 ' + lbl + ' 이관 항목 (' + newItems.length + '건)';
+        bodyEl.appendChild(sec1);
+        newItems.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, dateStr)); });
+      }
+
+      // ② 그 날 기준 진행 중이던 이전 이관 항목 (D+N 내림차순)
+      if (prevItems.length) {
+        prevItems.sort(function (a, b) {
+          return (calcDN(b.transferDate, dateStr) || 0) - (calcDN(a.transferDate, dateStr) || 0);
+        });
+        var sec2 = document.createElement('div');
+        sec2.className = 'modal-section-title';
+        sec2.textContent = '📊 ' + lbl + ' 기준 진행 중이던 항목 (' + prevItems.length + '건)';
+        bodyEl.appendChild(sec2);
+        prevItems.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, dateStr)); });
+      }
     }
   }
 
@@ -1386,6 +1433,41 @@ function openModal(dateStr) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   modalCurrentDate = null;
+}
+
+/* ── 필터 모달 (요약 스트립 칩 클릭) ────────────────────────────────── */
+var FILTER_TITLES = {
+  active: '진행 중 전체', synth: '합성생산 진행 중',
+  refine: '정제생산/소자이관 진행 중', alert: '⚡ 시급 · 지연 (D+7 이상)', done: '소자평가 완료 목록',
+};
+
+function openFilterModal(filter) {
+  var items  = loadItems();
+  var active = items.filter(function (it) { return !it.completed; });
+  var filtered;
+  switch (filter) {
+    case 'synth':  filtered = active.filter(function (it) { return it.dept === '합성생산'; }); break;
+    case 'refine': filtered = active.filter(function (it) { return it.dept === '정제생산/소자이관'; }); break;
+    case 'alert':  filtered = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; }); break;
+    case 'done':   filtered = items.filter(function (it)  { return it.completed; }); break;
+    default:       filtered = active;
+  }
+  filtered = filtered.slice().sort(function (a, b) {
+    return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
+  });
+
+  modalCurrentDate = null;
+  var overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent =
+    (FILTER_TITLES[filter] || '목록') + ' (' + filtered.length + '건)';
+  var bodyEl = document.getElementById('modalBody');
+  bodyEl.innerHTML = '';
+  if (!filtered.length) {
+    bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
+  } else {
+    filtered.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it)); });
+  }
+  overlay.classList.add('open');
 }
 
 /* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
@@ -1407,7 +1489,8 @@ function openItemModal(itemId) {
 }
 
 /* ── 모달 디테일 카드 생성 ────────────────────────────────────────────── */
-function buildDetailCard(item) {
+// asOf: 기준일 문자열 (없으면 오늘) — 과거 날짜 클릭 시 그 날 기준 경과일 표시
+function buildDetailCard(item, asOf) {
   var wrap = document.createElement('div');
   wrap.className = 'detail-card' + (item.completed ? ' is-done' : '');
   wrap.dataset.id = item.id;
@@ -1436,10 +1519,15 @@ function buildDetailCard(item) {
     dnEl.className = 'detail-dn dn-done';
     dnEl.textContent = '완료';
   } else {
-    var dn = calcDN(item.transferDate);
+    var dn = calcDN(item.transferDate, asOf);
     var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
     var dnCls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
     dnEl.className = 'detail-dn ' + dnCls;
+    // 과거 날짜 기준이면 "(X월Y일 기준)" 부제목 추가
+    if (asOf && asOf !== todayStr) {
+      var asOfD = new Date(asOf + 'T00:00:00');
+      dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
+    }
     dnEl.textContent = dnLabel;
   }
   top.appendChild(dnEl);
@@ -1464,18 +1552,22 @@ function buildDetailCard(item) {
   var actions = document.createElement('div');
   actions.className = 'detail-actions';
 
-  if (!item.completed) {
-    var btnDone = document.createElement('button');
-    btnDone.className = 'btn btn-success btn-sm';
-    btnDone.textContent = '✓ 소자평가 완료';
-    btnDone.addEventListener('click', function () { markComplete(item.id); });
-    actions.appendChild(btnDone);
-  } else {
-    var btnUndo = document.createElement('button');
-    btnUndo.className = 'btn btn-secondary btn-sm';
-    btnUndo.textContent = '↩ 완료 취소';
-    btnUndo.addEventListener('click', function () { markUncomplete(item.id); });
-    actions.appendChild(btnUndo);
+  // 정제생산/소자이관만 완료 처리 (합성생산은 이관 기록용이므로 완료 버튼 없음)
+  var isRefine = item.dept === '정제생산/소자이관';
+  if (isRefine) {
+    if (!item.completed) {
+      var btnDone = document.createElement('button');
+      btnDone.className = 'btn btn-success btn-sm';
+      btnDone.textContent = '✓ 소자평가 완료';
+      btnDone.addEventListener('click', function () { markComplete(item.id); });
+      actions.appendChild(btnDone);
+    } else {
+      var btnUndo = document.createElement('button');
+      btnUndo.className = 'btn btn-secondary btn-sm';
+      btnUndo.textContent = '↩ 완료 취소';
+      btnUndo.addEventListener('click', function () { markUncomplete(item.id); });
+      actions.appendChild(btnUndo);
+    }
   }
 
   var btnEdit = document.createElement('button');
