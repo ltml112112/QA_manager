@@ -46,6 +46,14 @@ const apps = [
     src:         './apps/05_cpl_quality/index.html',
     loaderText:  'Lot 추적관리 & SQC 로딩 중...',
   },
+  {
+    id:          'lotschedule',
+    label:       '소자평가 Lot 일정 관리',
+    icon:        '📅',
+    badge:       'NEW',
+    src:         './apps/06_lot_schedule/index.html',
+    loaderText:  '소자평가 Lot 일정 관리 로딩 중...',
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -255,6 +255,63 @@ html, body {
   cursor: pointer;
 }
 
+/* ── 달력 카드 ───────────────────────────────────────────────────────── */
+.lot-card {
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  border: 1px solid transparent;
+  cursor: pointer;
+  word-break: break-all;
+  transition: filter 0.1s, transform 0.1s;
+  position: relative;
+}
+.lot-card:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* 합성생산 — 빨간색 */
+.lot-card.dept-synth {
+  background: rgba(239, 68, 68, 0.09);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+
+/* 공정개발 — 초록색 */
+.lot-card.dept-proc {
+  background: rgba(16, 185, 129, 0.09);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+}
+
+/* 정제생산/소자이관 — 혼합 색상 (span으로 구분) */
+.lot-card.dept-refine {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.lot-card.dept-refine .c-purple { color: #9333ea; font-weight: 600; }
+.lot-card.dept-refine .c-dark   { color: var(--text); }
+.lot-card.dept-refine .c-blue   { color: #3b82f6; font-weight: 600; }
+
+/* 완료된 카드 */
+.lot-card.is-done {
+  opacity: 0.38;
+  text-decoration: line-through;
+}
+
+/* 더보기 */
+.cell-more {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 4px;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
 /* ── 폼 필드 그룹 ────────────────────────────────────────────────────── */
 .form-group {
   display: flex;
@@ -508,21 +565,83 @@ function saveItems(items) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
+/* ── HTML 이스케이프 ─────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── 날짜 문자열 → M/D 형식 ──────────────────────────────────────────── */
+function toMD(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
+/* ── 카드 innerHTML 생성 (부서별 포맷) ───────────────────────────────── */
+function buildCardHTML(item) {
+  var mat = esc(item.material || '');
+
+  if (item.dept === '합성생산') {
+    return mat;
+  }
+  if (item.dept === '공정개발') {
+    return mat;
+  }
+  // 정제생산/소자이관 — (자주색 이관일) 검정재료명 <파란색 소자평가시작일>
+  var parts = '';
+  if (item.transferDate) {
+    parts += '<span class="c-purple">(' + toMD(item.transferDate) + ')</span> ';
+  }
+  parts += '<span class="c-dark">' + mat + '</span>';
+  if (item.evalStart) {
+    parts += ' <span class="c-blue">&lt;' + toMD(item.evalStart) + '&gt;</span>';
+  }
+  return parts;
+}
+
+/* ── 카드 DOM 요소 생성 ──────────────────────────────────────────────── */
+function createCard(item) {
+  var card = document.createElement('div');
+  var cls  = 'lot-card';
+  if (item.dept === '합성생산')          cls += ' dept-synth';
+  else if (item.dept === '공정개발')     cls += ' dept-proc';
+  else                                   cls += ' dept-refine';
+  if (item.completed)                    cls += ' is-done';
+  card.className = card.className || '';  // (unused, set below)
+  card.className = cls;
+  card.innerHTML = buildCardHTML(item);
+  card.dataset.id = item.id;
+  return card;
+}
+
 /* ── 달력 타이틀 업데이트 ────────────────────────────────────────────── */
 function updateTitle() {
   document.getElementById('calTitle').textContent =
     curYear + '년 ' + (curMonth + 1) + '월';
 }
 
-/* ── 달력 그리드 렌더링 (셀 골격만, 카드는 STEP 5) ──────────────────── */
+/* ── 달력 그리드 렌더링 ──────────────────────────────────────────────── */
+var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
+
 function renderCalendar() {
   updateTitle();
-  var grid     = document.getElementById('calGrid');
+  var grid = document.getElementById('calGrid');
   grid.innerHTML = '';
+
+  // 날짜별 아이템 인덱싱
+  var items = loadItems();
+  var byDate = {};
+  items.forEach(function (it) {
+    if (!it.transferDate) return;
+    if (!byDate[it.transferDate]) byDate[it.transferDate] = [];
+    byDate[it.transferDate].push(it);
+  });
 
   var firstDay = new Date(curYear, curMonth, 1);
   var lastDay  = new Date(curYear, curMonth + 1, 0);
-  var startDow = firstDay.getDay();               // 0=일
+  var startDow = firstDay.getDay();
   var prevLast = new Date(curYear, curMonth, 0).getDate();
   var total    = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
 
@@ -530,14 +649,12 @@ function renderCalendar() {
     var dayNum, dateStr, otherMonth = false;
 
     if (i < startDow) {
-      // 이전 달
       dayNum = prevLast - startDow + i + 1;
       var py = curMonth === 0 ? curYear - 1 : curYear;
       var pm = curMonth === 0 ? 11 : curMonth - 1;
       dateStr = py + '-' + String(pm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
       otherMonth = true;
     } else if (i >= startDow + lastDay.getDate()) {
-      // 다음 달
       dayNum = i - startDow - lastDay.getDate() + 1;
       var ny = curMonth === 11 ? curYear + 1 : curYear;
       var nm = curMonth === 11 ? 0 : curMonth + 1;
@@ -548,7 +665,7 @@ function renderCalendar() {
       dateStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
     }
 
-    var dow  = i % 7; // 0=일, 6=토
+    var dow  = i % 7;
     var cell = document.createElement('div');
     cell.className = 'cal-cell'
       + (otherMonth ? ' other-month' : '')
@@ -562,6 +679,25 @@ function renderCalendar() {
       + (dow === 6 ? ' sat' : '');
     dn.textContent = dayNum;
     cell.appendChild(dn);
+
+    // ── 카드 배치 ──
+    var dayItems = byDate[dateStr] || [];
+    var toShow   = dayItems.slice(0, MAX_CARDS);
+    var overflow = dayItems.length - toShow.length;
+
+    toShow.forEach(function (item) {
+      var card = createCard(item);
+      // 카드 클릭 → 셀 클릭과 동일하게 처리 (STEP 7 모달 연결 예정)
+      card.addEventListener('click', function (e) { e.stopPropagation(); });
+      cell.appendChild(card);
+    });
+
+    if (overflow > 0) {
+      var more = document.createElement('div');
+      more.className = 'cell-more';
+      more.textContent = '+' + overflow + '개 더보기';
+      cell.appendChild(more);
+    }
 
     grid.appendChild(cell);
   }
