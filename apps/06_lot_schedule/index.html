@@ -155,6 +155,22 @@ html, body {
 }
 .btn-toggle-form:hover { background: var(--surface-2); }
 
+/* 샘플 버튼 */
+.btn-sample {
+  padding: 0 10px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-sample:hover { background: var(--surface-2); color: var(--text-muted); }
+
 /* ── 달력 본문 영역 ──────────────────────────────────────────────────── */
 .cal-body {
   flex: 1;
@@ -808,6 +824,7 @@ textarea.form-input {
       <h2 class="cal-title" id="calTitle">— 년 — 월</h2>
       <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
       <button class="btn-today" id="btnToday">오늘</button>
+      <button class="btn-sample" id="btnSample" title="샘플 데이터 로드">📋 샘플</button>
     </div>
 
     <!-- 요약 스트립 -->
@@ -1154,6 +1171,8 @@ document.getElementById('btnNextMonth').addEventListener('click', function () {
   if (curMonth > 11) { curMonth = 0; curYear++; }
   renderCalendar();
 });
+
+document.getElementById('btnSample').addEventListener('click', loadSampleData);
 
 document.getElementById('btnToday').addEventListener('click', function () {
   curYear  = today.getFullYear();
@@ -1530,6 +1549,30 @@ document.getElementById('modalOverlay').addEventListener('click', function (e) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeModal();
 });
+
+/* ── 샘플 데이터 ─────────────────────────────────────────────────────── */
+function loadSampleData() {
+  if (!confirm('기존 데이터를 모두 지우고 샘플 데이터를 불러오시겠습니까?')) return;
+  var sample = [
+    // ── 합성생산 (3/10 이관) ──────────────────────────────────────────
+    { id:'s1',  dept:'합성생산',          material:'H811',      lot:'P-NC03-TolACT',       request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s2',  dept:'합성생산',          material:'LT359',     lot:'CMWLT359P2602001',     request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s3',  dept:'합성생산',          material:'LTM968',    lot:'F260305-82-001-5,000g',request:'',                                               transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    // ── 정제생산/소자이관 (3/11 이관) ────────────────────────────────
+    { id:'s4',  dept:'정제생산/소자이관', material:'PH1524',    lot:'P-NB23-DCB',           request:'PH1524 Lot 평가(미정) 3/17 출하대응을 위한 시급 요청', transferDate:'2026-03-11', evalStart:'2026-03-11', evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s5',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB08-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s6',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB22-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s7',  dept:'정제생산/소자이관', material:'G22',       lot:'P-NB23-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'', urgent:false, completed:false, completedAt:null, createdAt:'2026-03-10' },
+    // ── 정제생산/소자이관 (3/10 이관, 시급) ──────────────────────────
+    { id:'s8',  dept:'정제생산/소자이관', material:'LT-PHM248', lot:'P-NA20-DCB2',          request:'PG1088 Lot 평가(미정) 출하대응을 위한 시급 요청',     transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s9',  dept:'정제생산/소자이관', material:'PG1088',    lot:'L26B-301-107(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s10', dept:'정제생산/소자이관', material:'PG1088-1',  lot:'L26B-327-103(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+    { id:'s11', dept:'정제생산/소자이관', material:'PG2464',    lot:'L26B-320-205(미정)',    request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'', urgent:true,  completed:false, completedAt:null, createdAt:'2026-03-10' },
+  ];
+  saveItems(sample);
+  curYear = 2026; curMonth = 2; // 2026년 3월
+  renderCalendar();
+}
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
