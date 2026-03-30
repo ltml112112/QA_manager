@@ -577,6 +577,14 @@ textarea.form-input {
   font-weight: 600;
 }
 
+/* 액션 버튼 영역 */
+.detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
 /* 빈 상태 */
 .modal-empty {
   text-align: center;
@@ -977,12 +985,20 @@ document.getElementById('btnToday').addEventListener('click', function () {
   openModal(todayStr);
 });
 
+/* ── 폼 기본값 세팅 (리셋 후 날짜 기본값 채우기) ────────────────────── */
+function setFormDefaults() {
+  document.getElementById('fTransferDate').value = todayStr;
+  document.getElementById('fEvalStart').value    = todayStr;
+  document.getElementById('fEvalTarget').value   = todayStr;
+}
+
 /* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
 function resetForm() {
   document.getElementById('scheduleForm').reset();
   document.getElementById('fEditId').value = '';
   document.getElementById('btnSubmit').textContent = '등록하기';
   document.getElementById('btnCancelEdit').style.display = 'none';
+  setFormDefaults();
 }
 
 /* ── 폼 → 아이템 객체 변환 ───────────────────────────────────────────── */
@@ -1168,8 +1184,54 @@ function buildDetailCard(item) {
     (item.evalTarget ? '<span class="detail-date-item"><strong>목표일</strong> '   + item.evalTarget + '</span>' : '');
   wrap.appendChild(dates);
 
-  // STEP 8/9에서 액션 버튼 추가 예정
+  // ── 액션 버튼 영역 ──
+  var actions = document.createElement('div');
+  actions.className = 'detail-actions';
+
+  if (!item.completed) {
+    var btnDone = document.createElement('button');
+    btnDone.className = 'btn btn-success btn-sm';
+    btnDone.textContent = '✓ 소자평가 완료';
+    btnDone.addEventListener('click', function () { markComplete(item.id); });
+    actions.appendChild(btnDone);
+  } else {
+    var btnUndo = document.createElement('button');
+    btnUndo.className = 'btn btn-secondary btn-sm';
+    btnUndo.textContent = '↩ 완료 취소';
+    btnUndo.addEventListener('click', function () { markUncomplete(item.id); });
+    actions.appendChild(btnUndo);
+  }
+
+  // STEP 8에서 수정/삭제 버튼 추가 예정
+  wrap.appendChild(actions);
   return wrap;
+}
+
+/* ── 완료 / 완료 취소 처리 ───────────────────────────────────────────── */
+function refreshModal() {
+  if (modalCurrentDate) openModal(modalCurrentDate);
+}
+
+function markComplete(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  item.completed   = true;
+  item.completedAt = todayStr;
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
+}
+
+function markUncomplete(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  item.completed   = false;
+  item.completedAt = null;
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
 }
 
 /* ── 모달 닫기 이벤트 ────────────────────────────────────────────────── */
@@ -1182,6 +1244,7 @@ document.addEventListener('keydown', function (e) {
 });
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+setFormDefaults();
 renderCalendar();
 
 })();
