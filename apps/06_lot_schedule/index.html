@@ -601,6 +601,73 @@ textarea.form-input {
   font-size: 13px;
 }
 
+/* ── 요약 스트립 ─────────────────────────────────────────────────────── */
+.summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.sum-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: default;
+  white-space: nowrap;
+}
+.sum-chip.chip-total   { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.sum-chip.chip-synth   { background: rgba(239,68,68,0.1);  color: #ef4444; }
+.sum-chip.chip-proc    { background: rgba(16,185,129,0.1); color: #10b981; }
+.sum-chip.chip-refine  { background: rgba(147,51,234,0.1); color: #9333ea; }
+.sum-chip.chip-alert   { background: rgba(239,68,68,0.14); color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.sum-chip.chip-done    { background: rgba(16,185,129,0.1); color: #10b981; }
+.sum-sep { color: var(--border); font-size: 14px; user-select: none; }
+
+/* ── 범례 + 완료토글 바 ──────────────────────────────────────────────── */
+.legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-spacer { flex: 1; }
+
+/* 완료 토글 */
+.done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.done-toggle input { accent-color: var(--accent); cursor: pointer; }
+
 /* ── 수정 모드 취소 버튼 (기본 숨김) ────────────────────────────────── */
 #btnCancelEdit {
   display: none;
@@ -697,6 +764,29 @@ textarea.form-input {
       <button class="btn-today" id="btnToday">오늘</button>
     </div>
 
+    <!-- 요약 스트립 -->
+    <div class="summary-strip" id="summaryStrip"></div>
+
+    <!-- 범례 + 완료 토글 -->
+    <div class="legend-bar">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ef4444;opacity:.75"></div>합성생산
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#10b981;opacity:.75"></div>공정개발
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#9333ea;opacity:.75"></div>정제생산/소자이관
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ef4444"></div>D+7 이상 · 긴급
+      </div>
+      <div class="legend-spacer"></div>
+      <label class="done-toggle">
+        <input type="checkbox" id="toggleDone"> 완료 항목 보기
+      </label>
+    </div>
+
     <!-- 달력 본문 -->
     <div class="cal-body">
 
@@ -747,7 +837,8 @@ window.addEventListener('message', function (e) {
 });
 
 /* ── 상수 ────────────────────────────────────────────────────────────── */
-var STORAGE_KEY = 'qa_lot_schedule_v1';
+var STORAGE_KEY  = 'qa_lot_schedule_v1';
+var showDone     = false;  // 완료 항목 달력 표시 여부
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var today    = new Date();
@@ -876,19 +967,43 @@ function updateTitle() {
     curYear + '년 ' + (curMonth + 1) + '월';
 }
 
+/* ── 요약 스트립 렌더 ────────────────────────────────────────────────── */
+function renderSummary(items) {
+  var strip   = document.getElementById('summaryStrip');
+  var active  = items.filter(function (it) { return !it.completed; });
+  var synth   = active.filter(function (it) { return it.dept === '합성생산'; });
+  var proc    = active.filter(function (it) { return it.dept === '공정개발'; });
+  var refine  = active.filter(function (it) { return it.dept === '정제생산/소자이관'; });
+  var alerts  = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; });
+  var done    = items.filter(function (it) { return it.completed; });
+
+  var html = '<span class="sum-chip chip-total">진행 중 ' + active.length + '건</span>'
+    + '<span class="sum-sep">|</span>';
+  if (synth.length)  html += '<span class="sum-chip chip-synth">합성 ' + synth.length + '</span>';
+  if (proc.length)   html += '<span class="sum-chip chip-proc">공정 ' + proc.length + '</span>';
+  if (refine.length) html += '<span class="sum-chip chip-refine">정제/소자 ' + refine.length + '</span>';
+  if (alerts.length) html += '<span class="sum-sep">|</span><span class="sum-chip chip-alert">⚡ 긴급·지연 ' + alerts.length + '</span>';
+  if (done.length)   html += '<span class="sum-sep">|</span><span class="sum-chip chip-done">완료 ' + done.length + '</span>';
+
+  strip.innerHTML = html;
+}
+
 /* ── 달력 그리드 렌더링 ──────────────────────────────────────────────── */
 var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
 
 function renderCalendar() {
   updateTitle();
-  var grid = document.getElementById('calGrid');
+  var grid  = document.getElementById('calGrid');
   grid.innerHTML = '';
 
-  // 날짜별 아이템 인덱싱
   var items = loadItems();
+  renderSummary(items);
+
+  // 날짜별 아이템 인덱싱 (완료 토글 적용)
   var byDate = {};
   items.forEach(function (it) {
     if (!it.transferDate) return;
+    if (it.completed && !showDone) return; // 완료 항목 필터
     if (!byDate[it.transferDate]) byDate[it.transferDate] = [];
     byDate[it.transferDate].push(it);
   });
@@ -1081,6 +1196,12 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 });
 
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
+
+/* ── 완료 항목 보기 토글 ─────────────────────────────────────────────── */
+document.getElementById('toggleDone').addEventListener('change', function () {
+  showDone = this.checked;
+  renderCalendar();
+});
 
 /* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
 var modalCurrentDate = null;
