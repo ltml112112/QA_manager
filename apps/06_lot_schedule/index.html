@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<title>소자평가 Lot test 일정 관리</title>
+<style>
+
+/* ── 전체 레이아웃 ───────────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── 좌측 폼 패널 ────────────────────────────────────────────────────── */
+.form-panel {
+  width: 280px;
+  min-width: 280px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.25s ease, min-width 0.25s ease;
+}
+
+.form-panel.collapsed {
+  width: 0;
+  min-width: 0;
+}
+
+/* 패널 내부 (width 고정 — 접힐 때 콘텐츠가 안 찌그러지게) */
+.form-panel-inner {
+  width: 280px;
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-panel-header {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+  padding: 14px 0 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+/* ── 우측 캘린더 메인 ────────────────────────────────────────────────── */
+.cal-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  min-width: 0;
+}
+
+/* 캘린더 상단 헤더 바 */
+.cal-topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+/* 네비게이션 버튼 공통 */
+.nav-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+  line-height: 1;
+}
+.nav-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-hover);
+}
+
+/* 오늘 버튼 */
+.btn-today {
+  padding: 0 11px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.btn-today:hover { background: var(--accent-glow); }
+
+/* 폼 토글 버튼 */
+.btn-toggle-form {
+  padding: 0 10px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-toggle-form:hover { background: var(--surface-2); }
+
+/* 샘플 버튼 */
+.btn-sample {
+  padding: 0 10px;
+  height: 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-sample:hover { background: var(--surface-2); color: var(--text-muted); }
+
+/* ── 달력 본문 영역 ──────────────────────────────────────────────────── */
+.cal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 요일 헤더 */
+.cal-dow-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 0;
+  letter-spacing: 0.02em;
+}
+.cal-dow.sun { color: #ef4444; }
+.cal-dow.sat { color: #3b82f6; }
+
+/* 달력 그리드 */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* 날짜 셀 */
+.cal-cell {
+  min-height: 90px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 5px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  overflow: hidden;  /* 넘치는 카드 숨김 */
+}
+.cal-cell:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+
+/* 다른 달 셀 */
+.cal-cell.other-month {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* 오늘 셀 */
+.cal-cell.is-today {
+  border: 2px solid var(--accent);
+}
+
+/* 날짜 숫자 */
+.cell-daynum {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cell-daynum.sun { color: #ef4444; }
+.cell-daynum.sat { color: #3b82f6; }
+
+/* 오늘 날짜 강조 원 */
+.cal-cell.is-today .cell-daynum {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* "+N개" 더보기 텍스트 */
+.cell-more {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 4px;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* ── 달력 카드 ───────────────────────────────────────────────────────── */
+.lot-card {
+  border-radius: 3px;
+  padding: 2px 5px 2px 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  border-left-width: 3px;        /* 왼쪽 컬러 바 */
+  cursor: pointer;
+  transition: filter 0.1s, opacity 0.1s;
+  position: relative;
+  /* 1줄 말줄임 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.lot-card:hover { filter: brightness(1.1); }
+
+/* 합성생산 — 빨간색 */
+.lot-card.dept-synth {
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.2);
+  border-left-color: #ef4444;
+  color: #ef4444;
+}
+
+/* 정제생산/소자이관 */
+.lot-card.dept-refine {
+  background: var(--surface-2);
+  border-color: var(--border);
+  border-left-color: #9333ea;
+}
+.lot-card.dept-refine .c-purple { color: #9333ea; font-weight: 600; }
+.lot-card.dept-refine .c-dark   { color: var(--text); }
+.lot-card.dept-refine .c-blue   { color: #3b82f6; font-weight: 600; }
+
+/* 완료된 카드 */
+.lot-card.is-done {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+/* 시급 요청 카드 강조 */
+.lot-card.is-urgent {
+  border-style: dashed !important;
+  border-left-style: solid !important;
+}
+
+/* ── D+N 뱃지 ────────────────────────────────────────────────────────── */
+.dn-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-left: 3px;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+/* 일반 — 회색 */
+.dn-badge.dn-normal {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* 7일 이상 또는 긴급 — 빨간색 */
+.dn-badge.dn-alert {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* 완료 — 초록색 */
+.dn-badge.dn-done {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  text-decoration: none;
+}
+
+/* 더보기 */
+.cell-more {
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 1px 4px;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* ── 폼 필드 그룹 ────────────────────────────────────────────────────── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.form-group:last-of-type { margin-bottom: 0; }
+
+.fld-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fld-label .req {
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+/* textarea 크기 조절 허용 (세로만) */
+textarea.form-input {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.5;
+}
+
+/* ── 긴급 출하 체크박스 행 ────────────────────────────────────────────── */
+.urgent-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 14px;
+}
+.urgent-row:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+.urgent-row input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #ef4444;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.urgent-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  flex: 1;
+  line-height: 1.3;
+}
+
+/* ── 폼 구분선 ───────────────────────────────────────────────────────── */
+.form-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0 14px;
+}
+
+/* ── 모달 오버레이 ───────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 모달 박스 */
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 920px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(8px);
+  transition: transform 0.18s ease;
+}
+.modal-overlay.open .modal-box {
+  transform: translateY(0);
+}
+
+/* 모달 헤더 */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.modal-close {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+.modal-close:hover { background: var(--surface-2); color: var(--text); }
+
+/* 모달 바디 */
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.modal-body.is-2col {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 모달 섹션 제목 (부서 그룹) */
+.modal-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 4px;
+}
+.modal-section-title:first-child { margin-top: 0; }
+
+/* ── 2컬럼 모달 레이아웃 ─────────────────────────────────────────────── */
+.modal-2col {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.modal-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+.modal-col + .modal-col {
+  border-left: 1px solid var(--border);
+}
+.modal-col-hd {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding-bottom: 6px;
+  border-bottom: 2px solid currentColor;
+  flex-shrink: 0;
+}
+.modal-col-hd.hd-synth  { color: #ef4444; }
+.modal-col-hd.hd-refine { color: #9333ea; }
+@media (max-width: 580px) {
+  .modal-2col { flex-direction: column; }
+  .modal-col + .modal-col { border-left: none; border-top: 1px solid var(--border); }
+}
+
+/* ── 디테일 카드 (compact) ───────────────────────────────────────────── */
+.detail-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.detail-card.is-done { opacity: 0.6; }
+
+/* 메인 행: D+N 왼쪽 | 정보 오른쪽 */
+.dc-main {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* D+N 블록 */
+.dc-dn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 38px;
+  flex-shrink: 0;
+  padding-top: 1px;
+  gap: 2px;
+}
+.dc-dn {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.dc-dn.dn-normal { color: var(--text-muted); }
+.dc-dn.dn-alert  { color: #ef4444; }
+.dc-dn.dn-done   { color: #10b981; }
+.dc-urg {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* 정보 블록 */
+.dc-info { flex: 1; min-width: 0; }
+
+/* 재료명 + LOT 행 */
+.dc-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.dc-mat {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.dc-lot {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 날짜 메타 */
+.dc-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+.dc-meta span {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.dc-meta b {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 요청사항 */
+.dc-req {
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 액션 버튼 영역 */
+.detail-actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.btn-del {
+  color: var(--danger) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+.btn-del:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: var(--danger) !important;
+}
+
+/* 빈 상태 */
+.modal-empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+/* ── 재료명 자동완성 ─────────────────────────────────────────────────── */
+.ac-wrap {
+  position: relative;
+}
+
+.ac-dropdown {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  display: none;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.ac-dropdown.open { display: block; }
+
+.ac-item {
+  padding: 7px 11px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover, .ac-item.ac-active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.ac-item .ac-match { font-weight: 700; color: var(--accent); }
+
+/* ── 요약 스트립 ─────────────────────────────────────────────────────── */
+.summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.sum-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: default;
+  white-space: nowrap;
+}
+.sum-chip.chip-total   { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.sum-chip.chip-synth   { background: rgba(239,68,68,0.1);  color: #ef4444; }
+.sum-chip.chip-proc    { background: rgba(16,185,129,0.1); color: #10b981; }
+.sum-chip.chip-refine  { background: rgba(147,51,234,0.1); color: #9333ea; }
+.sum-chip.chip-alert   { background: rgba(239,68,68,0.14); color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.sum-chip.chip-done    { background: rgba(16,185,129,0.1); color: #10b981; }
+.sum-sep { color: var(--border); font-size: 14px; user-select: none; }
+
+/* ── 범례 + 완료토글 바 ──────────────────────────────────────────────── */
+.legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 14px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-spacer { flex: 1; }
+
+/* ── 수정 모드 취소 버튼 (기본 숨김) ────────────────────────────────── */
+#btnCancelEdit {
+  display: none;
+  margin-top: 6px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ━━━━━━━━━━━━━━━━  좌측: 폼 패널  ━━━━━━━━━━━━━━━━ -->
+  <aside class="form-panel" id="formPanel">
+    <div class="form-panel-inner">
+
+      <div class="form-panel-header">
+        <span>📝</span>
+        <span class="form-panel-title">소자평가 일정 등록</span>
+      </div>
+
+      <!-- ── 등록 / 수정 폼 ── -->
+      <form id="scheduleForm" autocomplete="off" novalidate>
+        <input type="hidden" id="fEditId">
+
+        <!-- 부서/상태 -->
+        <div class="form-group">
+          <label class="fld-label" for="fDept">부서 / 상태<span class="req">*</span></label>
+          <select class="form-select" id="fDept" required>
+            <option value="">선택하세요</option>
+            <option value="합성생산">합성생산</option>
+            <option value="정제생산/소자이관">정제생산 / 소자이관</option>
+          </select>
+        </div>
+
+        <!-- 재료명 (자동완성) -->
+        <div class="form-group">
+          <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input class="form-input" type="text" id="fMaterial"
+              placeholder="예) PG1088" autocomplete="off" required>
+            <div class="ac-dropdown" id="acDropdown"></div>
+          </div>
+        </div>
+
+        <!-- Lot 번호 -->
+        <div class="form-group">
+          <label class="fld-label" for="fLot">Lot 번호</label>
+          <input class="form-input" type="text" id="fLot"
+            placeholder="예) P-NC05-Tol">
+        </div>
+
+        <!-- 요청사항 -->
+        <div class="form-group">
+          <label class="fld-label" for="fRequest">요청사항</label>
+          <input class="form-input" type="text" id="fRequest"
+            placeholder="예) Lot 평가(미정)">
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- 샘플 이관/시작일 -->
+        <div class="form-group">
+          <label class="fld-label" for="fTransferDate">샘플 이관 / 시작일<span class="req">*</span></label>
+          <input class="form-input" type="date" id="fTransferDate" required>
+        </div>
+
+        <!-- 소자평가 시작일 -->
+        <div class="form-group">
+          <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
+          <input class="form-input" type="date" id="fEvalStart">
+        </div>
+
+        <!-- 소자평가 완료 요청일 -->
+        <div class="form-group">
+          <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
+          <input class="form-input" type="date" id="fEvalTarget">
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- 긴급 출하 대응 -->
+        <div class="urgent-row" id="urgentRow">
+          <input type="checkbox" id="fUrgent">
+          <label for="fUrgent">⚡ 시급 요청</label>
+        </div>
+
+        <!-- 등록 / 수정 버튼 -->
+        <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
+          등록하기
+        </button>
+        <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit">
+          취소
+        </button>
+
+      </form>
+
+    </div>
+  </aside>
+
+  <!-- ━━━━━━━━━━━━━━━━  우측: 캘린더 메인  ━━━━━━━━━━━━━━━━ -->
+  <main class="cal-main">
+
+    <!-- 상단 헤더 바 -->
+    <div class="cal-topbar">
+      <button class="btn-toggle-form" id="btnToggleForm">◀ 폼</button>
+      <button class="nav-btn" id="btnPrevMonth" title="이전 달">&#8249;</button>
+      <h2 class="cal-title" id="calTitle">— 년 — 월</h2>
+      <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
+      <button class="btn-today" id="btnToday">오늘</button>
+      <button class="btn-sample" id="btnSample" title="샘플 데이터 로드">📋 샘플</button>
+    </div>
+
+    <!-- 요약 스트립 -->
+    <div class="summary-strip" id="summaryStrip"></div>
+
+    <!-- 범례 -->
+    <div class="legend-bar">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ef4444;opacity:.75"></div>합성생산
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#9333ea;opacity:.75"></div>정제생산/소자이관
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ef4444"></div>D+7 이상 · 시급 요청
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--text-faint)"></div>완료
+      </div>
+    </div>
+
+    <!-- 달력 본문 -->
+    <div class="cal-body">
+
+      <!-- 요일 헤더 -->
+      <div class="cal-dow-row">
+        <div class="cal-dow sun">일</div>
+        <div class="cal-dow">월</div>
+        <div class="cal-dow">화</div>
+        <div class="cal-dow">수</div>
+        <div class="cal-dow">목</div>
+        <div class="cal-dow">금</div>
+        <div class="cal-dow sat">토</div>
+      </div>
+
+      <!-- 날짜 그리드 (JS가 채움) -->
+      <div class="cal-grid" id="calGrid">
+        <!-- STEP 4에서 렌더링 예정 -->
+      </div>
+
+    </div>
+  </main>
+
+</div><!-- /.app-layout -->
+
+<!-- ━━━━━━━━━━━━━━━━  날짜 클릭 모달  ━━━━━━━━━━━━━━━━ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle"></span>
+      <button class="modal-close" id="btnModalClose" title="닫기">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ── 테마 동기화 ─────────────────────────────────────────────────────── */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('qa_theme', t);
+}
+applyTheme(localStorage.getItem('qa_theme') || 'dark');
+window.addEventListener('message', function (e) {
+  if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+});
+
+/* ── 상수 ────────────────────────────────────────────────────────────── */
+var STORAGE_KEY  = 'qa_lot_schedule_v1';
+
+/* ── 상태 ────────────────────────────────────────────────────────────── */
+var today    = new Date();
+var curYear  = today.getFullYear();
+var curMonth = today.getMonth(); // 0-indexed
+
+/* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
+function toDateStr(d) {
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+}
+var todayStr = toDateStr(today);
+
+/* ── 고유 ID 생성 ─────────────────────────────────────────────────────── */
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ── localStorage 데이터 관리 ────────────────────────────────────────── */
+/*
+  아이템 스키마:
+  {
+    id:           string,        // 고유 ID
+    dept:         string,        // 합성생산 | 공정개발 | 정제생산/소자이관
+    material:     string,        // 재료명·Lot·요청사항
+    transferDate: 'YYYY-MM-DD',  // 샘플 이관/시작일 (필수)
+    evalStart:    'YYYY-MM-DD',  // 소자평가 시작일 (선택)
+    evalTarget:   'YYYY-MM-DD',  // 소자평가 목표일 (선택)
+    urgent:       boolean,       // 긴급 출하 대응 여부
+    completed:    boolean,       // 소자평가 완료 여부
+    completedAt:  'YYYY-MM-DD' | null,
+    createdAt:    'YYYY-MM-DD',
+  }
+*/
+function loadItems() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveItems(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+/* ── D+N 계산 ────────────────────────────────────────────────────────── */
+// 이관일 기준 경과 일수 반환 (D+0 = 이관 당일, 음수 = 미래)
+// asOf: 기준일 문자열 (없으면 오늘)
+function calcDN(transferDateStr, asOf) {
+  if (!transferDateStr) return null;
+  var t = new Date(transferDateStr + 'T00:00:00');
+  var n = new Date((asOf || todayStr) + 'T00:00:00');
+  return Math.floor((n - t) / 86400000);
+}
+
+// 뱃지 HTML 반환
+function dnBadgeHTML(item) {
+  if (item.completed) {
+    return '<span class="dn-badge dn-done">완료</span>';
+  }
+  var dn = calcDN(item.transferDate);
+  if (dn === null) return '';
+
+  var label = dn === 0 ? 'D+0' : (dn > 0 ? 'D+' + dn : 'D' + dn);
+  var cls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
+  return '<span class="dn-badge ' + cls + '">' + label + '</span>';
+}
+
+/* ── HTML 이스케이프 ─────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── 날짜 문자열 → M/D 형식 ──────────────────────────────────────────── */
+function toMD(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
+/* ── 재료명 + Lot + 요청사항 조합 텍스트 생성 ───────────────────────── */
+function buildMatText(item) {
+  // 구 데이터: material 하나에 다 들어있는 경우 그대로 사용
+  // 신 데이터: material + lot + request 조합
+  var parts = [];
+  if (item.material) parts.push(item.material);
+  if (item.lot)      parts.push(item.lot);
+  if (item.request)  parts.push(item.request);
+  return parts.join(' ');
+}
+
+/* ── 카드 innerHTML 생성 (부서별 포맷 + D+N 뱃지) ────────────────────── */
+function buildCardHTML(item) {
+  var mat    = esc(buildMatText(item));
+  var badge  = dnBadgeHTML(item);
+  var urgent = item.urgent && !item.completed ? '⚡ ' : '';
+
+  if (item.dept === '합성생산') {
+    return urgent + mat + badge;
+  }
+  // 정제생산/소자이관 — (자주색 이관일) 검정재료명 <파란색 소자평가시작일> D+N
+  var parts = '';
+  if (item.transferDate) {
+    parts += '<span class="c-purple">(' + toMD(item.transferDate) + ')</span> ';
+  }
+  parts += '<span class="c-dark">' + mat + '</span>';
+  if (item.evalStart) {
+    parts += ' <span class="c-blue">&lt;' + toMD(item.evalStart) + '&gt;</span>';
+  }
+  parts += badge;
+  return parts;
+}
+
+/* ── 카드 DOM 요소 생성 ──────────────────────────────────────────────── */
+function createCard(item) {
+  var card = document.createElement('div');
+  var cls  = 'lot-card';
+  if (item.dept === '합성생산') cls += ' dept-synth';
+  else                          cls += ' dept-refine';
+  if (item.completed)           cls += ' is-done';
+  if (item.urgent && !item.completed) cls += ' is-urgent';
+  card.className = cls;
+  card.innerHTML = buildCardHTML(item);
+  card.dataset.id = item.id;
+  // 호버 툴팁: 잘린 텍스트 전체 보기
+  card.title = buildMatText(item);
+  return card;
+}
+
+/* ── 달력 타이틀 업데이트 ────────────────────────────────────────────── */
+function updateTitle() {
+  document.getElementById('calTitle').textContent =
+    curYear + '년 ' + (curMonth + 1) + '월';
+}
+
+/* ── 요약 스트립 렌더 ────────────────────────────────────────────────── */
+function renderSummary(items) {
+  var strip   = document.getElementById('summaryStrip');
+  var active  = items.filter(function (it) { return !it.completed; });
+  var synth   = active.filter(function (it) { return it.dept === '합성생산'; });
+  var refine  = active.filter(function (it) { return it.dept === '정제생산/소자이관'; });
+  var alerts  = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; });
+  var done    = items.filter(function (it) { return it.completed; });
+
+  function chip(cls, filter, label) {
+    return '<span class="sum-chip ' + cls + '" data-filter="' + filter + '" style="cursor:pointer">' + label + '</span>';
+  }
+
+  var html = chip('chip-total', 'active',  '진행 중 ' + active.length + '건')
+           + '<span class="sum-sep">|</span>';
+  if (synth.length)  html += chip('chip-synth',  'synth',  '합성 '      + synth.length);
+  if (refine.length) html += chip('chip-refine', 'refine', '정제/소자 ' + refine.length);
+  if (alerts.length) html += '<span class="sum-sep">|</span>'
+                           + chip('chip-alert', 'alert', '⚡ 시급·지연 ' + alerts.length);
+  if (done.length)   html += '<span class="sum-sep">|</span>'
+                           + chip('chip-done', 'done', '완료 ' + done.length);
+
+  strip.innerHTML = html;
+
+  // 칩 클릭 → 필터 모달
+  strip.querySelectorAll('.sum-chip[data-filter]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      openFilterModal(this.dataset.filter);
+    });
+  });
+}
+
+/* ── 달력 그리드 렌더링 ──────────────────────────────────────────────── */
+var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
+
+function renderCalendar() {
+  updateTitle();
+  var grid  = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  var items = loadItems();
+  renderSummary(items);
+
+  // 날짜별 아이템 인덱싱
+  // 미완료 항목은 이관월 이후의 달에서도 ��속 표시 (D+N 누적 반영)
+  //  - 현재 달 보기: 이전 달 이관 항목 → 오늘 셀에 표시
+  //  - 미래 달 보기: 이전 달 이관 항목 → 해당 달 1일 셀에 표시
+  //  - 과거 달 보기: 원래 이관일에만 표시
+  var viewMonthStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-01';
+  var isCurMonth   = (curYear === today.getFullYear() && curMonth === today.getMonth());
+  var isCurrentOrFutureMonth =
+    curYear > today.getFullYear() ||
+    (curYear === today.getFullYear() && curMonth >= today.getMonth());
+
+  var byDate = {};
+  items.forEach(function (it) {
+    if (!it.transferDate) return;
+    var displayDate = it.transferDate;
+    // 미완료 항목만 carry-forward (완료는 이관일 고정)
+    if (!it.completed && isCurrentOrFutureMonth && it.transferDate < viewMonthStr) {
+      displayDate = isCurMonth ? todayStr : viewMonthStr;
+    }
+    if (!byDate[displayDate]) byDate[displayDate] = [];
+    byDate[displayDate].push(it);
+  });
+
+  var firstDay = new Date(curYear, curMonth, 1);
+  var lastDay  = new Date(curYear, curMonth + 1, 0);
+  var startDow = firstDay.getDay();
+  var prevLast = new Date(curYear, curMonth, 0).getDate();
+  var total    = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
+
+  for (var i = 0; i < total; i++) {
+    var dayNum, dateStr, otherMonth = false;
+
+    if (i < startDow) {
+      dayNum = prevLast - startDow + i + 1;
+      var py = curMonth === 0 ? curYear - 1 : curYear;
+      var pm = curMonth === 0 ? 11 : curMonth - 1;
+      dateStr = py + '-' + String(pm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+      otherMonth = true;
+    } else if (i >= startDow + lastDay.getDate()) {
+      dayNum = i - startDow - lastDay.getDate() + 1;
+      var ny = curMonth === 11 ? curYear + 1 : curYear;
+      var nm = curMonth === 11 ? 0 : curMonth + 1;
+      dateStr = ny + '-' + String(nm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+      otherMonth = true;
+    } else {
+      dayNum  = i - startDow + 1;
+      dateStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
+    }
+
+    var dow  = i % 7;
+    var cell = document.createElement('div');
+    cell.className = 'cal-cell'
+      + (otherMonth ? ' other-month' : '')
+      + (dateStr === todayStr ? ' is-today' : '');
+    cell.dataset.date = dateStr;
+
+    // 날짜 숫자
+    var dn = document.createElement('div');
+    dn.className = 'cell-daynum'
+      + (dow === 0 ? ' sun' : '')
+      + (dow === 6 ? ' sat' : '');
+    dn.textContent = dayNum;
+    cell.appendChild(dn);
+
+    // ── 카드 배치 ──
+    var dayItems = byDate[dateStr] || [];
+    var toShow   = dayItems.slice(0, MAX_CARDS);
+    var overflow = dayItems.length - toShow.length;
+
+    toShow.forEach(function (item) {
+      var card = createCard(item);
+      (function(capturedItem) {
+        card.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (capturedItem.completed) {
+            openItemModal(capturedItem.id);
+          } else {
+            openModal(e.currentTarget.closest('.cal-cell').dataset.date);
+          }
+        });
+      })(item);
+      cell.appendChild(card);
+    });
+
+    if (overflow > 0) {
+      var more = document.createElement('div');
+      more.className = 'cell-more';
+      more.textContent = '+' + overflow + '개 더보기';
+      cell.appendChild(more);
+    }
+
+    // 셀 클릭 → 모달
+    cell.addEventListener('click', function () {
+      openModal(this.dataset.date);
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+/* ── 폼 패널 토글 ────────────────────────────────────────────────────── */
+var formPanel      = document.getElementById('formPanel');
+var btnToggleForm  = document.getElementById('btnToggleForm');
+
+btnToggleForm.addEventListener('click', function () {
+  var collapsed = formPanel.classList.toggle('collapsed');
+  btnToggleForm.textContent = collapsed ? '▶ 폼' : '◀ 폼';
+});
+
+/* ── 월 네비게이션 ───────────────────────────────────────────────────── */
+document.getElementById('btnPrevMonth').addEventListener('click', function () {
+  curMonth--;
+  if (curMonth < 0) { curMonth = 11; curYear--; }
+  renderCalendar();
+});
+
+document.getElementById('btnNextMonth').addEventListener('click', function () {
+  curMonth++;
+  if (curMonth > 11) { curMonth = 0; curYear++; }
+  renderCalendar();
+});
+
+document.getElementById('btnSample').addEventListener('click', loadSampleData);
+
+document.getElementById('btnToday').addEventListener('click', function () {
+  curYear  = today.getFullYear();
+  curMonth = today.getMonth();
+  renderCalendar();
+  openModal(todayStr);
+});
+
+/* ── 재료명 자동완성 ─────────────────────────────────────────────────── */
+function getUniqueMaterials() {
+  var items = loadItems();
+  var seen  = {};
+  var list  = [];
+  // 최신 등록 순으로 유니크 재료명 수집
+  items.slice().reverse().forEach(function (it) {
+    var name = (it.material || '').trim();
+    if (name && !seen[name]) { seen[name] = true; list.push(name); }
+  });
+  return list;
+}
+
+function renderAC(query) {
+  var drop  = document.getElementById('acDropdown');
+  var names = getUniqueMaterials();
+  var q     = query.trim().toLowerCase();
+  var filtered = q
+    ? names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; })
+    : names;
+
+  if (!filtered.length) { drop.classList.remove('open'); return; }
+
+  drop.innerHTML = filtered.map(function (n) {
+    var display = esc(n);
+    if (q) {
+      // 매칭 부분 굵게 표시
+      var idx = n.toLowerCase().indexOf(q);
+      display = esc(n.slice(0, idx))
+        + '<span class="ac-match">' + esc(n.slice(idx, idx + q.length)) + '</span>'
+        + esc(n.slice(idx + q.length));
+    }
+    return '<div class="ac-item" data-val="' + esc(n) + '">' + display + '</div>';
+  }).join('');
+  drop.classList.add('open');
+
+  drop.querySelectorAll('.ac-item').forEach(function (el) {
+    el.addEventListener('mousedown', function (e) {
+      e.preventDefault(); // blur 방지
+      document.getElementById('fMaterial').value = this.dataset.val;
+      drop.classList.remove('open');
+    });
+  });
+}
+
+(function initAC() {
+  var input = document.getElementById('fMaterial');
+  var drop  = document.getElementById('acDropdown');
+
+  input.addEventListener('focus', function () { renderAC(this.value); });
+  input.addEventListener('input', function () { renderAC(this.value); });
+  input.addEventListener('blur',  function () {
+    setTimeout(function () { drop.classList.remove('open'); }, 150);
+  });
+  // ESC로 드롭다운 닫기
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') drop.classList.remove('open');
+  });
+})();
+
+/* ── 폼 기본값 세팅 (리셋 후 날짜 기본값 채우기) ────────────────────── */
+function setFormDefaults() {
+  document.getElementById('fTransferDate').value = todayStr;
+  document.getElementById('fEvalStart').value    = todayStr;
+}
+
+/* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
+function resetForm() {
+  document.getElementById('scheduleForm').reset();
+  document.getElementById('fEditId').value = '';
+  document.getElementById('btnSubmit').textContent = '등록하기';
+  document.getElementById('btnCancelEdit').style.display = 'none';
+  setFormDefaults();
+}
+
+/* ── 폼 → 아이템 객체 변환 ───────────────────────────────────────────── */
+function readFormData() {
+  return {
+    dept:         document.getElementById('fDept').value,
+    material:     document.getElementById('fMaterial').value.trim(),
+    lot:          document.getElementById('fLot').value.trim(),
+    request:      document.getElementById('fRequest').value.trim(),
+    transferDate: document.getElementById('fTransferDate').value,
+    evalStart:    document.getElementById('fEvalStart').value,
+    evalTarget:   document.getElementById('fEvalTarget').value,
+    urgent:       document.getElementById('fUrgent').checked,
+  };
+}
+
+/* ── 폼 ← 아이템 객체 채우기 (수정 모드) ────────────────────────────── */
+function fillForm(item) {
+  document.getElementById('fEditId').value          = item.id;
+  document.getElementById('fDept').value            = item.dept;
+  document.getElementById('fMaterial').value        = item.material || '';
+  document.getElementById('fLot').value             = item.lot      || '';
+  document.getElementById('fRequest').value         = item.request  || '';
+  document.getElementById('fTransferDate').value    = item.transferDate;
+  document.getElementById('fEvalStart').value       = item.evalStart  || '';
+  document.getElementById('fEvalTarget').value      = item.evalTarget || '';
+  document.getElementById('fUrgent').checked        = !!item.urgent;
+  document.getElementById('btnSubmit').textContent  = '수정 저장';
+  document.getElementById('btnCancelEdit').style.display = 'block';
+  formPanel.classList.remove('collapsed');
+  btnToggleForm.textContent = '◀ 폼';
+}
+
+/* ── 폼 제출 (신규 등록 + 수정 저장 통합) ───────────────────────────── */
+document.getElementById('scheduleForm').addEventListener('submit', function (e) {
+  e.preventDefault();
+
+  var fd = readFormData();
+  if (!fd.dept || !fd.material || !fd.transferDate) {
+    alert('부서/상태, 재료명, 이관일은 필수 항목입니다.');
+    return;
+  }
+
+  var items  = loadItems();
+  var editId = document.getElementById('fEditId').value;
+
+  if (editId) {
+    // ── 수정 ──
+    var idx = items.findIndex(function (it) { return it.id === editId; });
+    if (idx !== -1) {
+      // completed / completedAt 은 유지
+      items[idx] = Object.assign(items[idx], fd);
+    }
+  } else {
+    // ── 신규 등록 ──
+    var newItem = Object.assign(fd, {
+      id:          genId(),
+      completed:   false,
+      completedAt: null,
+      createdAt:   todayStr,
+    });
+    items.push(newItem);
+
+    // 등록된 달로 이동
+    var d = new Date(fd.transferDate + 'T00:00:00');
+    if (!isNaN(d)) {
+      curYear  = d.getFullYear();
+      curMonth = d.getMonth();
+    }
+  }
+
+  saveItems(items);
+  resetForm();
+  renderCalendar();
+});
+
+document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
+
+/* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
+var modalCurrentDate = null;
+
+function openModal(dateStr) {
+  modalCurrentDate = dateStr;
+  var overlay = document.getElementById('modalOverlay');
+  var titleEl = document.getElementById('modalTitle');
+  var bodyEl  = document.getElementById('modalBody');
+  var items   = loadItems();
+  var isToday = (dateStr === todayStr);
+
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
+  if (isToday) {
+    // 오늘 클릭 → 합성생산: 오늘 이관만 / 정제생산: 전체 미완료
+    titleEl.textContent = '📊 오늘 기준 전체 진행 현황';
+    var active = items.filter(function (it) {
+      if (it.dept === '합성생산') return it.transferDate === todayStr && !it.completed;
+      return !it.completed;
+    });
+    active.sort(function (a, b) {
+      return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
+    });
+    if (!active.length) {
+      bodyEl.innerHTML = '<div class="modal-empty">진행 중인 항목이 없습니다.</div>';
+    } else {
+      renderBodyTwoCols(bodyEl, active, null);
+    }
+  } else {
+    var d      = new Date(dateStr + 'T00:00:00');
+    var lbl    = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+    var isPast = dateStr < todayStr;
+
+    // 합성생산: 클릭 당일 이관만 / 정제생산: 그 날 기준 활성 전체
+    var activeOnDate = items.filter(function (it) {
+      if (it.dept === '합성생산') return it.transferDate === dateStr && !it.completed;
+      if (it.transferDate > dateStr) return false;
+      if (!it.completed) return true;
+      return it.completedAt && it.completedAt > dateStr;
+    });
+    activeOnDate.sort(function (a, b) {
+      return (calcDN(b.transferDate, dateStr) || 0) - (calcDN(a.transferDate, dateStr) || 0);
+    });
+
+    if (!activeOnDate.length) {
+      titleEl.textContent = lbl + ' 이관/진행 항목';
+      bodyEl.innerHTML = '<div class="modal-empty">이 날짜에 등록된 항목이 없습니다.</div>';
+    } else {
+      titleEl.textContent = lbl + (isPast ? ' 기준 현황' : ' 이관 예정');
+      renderBodyTwoCols(bodyEl, activeOnDate, isPast ? dateStr : null);
+    }
+  }
+
+  overlay.classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalBody').classList.remove('is-2col');
+  modalCurrentDate = null;
+}
+
+/* ── 필터 모달 (요약 스트립 칩 클릭) ────────────────────────────────── */
+var FILTER_TITLES = {
+  active: '진행 중 전체', synth: '합성생산 진행 중',
+  refine: '정제생산/소자이관 진행 중', alert: '⚡ 시급 · 지연 (D+7 이상)', done: '소자평가 완료 목록',
+};
+
+function openFilterModal(filter) {
+  var items  = loadItems();
+  var active = items.filter(function (it) { return !it.completed; });
+  var filtered;
+  switch (filter) {
+    case 'synth':  filtered = active.filter(function (it) { return it.dept === '합성생산'; }); break;
+    case 'refine': filtered = active.filter(function (it) { return it.dept === '정제생산/소자이관'; }); break;
+    case 'alert':  filtered = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; }); break;
+    case 'done':   filtered = items.filter(function (it)  { return it.completed; }); break;
+    default:       filtered = active;
+  }
+  filtered = filtered.slice().sort(function (a, b) {
+    return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
+  });
+
+  modalCurrentDate = null;
+  var overlay = document.getElementById('modalOverlay');
+  var bodyEl  = document.getElementById('modalBody');
+  document.getElementById('modalTitle').textContent =
+    (FILTER_TITLES[filter] || '목록') + ' (' + filtered.length + '건)';
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
+  if (!filtered.length) {
+    bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
+  } else if (filter === 'active' || filter === 'alert') {
+    // 합성/정제 2컬럼
+    renderBodyTwoCols(bodyEl, filtered, null);
+  } else {
+    filtered.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it)); });
+  }
+  overlay.classList.add('open');
+}
+
+/* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
+function openItemModal(itemId) {
+  var items  = loadItems();
+  var item   = items.find(function (it) { return it.id === itemId; });
+  if (!item) return;
+
+  modalCurrentDate = item.transferDate; // refreshModal용 저장
+  var overlay = document.getElementById('modalOverlay');
+  var titleEl = document.getElementById('modalTitle');
+  var bodyEl  = document.getElementById('modalBody');
+
+  var mat = buildMatText(item);
+  titleEl.textContent = (item.completed ? '✓ 완료 — ' : '') + (mat.length > 30 ? mat.slice(0, 30) + '…' : mat);
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+  bodyEl.appendChild(buildDetailCard(item));
+  overlay.classList.add('open');
+}
+
+/* ── 2컬럼 렌더링 헬퍼 ───────────────────────────────────────────────── */
+// allItems를 합성/정제 두 컬럼으로 렌더링. 한 종류만 있으면 단일 컬럼.
+// 각 컬럼 내부: 미완료 먼저 (D+N 내림차순), 완료 나중.
+function renderBodyTwoCols(bodyEl, allItems, asOf) {
+  function sortCol(arr) {
+    return arr.slice().sort(function (a, b) {
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
+      return (calcDN(b.transferDate, asOf) || 0) - (calcDN(a.transferDate, asOf) || 0);
+    });
+  }
+
+  var synth  = sortCol(allItems.filter(function (it) { return it.dept === '합성생산'; }));
+  var refine = sortCol(allItems.filter(function (it) { return it.dept === '정제생산/소자이관'; }));
+
+  if (!synth.length && !refine.length) {
+    bodyEl.innerHTML = '<div class="modal-empty">해당 항목이 없습니다.</div>';
+    return;
+  }
+
+  // 한 종류만 있으면 단일 컬럼 (bodyEl padding 유지)
+  if (!synth.length || !refine.length) {
+    var single = synth.length ? synth : refine;
+    single.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, asOf)); });
+    return;
+  }
+
+  // 두 종류 모두 → 2컬럼
+  bodyEl.classList.add('is-2col');
+  var twoCol = document.createElement('div');
+  twoCol.className = 'modal-2col';
+
+  var lCol = document.createElement('div');
+  lCol.className = 'modal-col';
+  var lHd = document.createElement('div');
+  lHd.className = 'modal-col-hd hd-synth';
+  lHd.textContent = '합성생산 ' + synth.length + '건';
+  lCol.appendChild(lHd);
+  synth.forEach(function (it) { lCol.appendChild(buildDetailCard(it, asOf)); });
+  twoCol.appendChild(lCol);
+
+  var rCol = document.createElement('div');
+  rCol.className = 'modal-col';
+  var rHd = document.createElement('div');
+  rHd.className = 'modal-col-hd hd-refine';
+  rHd.textContent = '정제생산/소자이관 ' + refine.length + '건';
+  rCol.appendChild(rHd);
+  refine.forEach(function (it) { rCol.appendChild(buildDetailCard(it, asOf)); });
+  twoCol.appendChild(rCol);
+
+  bodyEl.appendChild(twoCol);
+}
+
+/* ── 모달 디테일 카드 생성 (compact) ─────────────────────────────────── */
+// asOf: 기준일 문자열 (없으면 오늘) — 과거 날짜 클릭 시 그 날 기준 경과일 표시
+function buildDetailCard(item, asOf) {
+  var wrap = document.createElement('div');
+  wrap.className = 'detail-card' + (item.completed ? ' is-done' : '');
+  wrap.dataset.id = item.id;
+
+  // ── 메인 행: D+N 블록(정제생산만) + 정보 블록 ──
+  var main = document.createElement('div');
+  main.className = 'dc-main';
+
+  // 합성생산은 D+N 불필요 (당일 이관 추적만)
+  if (item.dept !== '합성생산') {
+    var dnWrap = document.createElement('div');
+    dnWrap.className = 'dc-dn-wrap';
+
+    var dnEl = document.createElement('div');
+    if (item.completed) {
+      dnEl.className = 'dc-dn dn-done';
+      dnEl.textContent = '완료';
+    } else {
+      var dn = calcDN(item.transferDate, asOf);
+      var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
+      var dnCls   = (dn >= 7 || item.urgent) ? 'dn-alert' : 'dn-normal';
+      dnEl.className = 'dc-dn ' + dnCls;
+      dnEl.textContent = dnLabel;
+      if (asOf && asOf !== todayStr) {
+        var asOfD = new Date(asOf + 'T00:00:00');
+        dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
+      }
+    }
+    dnWrap.appendChild(dnEl);
+
+    if (item.urgent && !item.completed) {
+      var urgEl = document.createElement('div');
+      urgEl.className = 'dc-urg';
+      urgEl.textContent = '⚡';
+      dnWrap.appendChild(urgEl);
+    }
+    main.appendChild(dnWrap);
+  }
+
+  // 정보 블록
+  var info = document.createElement('div');
+  info.className = 'dc-info';
+
+  // 재료명 + LOT 행
+  var nameRow = document.createElement('div');
+  nameRow.className = 'dc-name-row';
+
+  var matEl = document.createElement('span');
+  matEl.className = 'dc-mat';
+  matEl.textContent = item.material || '-';
+  nameRow.appendChild(matEl);
+
+  if (item.lot) {
+    var lotEl = document.createElement('span');
+    lotEl.className = 'dc-lot';
+    lotEl.textContent = item.lot;
+    lotEl.title = item.lot;
+    nameRow.appendChild(lotEl);
+  }
+  info.appendChild(nameRow);
+
+  // 날짜 메타
+  var meta = document.createElement('div');
+  meta.className = 'dc-meta';
+  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b></span>';
+  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart)  + '</b></span>';
+  if (item.evalTarget) mh += '<span>요청일 <b>'   + toMD(item.evalTarget) + '</b></span>';
+  if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
+  meta.innerHTML = mh;
+  info.appendChild(meta);
+
+  // 요청사항
+  if (item.request) {
+    var reqEl = document.createElement('div');
+    reqEl.className = 'dc-req';
+    reqEl.textContent = item.request;
+    reqEl.title = item.request;
+    info.appendChild(reqEl);
+  }
+
+  main.appendChild(info);
+  wrap.appendChild(main);
+
+  // ── 액션 버튼 ──
+  var actions = document.createElement('div');
+  actions.className = 'detail-actions';
+
+  // 정제생산/소자이관만 완료 처리
+  var isRefine = item.dept === '정제생산/소자이관';
+  if (isRefine) {
+    if (!item.completed) {
+      var btnDone = document.createElement('button');
+      btnDone.className = 'btn btn-success btn-sm';
+      btnDone.textContent = '✓ 소자평가 완료';
+      btnDone.addEventListener('click', function () { markComplete(item.id); });
+      actions.appendChild(btnDone);
+    } else {
+      var btnUndo = document.createElement('button');
+      btnUndo.className = 'btn btn-secondary btn-sm';
+      btnUndo.textContent = '↩ 완료 취소';
+      btnUndo.addEventListener('click', function () { markUncomplete(item.id); });
+      actions.appendChild(btnUndo);
+    }
+  }
+
+  var btnEdit = document.createElement('button');
+  btnEdit.className = 'btn btn-secondary btn-sm';
+  btnEdit.textContent = '✎ 수정';
+  btnEdit.addEventListener('click', function () { editInModal(item.id, wrap); });
+  actions.appendChild(btnEdit);
+
+  var btnDel = document.createElement('button');
+  btnDel.className = 'btn btn-secondary btn-sm btn-del';
+  btnDel.textContent = '✕ 삭제';
+  btnDel.addEventListener('click', function () { deleteItem(item.id); });
+  actions.appendChild(btnDel);
+
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+/* ── 수정 (왼쪽 패널 — 사용되지 않지만 외부 호출 호환 유지) ─────────── */
+function editItem(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  closeModal();
+  fillForm(item);
+  document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── 인라인 수정 (모달 내 카드 → 폼 변환) ───────────────────────────── */
+function editInModal(itemId, cardEl) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === itemId; });
+  if (!item) return;
+
+  var parent = cardEl.parentNode;
+
+  var form = document.createElement('div');
+  form.className = 'detail-card';
+  form.style.gap = '8px';
+  form.style.background = 'var(--surface)';
+  form.style.borderColor = 'var(--accent)';
+
+  // 재료명 + LOT
+  var r1 = document.createElement('div');
+  r1.style.cssText = 'display:flex;gap:6px;';
+  var inpMat = document.createElement('input');
+  inpMat.className = 'form-input';
+  inpMat.style.cssText = 'flex:1;font-size:13px;padding:5px 8px;';
+  inpMat.placeholder = '재료명';
+  inpMat.value = item.material || '';
+  var inpLot = document.createElement('input');
+  inpLot.className = 'form-input';
+  inpLot.style.cssText = 'flex:1;font-size:13px;padding:5px 8px;';
+  inpLot.placeholder = 'LOT 번호';
+  inpLot.value = item.lot || '';
+  r1.appendChild(inpMat);
+  r1.appendChild(inpLot);
+  form.appendChild(r1);
+
+  // 요청사항
+  var inpReq = document.createElement('input');
+  inpReq.className = 'form-input';
+  inpReq.style.cssText = 'font-size:12px;padding:4px 8px;';
+  inpReq.placeholder = '요청사항';
+  inpReq.value = item.request || '';
+  form.appendChild(inpReq);
+
+  // 날짜 row
+  var r2 = document.createElement('div');
+  r2.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  function mkD(val, lbl) {
+    var w = document.createElement('div');
+    w.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:100px;';
+    var l = document.createElement('div');
+    l.style.cssText = 'font-size:10px;color:var(--text-muted);';
+    l.textContent = lbl;
+    var i = document.createElement('input');
+    i.type = 'date'; i.className = 'form-input';
+    i.style.cssText = 'font-size:12px;padding:4px 6px;';
+    i.value = val || '';
+    w.appendChild(l); w.appendChild(i);
+    return { w: w, i: i };
+  }
+  var dTf = mkD(item.transferDate, '이관일');
+  var dEs = mkD(item.evalStart,    '평가시작');
+  var dEt = mkD(item.evalTarget,   '완료 요청일');
+  r2.appendChild(dTf.w); r2.appendChild(dEs.w); r2.appendChild(dEt.w);
+  form.appendChild(r2);
+
+  // 시급 + 저장/취소
+  var r3 = document.createElement('div');
+  r3.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
+  var ckId  = 'ck_' + itemId;
+  var ckUrg = document.createElement('input');
+  ckUrg.type = 'checkbox'; ckUrg.id = ckId; ckUrg.checked = !!item.urgent;
+  var lbUrg = document.createElement('label');
+  lbUrg.htmlFor = ckId;
+  lbUrg.style.cssText = 'font-size:12px;cursor:pointer;user-select:none;';
+  lbUrg.textContent = '⚡ 시급 요청';
+  r3.appendChild(ckUrg); r3.appendChild(lbUrg);
+  var sp = document.createElement('div'); sp.style.flex = '1';
+  r3.appendChild(sp);
+
+  var btnSave = document.createElement('button');
+  btnSave.className = 'btn btn-primary btn-sm';
+  btnSave.textContent = '저장';
+  btnSave.addEventListener('click', function () {
+    var all = loadItems();
+    var idx = -1;
+    for (var i = 0; i < all.length; i++) { if (all[i].id === itemId) { idx = i; break; } }
+    if (idx === -1) return;
+    all[idx].material    = inpMat.value.trim();
+    all[idx].lot         = inpLot.value.trim();
+    all[idx].request     = inpReq.value.trim();
+    all[idx].transferDate = dTf.i.value;
+    all[idx].evalStart   = dEs.i.value;
+    all[idx].evalTarget  = dEt.i.value;
+    all[idx].urgent      = ckUrg.checked;
+    saveItems(all);
+    renderCalendar();
+    if (parent) parent.replaceChild(buildDetailCard(all[idx]), form);
+  });
+
+  var btnCancel = document.createElement('button');
+  btnCancel.className = 'btn btn-secondary btn-sm';
+  btnCancel.textContent = '취소';
+  btnCancel.addEventListener('click', function () {
+    if (parent) parent.replaceChild(cardEl, form);
+  });
+
+  r3.appendChild(btnSave); r3.appendChild(btnCancel);
+  form.appendChild(r3);
+
+  if (parent) parent.replaceChild(form, cardEl);
+  inpMat.focus();
+}
+
+/* ── 삭제 ────────────────────────────────────────────────────────────── */
+function deleteItem(id) {
+  if (!confirm('이 항목을 삭제하시겠습니까?')) return;
+  var items = loadItems().filter(function (it) { return it.id !== id; });
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
+}
+
+/* ── 완료 / 완료 취소 처리 ───────────────────────────────────────────── */
+function refreshModal() {
+  if (modalCurrentDate) openModal(modalCurrentDate);
+}
+
+function markComplete(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  item.completed   = true;
+  item.completedAt = todayStr;
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
+}
+
+function markUncomplete(id) {
+  var items = loadItems();
+  var item  = items.find(function (it) { return it.id === id; });
+  if (!item) return;
+  item.completed   = false;
+  item.completedAt = null;
+  saveItems(items);
+  renderCalendar();
+  refreshModal();
+}
+
+/* ── 모달 닫기 이벤트 ────────────────────────────────────────────────── */
+document.getElementById('btnModalClose').addEventListener('click', closeModal);
+document.getElementById('modalOverlay').addEventListener('click', function (e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ── 샘플 데이터 ─────────────────────────────────────────────────────── */
+function loadSampleData() {
+  if (!confirm('기존 데이터를 모두 지우고 샘플 데이터를 불러오시겠습니까?')) return;
+  var sample = [
+    // ── 3/3 합성생산 (완료 3/15) ─────────────────────────────────────
+    { id:'s1',  dept:'합성생산',          material:'H522',      lot:'P-NC07-DMA',           request:'',                                                   transferDate:'2026-03-03', evalStart:'',           evalTarget:'',           urgent:false, completed:true,  completedAt:'2026-03-15', createdAt:'2026-03-03' },
+    // ── 3/5 정제생산 (완료 3/20) ─────────────────────────────────────
+    { id:'s2',  dept:'정제생산/소자이관', material:'PG267',     lot:'L26B-315-207',         request:'3/18 출하대응',                                       transferDate:'2026-03-05', evalStart:'2026-03-05', evalTarget:'2026-03-18', urgent:false, completed:true,  completedAt:'2026-03-20', createdAt:'2026-03-05' },
+    // ── 3/7 합성생산 + 정제생산 ──────────────────────────────────────
+    { id:'s3',  dept:'합성생산',          material:'LT523',     lot:'CMWLT523P2602003',     request:'',                                                   transferDate:'2026-03-07', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-07' },
+    { id:'s4',  dept:'정제생산/소자이관', material:'PG1088-2',  lot:'L26B-303-109',         request:'3/21 내 결과 확인 요청',                              transferDate:'2026-03-07', evalStart:'2026-03-07', evalTarget:'2026-03-21', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-07' },
+    // ── 3/10 합성생산 ─────────────────────────────────────────────────
+    { id:'s5',  dept:'합성생산',          material:'H811',      lot:'P-NC03-TolACT',        request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s6',  dept:'합성생산',          material:'LT359',     lot:'CMWLT359P2602001',     request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s7',  dept:'합성생산',          material:'LTM968',    lot:'F260305-82-001-5,000g',request:'',                                                   transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/10 정제생산 (시급) ──────────────────────────────────────────
+    { id:'s8',  dept:'정제생산/소자이관', material:'LT-PHM248', lot:'P-NA20-DCB2',          request:'PG1088 Lot 평가(미정) 출하대응을 위한 시급 요청',     transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s9',  dept:'정제생산/소자이관', material:'PG1088',    lot:'L26B-301-107(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s10', dept:'정제생산/소자이관', material:'PG1088-1',  lot:'L26B-327-103(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s11', dept:'정제생산/소자이관', material:'PG2464',    lot:'L26B-320-205(미정)',   request:'출하대응을 위한 시급 요청',                           transferDate:'2026-03-10', evalStart:'',           evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/11 정제생산 ─────────────────────────────────────────────────
+    { id:'s12', dept:'정제생산/소자이관', material:'PH1524',    lot:'P-NB23-DCB',           request:'3/17 출하대응을 위한 시급 요청',                      transferDate:'2026-03-11', evalStart:'2026-03-11', evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s13', dept:'정제생산/소자이관', material:'G22',       lot:'P-NB08-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'2026-03-25', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    { id:'s14', dept:'정제생산/소자이관', material:'G22',       lot:'P-NB22-DCE',           request:'PG267 Lot 평가(미정) 3/25 내 결과 확인 요청',         transferDate:'2026-03-11', evalStart:'2026-03-13', evalTarget:'2026-03-25', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-10' },
+    // ── 3/14 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s15', dept:'합성생산',          material:'LTM970',    lot:'F260314-82-002-3,000g',request:'',                                                   transferDate:'2026-03-14', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    { id:'s16', dept:'정제생산/소자이관', material:'PH633',     lot:'P-NA25-DCB',           request:'3/28 출하대응을 위한 시급 요청',                      transferDate:'2026-03-14', evalStart:'2026-03-14', evalTarget:'2026-03-28', urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    { id:'s17', dept:'정제생산/소자이관', material:'G22-P',     lot:'P-NB25-DCE',           request:'3/31 내 결과 확인 요청',                              transferDate:'2026-03-14', evalStart:'2026-03-14', evalTarget:'2026-03-31', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-14' },
+    // ── 3/17 합성(완료 3/25) + 정제 ──────────────────────────────────
+    { id:'s18', dept:'합성생산',          material:'H811-V2',   lot:'P-NC05-TolACT2',       request:'',                                                   transferDate:'2026-03-17', evalStart:'',           evalTarget:'',           urgent:false, completed:true,  completedAt:'2026-03-25', createdAt:'2026-03-17' },
+    { id:'s19', dept:'정제생산/소자이관', material:'LT-PHM250', lot:'P-NA22-DCB',           request:'4/3 출하 예정',                                       transferDate:'2026-03-17', evalStart:'2026-03-18', evalTarget:'2026-04-03', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-17' },
+    { id:'s20', dept:'정제생산/소자이관', material:'PH1524-B',  lot:'P-NB25-DCB2',          request:'시급 요청',                                           transferDate:'2026-03-17', evalStart:'2026-03-17', evalTarget:'',           urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-17' },
+    // ── 3/20 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s21', dept:'합성생산',          material:'LT398',     lot:'CMWLT398P2603001',     request:'',                                                   transferDate:'2026-03-20', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-20' },
+    { id:'s22', dept:'정제생산/소자이관', material:'PH1050',    lot:'P-NA28-DCB',           request:'3/31 출하대응 시급',                                  transferDate:'2026-03-20', evalStart:'2026-03-21', evalTarget:'2026-03-31', urgent:true,  completed:false, completedAt:null,         createdAt:'2026-03-20' },
+    // ── 3/25 정제 ────────────────────────────────────────────────────
+    { id:'s23', dept:'정제생산/소자이관', material:'PG2464-2',  lot:'L26B-322-207',         request:'4/7 내 결과 확인 요청',                               transferDate:'2026-03-25', evalStart:'2026-03-25', evalTarget:'2026-04-07', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-25' },
+    // ── 3/28 합성 + 정제 ─────────────────────────────────────────────
+    { id:'s24', dept:'합성생산',          material:'SGH306-28', lot:'F260328-82-003-2,000g',request:'',                                                   transferDate:'2026-03-28', evalStart:'',           evalTarget:'',           urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-28' },
+    { id:'s25', dept:'정제생산/소자이관', material:'PH1524-C',  lot:'P-NB26-DCB',           request:'4/4 출하대응',                                        transferDate:'2026-03-28', evalStart:'2026-03-28', evalTarget:'2026-04-04', urgent:false, completed:false, completedAt:null,         createdAt:'2026-03-28' },
+  ];
+  saveItems(sample);
+  curYear = 2026; curMonth = 2; // 2026년 3월
+  renderCalendar();
+}
+
+/* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+setFormDefaults();
+renderCalendar();
+
+})();
+</script>
+</body>
+</html>
