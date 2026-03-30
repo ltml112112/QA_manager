@@ -191,18 +191,18 @@ html, body {
 
 /* 날짜 셀 */
 .cal-cell {
-  min-height: 110px;
+  min-height: 90px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 5px 6px;
+  padding: 4px 5px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   position: relative;
-  overflow: hidden;
+  overflow: hidden;  /* 넘치는 카드 숨김 */
 }
 .cal-cell:hover {
   border-color: var(--border-hover);
@@ -257,39 +257,44 @@ html, body {
 
 /* ── 달력 카드 ───────────────────────────────────────────────────────── */
 .lot-card {
-  border-radius: 4px;
-  padding: 3px 6px;
+  border-radius: 3px;
+  padding: 2px 5px 2px 7px;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.5;
   border: 1px solid transparent;
+  border-left-width: 3px;        /* 왼쪽 컬러 바 */
   cursor: pointer;
-  word-break: break-all;
-  transition: filter 0.1s, transform 0.1s;
+  transition: filter 0.1s, opacity 0.1s;
   position: relative;
+  /* 1줄 말줄임 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
-.lot-card:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
-}
+.lot-card:hover { filter: brightness(1.1); }
 
 /* 합성생산 — 빨간색 */
 .lot-card.dept-synth {
-  background: rgba(239, 68, 68, 0.09);
-  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.07);
+  border-color: rgba(239, 68, 68, 0.2);
+  border-left-color: #ef4444;
   color: #ef4444;
 }
 
 /* 공정개발 — 초록색 */
 .lot-card.dept-proc {
-  background: rgba(16, 185, 129, 0.09);
-  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.2);
+  border-left-color: #10b981;
   color: #10b981;
 }
 
-/* 정제생산/소자이관 — 혼합 색상 (span으로 구분) */
+/* 정제생산/소자이관 */
 .lot-card.dept-refine {
   background: var(--surface-2);
   border-color: var(--border);
+  border-left-color: #9333ea;
 }
 .lot-card.dept-refine .c-purple { color: #9333ea; font-weight: 600; }
 .lot-card.dept-refine .c-dark   { color: var(--text); }
@@ -297,7 +302,7 @@ html, body {
 
 /* 완료된 카드 */
 .lot-card.is-done {
-  opacity: 0.38;
+  opacity: 0.35;
   text-decoration: line-through;
 }
 
@@ -1017,14 +1022,15 @@ function buildCardHTML(item) {
 function createCard(item) {
   var card = document.createElement('div');
   var cls  = 'lot-card';
-  if (item.dept === '합성생산')          cls += ' dept-synth';
-  else if (item.dept === '공정개발')     cls += ' dept-proc';
-  else                                   cls += ' dept-refine';
-  if (item.completed)                    cls += ' is-done';
-  card.className = card.className || '';  // (unused, set below)
+  if (item.dept === '합성생산')      cls += ' dept-synth';
+  else if (item.dept === '공정개발') cls += ' dept-proc';
+  else                               cls += ' dept-refine';
+  if (item.completed)                cls += ' is-done';
   card.className = cls;
   card.innerHTML = buildCardHTML(item);
   card.dataset.id = item.id;
+  // 호버 툴팁: 잘린 텍스트 전체 보기
+  card.title = buildMatText(item);
   return card;
 }
 
@@ -1125,7 +1131,8 @@ function renderCalendar() {
       var card = createCard(item);
       card.addEventListener('click', function (e) {
         e.stopPropagation();
-        openModal(dateStr);
+        // dateStr을 직접 쓰면 var 루프 클로저 버그 발생 → DOM에서 읽음
+        openModal(e.currentTarget.closest('.cal-cell').dataset.date);
       });
       cell.appendChild(card);
     });
