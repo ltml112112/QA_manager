@@ -282,14 +282,6 @@ html, body {
   color: #ef4444;
 }
 
-/* 공정개발 — 초록색 */
-.lot-card.dept-proc {
-  background: rgba(16, 185, 129, 0.07);
-  border-color: rgba(16, 185, 129, 0.2);
-  border-left-color: #10b981;
-  color: #10b981;
-}
-
 /* 정제생산/소자이관 */
 .lot-card.dept-refine {
   background: var(--surface-2);
@@ -304,6 +296,12 @@ html, body {
 .lot-card.is-done {
   opacity: 0.35;
   text-decoration: line-through;
+}
+
+/* 시급 요청 카드 강조 */
+.lot-card.is-urgent {
+  border-style: dashed !important;
+  border-left-style: solid !important;
 }
 
 /* ── D+N 뱃지 ────────────────────────────────────────────────────────── */
@@ -700,18 +698,6 @@ textarea.form-input {
 }
 .legend-spacer { flex: 1; }
 
-/* 완료 토글 */
-.done-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-}
-.done-toggle input { accent-color: var(--accent); cursor: pointer; }
-
 /* ── 수정 모드 취소 버튼 (기본 숨김) ────────────────────────────────── */
 #btnCancelEdit {
   display: none;
@@ -743,7 +729,6 @@ textarea.form-input {
           <select class="form-select" id="fDept" required>
             <option value="">선택하세요</option>
             <option value="합성생산">합성생산</option>
-            <option value="공정개발">공정개발</option>
             <option value="정제생산/소자이관">정제생산 / 소자이관</option>
           </select>
         </div>
@@ -786,9 +771,9 @@ textarea.form-input {
           <input class="form-input" type="date" id="fEvalStart">
         </div>
 
-        <!-- 소자평가 목표일 -->
+        <!-- 소자평가 완료 요청일 -->
         <div class="form-group">
-          <label class="fld-label" for="fEvalTarget">소자평가 목표일</label>
+          <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
           <input class="form-input" type="date" id="fEvalTarget">
         </div>
 
@@ -797,7 +782,7 @@ textarea.form-input {
         <!-- 긴급 출하 대응 -->
         <div class="urgent-row" id="urgentRow">
           <input type="checkbox" id="fUrgent">
-          <label for="fUrgent">⚡ 긴급 출하 대응</label>
+          <label for="fUrgent">⚡ 시급 요청</label>
         </div>
 
         <!-- 등록 / 수정 버튼 -->
@@ -828,24 +813,20 @@ textarea.form-input {
     <!-- 요약 스트립 -->
     <div class="summary-strip" id="summaryStrip"></div>
 
-    <!-- 범례 + 완료 토글 -->
+    <!-- 범례 -->
     <div class="legend-bar">
       <div class="legend-item">
         <div class="legend-dot" style="background:#ef4444;opacity:.75"></div>합성생산
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#10b981;opacity:.75"></div>공정개발
-      </div>
-      <div class="legend-item">
         <div class="legend-dot" style="background:#9333ea;opacity:.75"></div>정제생산/소자이관
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#ef4444"></div>D+7 이상 · 긴급
+        <div class="legend-dot" style="background:#ef4444"></div>D+7 이상 · 시급 요청
       </div>
-      <div class="legend-spacer"></div>
-      <label class="done-toggle">
-        <input type="checkbox" id="toggleDone"> 완료 항목 보기
-      </label>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--text-faint)"></div>완료
+      </div>
     </div>
 
     <!-- 달력 본문 -->
@@ -899,7 +880,6 @@ window.addEventListener('message', function (e) {
 
 /* ── 상수 ────────────────────────────────────────────────────────────── */
 var STORAGE_KEY  = 'qa_lot_schedule_v1';
-var showDone     = false;  // 완료 항목 달력 표시 여부
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var today    = new Date();
@@ -996,14 +976,12 @@ function buildMatText(item) {
 
 /* ── 카드 innerHTML 생성 (부서별 포맷 + D+N 뱃지) ────────────────────── */
 function buildCardHTML(item) {
-  var mat   = esc(buildMatText(item));
-  var badge = dnBadgeHTML(item);
+  var mat    = esc(buildMatText(item));
+  var badge  = dnBadgeHTML(item);
+  var urgent = item.urgent && !item.completed ? '⚡ ' : '';
 
   if (item.dept === '합성생산') {
-    return mat + badge;
-  }
-  if (item.dept === '공정개발') {
-    return mat + badge;
+    return urgent + mat + badge;
   }
   // 정제생산/소자이관 — (자주색 이관일) 검정재료명 <파란색 소자평가시작일> D+N
   var parts = '';
@@ -1022,10 +1000,10 @@ function buildCardHTML(item) {
 function createCard(item) {
   var card = document.createElement('div');
   var cls  = 'lot-card';
-  if (item.dept === '합성생산')      cls += ' dept-synth';
-  else if (item.dept === '공정개발') cls += ' dept-proc';
-  else                               cls += ' dept-refine';
-  if (item.completed)                cls += ' is-done';
+  if (item.dept === '합성생산') cls += ' dept-synth';
+  else                          cls += ' dept-refine';
+  if (item.completed)           cls += ' is-done';
+  if (item.urgent && !item.completed) cls += ' is-urgent';
   card.className = cls;
   card.innerHTML = buildCardHTML(item);
   card.dataset.id = item.id;
@@ -1045,7 +1023,6 @@ function renderSummary(items) {
   var strip   = document.getElementById('summaryStrip');
   var active  = items.filter(function (it) { return !it.completed; });
   var synth   = active.filter(function (it) { return it.dept === '합성생산'; });
-  var proc    = active.filter(function (it) { return it.dept === '공정개발'; });
   var refine  = active.filter(function (it) { return it.dept === '정제생산/소자이관'; });
   var alerts  = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; });
   var done    = items.filter(function (it) { return it.completed; });
@@ -1053,9 +1030,8 @@ function renderSummary(items) {
   var html = '<span class="sum-chip chip-total">진행 중 ' + active.length + '건</span>'
     + '<span class="sum-sep">|</span>';
   if (synth.length)  html += '<span class="sum-chip chip-synth">합성 ' + synth.length + '</span>';
-  if (proc.length)   html += '<span class="sum-chip chip-proc">공정 ' + proc.length + '</span>';
   if (refine.length) html += '<span class="sum-chip chip-refine">정제/소자 ' + refine.length + '</span>';
-  if (alerts.length) html += '<span class="sum-sep">|</span><span class="sum-chip chip-alert">⚡ 긴급·지연 ' + alerts.length + '</span>';
+  if (alerts.length) html += '<span class="sum-sep">|</span><span class="sum-chip chip-alert">⚡ 시급·지연 ' + alerts.length + '</span>';
   if (done.length)   html += '<span class="sum-sep">|</span><span class="sum-chip chip-done">완료 ' + done.length + '</span>';
 
   strip.innerHTML = html;
@@ -1072,11 +1048,10 @@ function renderCalendar() {
   var items = loadItems();
   renderSummary(items);
 
-  // 날짜별 아이템 인덱싱 (완료 토글 적용)
+  // 날짜별 아이템 인덱싱
   var byDate = {};
   items.forEach(function (it) {
     if (!it.transferDate) return;
-    if (it.completed && !showDone) return; // 완료 항목 필터
     if (!byDate[it.transferDate]) byDate[it.transferDate] = [];
     byDate[it.transferDate].push(it);
   });
@@ -1129,11 +1104,16 @@ function renderCalendar() {
 
     toShow.forEach(function (item) {
       var card = createCard(item);
-      card.addEventListener('click', function (e) {
-        e.stopPropagation();
-        // dateStr을 직접 쓰면 var 루프 클로저 버그 발생 → DOM에서 읽음
-        openModal(e.currentTarget.closest('.cal-cell').dataset.date);
-      });
+      (function(capturedItem) {
+        card.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (capturedItem.completed) {
+            openItemModal(capturedItem.id);
+          } else {
+            openModal(e.currentTarget.closest('.cal-cell').dataset.date);
+          }
+        });
+      })(item);
       cell.appendChild(card);
     });
 
@@ -1246,7 +1226,6 @@ function renderAC(query) {
 function setFormDefaults() {
   document.getElementById('fTransferDate').value = todayStr;
   document.getElementById('fEvalStart').value    = todayStr;
-  document.getElementById('fEvalTarget').value   = todayStr;
 }
 
 /* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
@@ -1333,12 +1312,6 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 });
 
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
-
-/* ── 완료 항목 보기 토글 ─────────────────────────────────────────────── */
-document.getElementById('toggleDone').addEventListener('change', function () {
-  showDone = this.checked;
-  renderCalendar();
-});
 
 /* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
 var modalCurrentDate = null;
