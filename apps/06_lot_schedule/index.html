@@ -1336,7 +1336,7 @@ function openModal(dateStr) {
       bodyEl.innerHTML = '<div class="modal-empty">진행 중인 항목이 없습니다.</div>';
     } else {
       // 부서별 그룹
-      var depts = ['합성생산', '공정개발', '정제생산/소자이관'];
+      var depts = ['합성생산', '정제생산/소자이관'];
       depts.forEach(function (dept) {
         var group = active.filter(function (it) { return it.dept === dept; });
         if (!group.length) return;
@@ -1352,7 +1352,7 @@ function openModal(dateStr) {
     var d   = new Date(dateStr + 'T00:00:00');
     var lbl = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 이관 항목';
     titleEl.textContent = lbl;
-    var dayItems = items.filter(function (it) { return it.transferDate === dateStr; });
+    var dayItems = items.filter(function (it) { return it.transferDate === dateStr && !it.completed; });
     bodyEl.innerHTML = '';
     if (!dayItems.length) {
       bodyEl.innerHTML = '<div class="modal-empty">이 날짜에 등록된 항목이 없습니다.</div>';
@@ -1367,6 +1367,24 @@ function openModal(dateStr) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   modalCurrentDate = null;
+}
+
+/* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
+function openItemModal(itemId) {
+  var items  = loadItems();
+  var item   = items.find(function (it) { return it.id === itemId; });
+  if (!item) return;
+
+  modalCurrentDate = item.transferDate; // refreshModal용 저장
+  var overlay = document.getElementById('modalOverlay');
+  var titleEl = document.getElementById('modalTitle');
+  var bodyEl  = document.getElementById('modalBody');
+
+  var mat = buildMatText(item);
+  titleEl.textContent = (item.completed ? '✓ 완료 — ' : '') + (mat.length > 30 ? mat.slice(0, 30) + '…' : mat);
+  bodyEl.innerHTML = '';
+  bodyEl.appendChild(buildDetailCard(item));
+  overlay.classList.add('open');
 }
 
 /* ── 모달 디테일 카드 생성 ────────────────────────────────────────────── */
@@ -1389,7 +1407,7 @@ function buildDetailCard(item) {
   if (item.urgent && !item.completed) {
     var urg = document.createElement('span');
     urg.className = 'badge-urgent';
-    urg.textContent = '⚡ 긴급';
+    urg.textContent = '⚡ 시급';
     top.appendChild(urg);
   }
 
