@@ -78,6 +78,7 @@ html, body {
   overflow: hidden;
   background: var(--bg);
   min-width: 0;
+  position: relative;
 }
 
 /* 캘린더 상단 헤더 바 */
@@ -91,14 +92,88 @@ html, body {
   flex-shrink: 0;
 }
 
+.cal-title-wrap {
+  flex: 1;
+  position: relative;
+  text-align: center;
+}
+
 .cal-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--text);
-  flex: 1;
   text-align: center;
   letter-spacing: -0.01em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
 }
+.cal-title:hover { background: var(--surface-2); }
+.cal-title .mp-caret { font-size: 11px; opacity: 0.55; }
+
+/* ── 월 선택 피커 ────────────────────────────────────────────────────── */
+.month-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+  z-index: 200;
+  display: none;
+  min-width: 230px;
+}
+.month-picker.open { display: block; }
+.mp-year-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mp-arrow {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 26px; height: 26px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+.mp-arrow:hover { background: var(--surface-2); }
+.mp-months {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.mp-month-btn {
+  padding: 7px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  font-family: var(--font-body);
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.mp-month-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.mp-month-btn.mp-cur { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 
 /* 네비게이션 버튼 공통 */
 .nav-btn {
@@ -890,7 +965,17 @@ textarea.form-input {
     <div class="cal-topbar">
       <button class="btn-toggle-form" id="btnToggleForm">◀ 폼</button>
       <button class="nav-btn" id="btnPrevMonth" title="이전 달">&#8249;</button>
-      <h2 class="cal-title" id="calTitle">— 년 — 월</h2>
+      <div class="cal-title-wrap">
+        <h2 class="cal-title" id="calTitle" title="클릭하여 년/월 선택">— 년 — 월 <span class="mp-caret">▾</span></h2>
+        <div class="month-picker" id="monthPicker">
+          <div class="mp-year-row">
+            <button class="mp-arrow" id="mpPrevYear">&#8249;</button>
+            <span id="mpYearLabel">2026</span>
+            <button class="mp-arrow" id="mpNextYear">&#8250;</button>
+          </div>
+          <div class="mp-months" id="mpMonths"></div>
+        </div>
+      </div>
       <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
       <button class="btn-today" id="btnToday">오늘</button>
       <button class="btn-sample" id="btnSample" title="샘플 데이터 로드">📋 샘플</button>
@@ -979,6 +1064,8 @@ function toDateStr(d) {
     + String(d.getDate()).padStart(2, '0');
 }
 var todayStr = toDateStr(today);
+// 오늘 날짜를 항상 최신으로 반환 (페이지를 오래 열어두어도 날짜 갱신)
+function getTodayStr() { return toDateStr(new Date()); }
 
 /* ── 고유 ID 생성 ─────────────────────────────────────────────────────── */
 function genId() {
@@ -1019,16 +1106,16 @@ function saveItems(items) {
 function calcDN(transferDateStr, asOf) {
   if (!transferDateStr) return null;
   var t = new Date(transferDateStr + 'T00:00:00');
-  var n = new Date((asOf || todayStr) + 'T00:00:00');
+  var n = new Date((asOf || getTodayStr()) + 'T00:00:00');
   return Math.floor((n - t) / 86400000);
 }
 
 // 뱃지 HTML 반환
-function dnBadgeHTML(item) {
+function dnBadgeHTML(item, asOf) {
   if (item.completed) {
     return '<span class="dn-badge dn-done">완료</span>';
   }
-  var dn = calcDN(item.transferDate);
+  var dn = calcDN(item.transferDate, asOf);
   if (dn === null) return '';
 
   var label = dn === 0 ? 'D+0' : (dn > 0 ? 'D+' + dn : 'D' + dn);
@@ -1062,9 +1149,9 @@ function buildMatText(item) {
 }
 
 /* ── 카드 innerHTML 생성 (부서별 포맷 + D+N 뱃지) ────────────────────── */
-function buildCardHTML(item) {
+function buildCardHTML(item, asOf) {
   var mat    = esc(buildMatText(item));
-  var badge  = dnBadgeHTML(item);
+  var badge  = dnBadgeHTML(item, asOf);
   var urgent = item.urgent && !item.completed ? '⚡ ' : '';
 
   if (item.dept === '합성생산') {
@@ -1084,7 +1171,7 @@ function buildCardHTML(item) {
 }
 
 /* ── 카드 DOM 요소 생성 ──────────────────────────────────────────────── */
-function createCard(item) {
+function createCard(item, asOf) {
   var card = document.createElement('div');
   var cls  = 'lot-card';
   if (item.dept === '합성생산') cls += ' dept-synth';
@@ -1092,7 +1179,7 @@ function createCard(item) {
   if (item.completed)           cls += ' is-done';
   if (item.urgent && !item.completed) cls += ' is-urgent';
   card.className = cls;
-  card.innerHTML = buildCardHTML(item);
+  card.innerHTML = buildCardHTML(item, asOf);
   card.dataset.id = item.id;
   // 호버 툴팁: 잘린 텍스트 전체 보기
   card.title = buildMatText(item);
@@ -1153,21 +1240,33 @@ function renderCalendar() {
   //  - 현재 달 보기: 이전 달 이관 항목 → 오늘 셀에 표시
   //  - 미래 달 보기: 이전 달 이관 항목 → 해당 달 1일 셀에 표시
   //  - 과거 달 보기: 원래 이관일에만 표시
+  var curTodayStr  = getTodayStr(); // 항상 최신 오늘 날짜
+  var nowDate      = new Date();
   var viewMonthStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-01';
-  var isCurMonth   = (curYear === today.getFullYear() && curMonth === today.getMonth());
-  var isCurrentOrFutureMonth =
-    curYear > today.getFullYear() ||
-    (curYear === today.getFullYear() && curMonth >= today.getMonth());
+  var isCurMonth   = (curYear === nowDate.getFullYear() && curMonth === nowDate.getMonth());
+  var isFutureMonth =
+    curYear > nowDate.getFullYear() ||
+    (curYear === nowDate.getFullYear() && curMonth > nowDate.getMonth());
+  var isCurrentOrFutureMonth = isCurMonth || isFutureMonth;
 
-  var byDate = {};
+  var byDate    = {};
+  var byDateAsOf = {}; // displayDate → asOf (미래 달 보기 시 projected D+N 기준일)
   items.forEach(function (it) {
     if (!it.transferDate) return;
     var displayDate = it.transferDate;
+    var asOf;
     // 미완료 항목만 carry-forward (완료는 이관일 고정)
     if (!it.completed && isCurrentOrFutureMonth && it.transferDate < viewMonthStr) {
-      displayDate = isCurMonth ? todayStr : viewMonthStr;
+      displayDate = isCurMonth ? curTodayStr : viewMonthStr;
+      if (isFutureMonth) asOf = displayDate; // 미래 달: displayDate 기준으로 projected
+    } else if (isFutureMonth) {
+      // 미래 달 내 항목: 각 날짜 기준 projected
+      asOf = displayDate;
     }
-    if (!byDate[displayDate]) byDate[displayDate] = [];
+    if (!byDate[displayDate]) {
+      byDate[displayDate] = [];
+      byDateAsOf[displayDate] = asOf;
+    }
     byDate[displayDate].push(it);
   });
 
@@ -1201,7 +1300,7 @@ function renderCalendar() {
     var cell = document.createElement('div');
     cell.className = 'cal-cell'
       + (otherMonth ? ' other-month' : '')
-      + (dateStr === todayStr ? ' is-today' : '');
+      + (dateStr === curTodayStr ? ' is-today' : '');
     cell.dataset.date = dateStr;
 
     // 날짜 숫자
@@ -1217,8 +1316,9 @@ function renderCalendar() {
     var toShow   = dayItems.slice(0, MAX_CARDS);
     var overflow = dayItems.length - toShow.length;
 
+    var cellAsOf = byDateAsOf[dateStr];
     toShow.forEach(function (item) {
-      var card = createCard(item);
+      var card = createCard(item, cellAsOf);
       (function(capturedItem) {
         card.addEventListener('click', function (e) {
           e.stopPropagation();
@@ -1276,7 +1376,7 @@ document.getElementById('btnToday').addEventListener('click', function () {
   curYear  = today.getFullYear();
   curMonth = today.getMonth();
   renderCalendar();
-  openModal(todayStr);
+  openModal(getTodayStr());
 });
 
 /* ── 재료명 자동완성 ─────────────────────────────────────────────────── */
@@ -1341,8 +1441,9 @@ function renderAC(query) {
 
 /* ── 폼 기본값 세팅 (리셋 후 날짜 기본값 채우기) ────────────────────── */
 function setFormDefaults() {
-  document.getElementById('fTransferDate').value = todayStr;
-  document.getElementById('fEvalStart').value    = todayStr;
+  var t = getTodayStr();
+  document.getElementById('fTransferDate').value = t;
+  document.getElementById('fEvalStart').value    = t;
 }
 
 /* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
@@ -1411,7 +1512,7 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
       id:          genId(),
       completed:   false,
       completedAt: null,
-      createdAt:   todayStr,
+      createdAt:   getTodayStr(),
     });
     items.push(newItem);
 
@@ -1439,7 +1540,8 @@ function openModal(dateStr) {
   var titleEl = document.getElementById('modalTitle');
   var bodyEl  = document.getElementById('modalBody');
   var items   = loadItems();
-  var isToday = (dateStr === todayStr);
+  var curT    = getTodayStr();
+  var isToday = (dateStr === curT);
 
   bodyEl.innerHTML = '';
   bodyEl.classList.remove('is-2col');
@@ -1448,7 +1550,7 @@ function openModal(dateStr) {
     // 오늘 클릭 → 합성생산: 오늘 이관만 / 정제생산: 전체 미완료
     titleEl.textContent = '📊 오늘 기준 전체 진행 현황';
     var active = items.filter(function (it) {
-      if (it.dept === '합성생산') return it.transferDate === todayStr && !it.completed;
+      if (it.dept === '합성생산') return it.transferDate === curT && !it.completed;
       return !it.completed;
     });
     active.sort(function (a, b) {
@@ -1462,7 +1564,7 @@ function openModal(dateStr) {
   } else {
     var d      = new Date(dateStr + 'T00:00:00');
     var lbl    = (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
-    var isPast = dateStr < todayStr;
+    var isPast = dateStr < curT;
 
     // 합성생산: 클릭 당일 이관만 / 정제생산: 그 날 기준 활성 전체
     var activeOnDate = items.filter(function (it) {
@@ -1867,7 +1969,7 @@ function markComplete(id) {
   var item  = items.find(function (it) { return it.id === id; });
   if (!item) return;
   item.completed   = true;
-  item.completedAt = todayStr;
+  item.completedAt = getTodayStr();
   saveItems(items);
   renderCalendar();
   refreshModal();
@@ -1938,6 +2040,74 @@ function loadSampleData() {
   curYear = 2026; curMonth = 2; // 2026년 3월
   renderCalendar();
 }
+
+/* ── 월/년 선택 피커 ─────────────────────────────────────────────────── */
+var mpOpen = false;
+var mpYear = curYear;
+
+function renderMonthPicker() {
+  document.getElementById('mpYearLabel').textContent = mpYear + '년';
+  var months = document.getElementById('mpMonths');
+  months.innerHTML = '';
+  var names = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  names.forEach(function(name, i) {
+    var btn = document.createElement('button');
+    btn.className = 'mp-month-btn' + (mpYear === curYear && i === curMonth ? ' mp-cur' : '');
+    btn.textContent = name;
+    btn.addEventListener('click', function() {
+      curYear  = mpYear;
+      curMonth = i;
+      renderCalendar();
+      closeMonthPicker();
+    });
+    months.appendChild(btn);
+  });
+}
+
+function openMonthPicker() {
+  mpYear = curYear;
+  renderMonthPicker();
+  document.getElementById('monthPicker').classList.add('open');
+  mpOpen = true;
+}
+
+function closeMonthPicker() {
+  document.getElementById('monthPicker').classList.remove('open');
+  mpOpen = false;
+}
+
+document.getElementById('calTitle').addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (mpOpen) closeMonthPicker(); else openMonthPicker();
+});
+document.getElementById('mpPrevYear').addEventListener('click', function(e) {
+  e.stopPropagation(); mpYear--; renderMonthPicker();
+});
+document.getElementById('mpNextYear').addEventListener('click', function(e) {
+  e.stopPropagation(); mpYear++; renderMonthPicker();
+});
+document.addEventListener('click', function() { if (mpOpen) closeMonthPicker(); });
+document.getElementById('monthPicker').addEventListener('click', function(e) { e.stopPropagation(); });
+
+// 피커가 열려 있을 때 renderCalendar 호출 시 현재 월 강조 갱신
+var _origRenderCalendar = renderCalendar;
+renderCalendar = function() {
+  _origRenderCalendar();
+  if (mpOpen) renderMonthPicker(); // 선택 강조 동기화
+};
+
+/* ── 휠 스크롤로 월 이동 ────────────────────────────────────────────── */
+document.querySelector('.cal-main').addEventListener('wheel', function(e) {
+  // 모달 열려 있으면 스크롤 무시
+  if (document.getElementById('modalOverlay').classList.contains('open')) return;
+  e.preventDefault();
+  if (e.deltaY > 0) {
+    curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; }
+  } else {
+    curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; }
+  }
+  renderCalendar();
+}, { passive: false });
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
