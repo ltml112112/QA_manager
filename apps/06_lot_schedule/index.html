@@ -903,6 +903,119 @@ textarea.form-input {
   margin-top: 6px;
 }
 
+/* ── 입력 방식 탭 ────────────────────────────────────────────────────── */
+.input-mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.input-mode-tab {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.input-mode-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── 메일 붙여넣기 패널 ───────────────────────────────────────────────── */
+#formMail { display: none; }
+#formMail.active { display: block; }
+#formDirect.hidden { display: none; }
+
+.mail-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.mail-paste-area {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 90px;
+  max-height: 160px;
+  resize: vertical;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+.mail-paste-area:focus { border-color: var(--accent); }
+
+/* 미리보기 테이블 래퍼 — 가로 스크롤 */
+.mail-preview-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.mail-preview-table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  font-size: 10.5px;
+}
+.mail-preview-table th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.mail-preview-table td {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+.mail-preview-table tbody tr.row-selected td {
+  background: rgba(190,0,57,.05);
+}
+.mail-preview-table .ref-col {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.dept-sel {
+  font-size: 10.5px;
+  padding: 2px 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  width: 72px;
+}
+.mail-import-footer {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mail-import-count {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex: 1;
+}
+.mail-parse-warn {
+  font-size: 11px;
+  color: var(--warning);
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(245,158,11,.08);
+  border-radius: var(--radius-sm);
+}
+
 </style>
 </head>
 <body>
@@ -918,7 +1031,14 @@ textarea.form-input {
         <span class="form-panel-title">소자평가 일정 등록</span>
       </div>
 
-      <!-- ── 등록 / 수정 폼 ── -->
+      <!-- 입력 방식 탭 -->
+      <div class="input-mode-tabs">
+        <button type="button" class="input-mode-tab active" id="tabDirect">✏️ 직접 입력</button>
+        <button type="button" class="input-mode-tab" id="tabMail">📧 메일 붙여넣기</button>
+      </div>
+
+      <!-- ── 직접 입력 폼 ── -->
+      <div id="formDirect">
       <form id="scheduleForm" autocomplete="off" novalidate>
         <input type="hidden" id="fEditId">
 
@@ -1000,6 +1120,17 @@ textarea.form-input {
         </button>
 
       </form>
+      </div><!-- /formDirect -->
+
+      <!-- ── 메일 붙여넣기 패널 ── -->
+      <div id="formMail">
+        <p class="mail-hint">이메일 표를 헤더 행 포함해 전체 선택 후 여기에 붙여넣으세요.</p>
+        <textarea class="mail-paste-area" id="mailPasteText"
+          placeholder="날짜&#9;품명&#9;Lot 번호&#9;중량(g)&#9;수령인&#9;비고&#9;..."></textarea>
+        <button type="button" class="btn btn-primary btn-block" id="btnMailParse"
+          style="margin-top:8px">🔍 분석하기</button>
+        <div id="mailPreview"></div>
+      </div><!-- /formMail -->
 
     </div>
   </aside>
@@ -2169,6 +2300,216 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
 renderCalendar();
+
+/* ════════════════════════════════════════════════════════════════════════
+   메일 붙여넣기 입력 모드
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ── 탭 전환 ─────────────────────────────────────────────────────────── */
+document.getElementById('tabDirect').addEventListener('click', function () {
+  document.getElementById('tabDirect').classList.add('active');
+  document.getElementById('tabMail').classList.remove('active');
+  document.getElementById('formDirect').classList.remove('hidden');
+  document.getElementById('formMail').classList.remove('active');
+});
+document.getElementById('tabMail').addEventListener('click', function () {
+  document.getElementById('tabMail').classList.add('active');
+  document.getElementById('tabDirect').classList.remove('active');
+  document.getElementById('formDirect').classList.add('hidden');
+  document.getElementById('formMail').classList.add('active');
+});
+
+/* ── 테이블 파싱 ─────────────────────────────────────────────────────── */
+function parsePastedTable(text) {
+  var lines = text.split(/\r?\n/).map(function (l) { return l.trimEnd(); });
+  // 빈 줄 제거 (맨 끝만 허용)
+  while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+  if (!lines.length) return null;
+
+  // 헤더 컬럼명 → 역할 매핑 (공백·괄호·단위 제거 후 소문자로 비교)
+  function normH(h) {
+    return h.replace(/\s+/g, '').replace(/[()（）ｇg]/gi, '').toLowerCase();
+  }
+  var ROLE = {
+    '날짜': 'date', '일자': 'date',
+    '품명': 'material',
+    'lot번호': 'lot', 'lot': 'lot',
+    '중량': 'weight',
+    '수령인': 'recipient',
+    '비고': 'comment',
+    '승화정제batchno': 'batchNo', '승화정제batch': 'batchNo',
+    '다음batch이관예정일정': 'skip', '다음batch': 'skip', '이관예정일정': 'skip',
+  };
+
+  // 헤더 행 탐색 (최대 앞 5줄)
+  var colMap = null; // idx → role
+  var headerIdx = -1;
+  for (var i = 0; i < Math.min(lines.length, 5); i++) {
+    var cells = lines[i].split('\t');
+    var map = {};
+    var hits = 0;
+    cells.forEach(function (c, idx) {
+      var r = ROLE[normH(c)];
+      if (r) { map[idx] = r; hits++; }
+    });
+    if (hits >= 2) { colMap = map; headerIdx = i; break; }
+  }
+  if (!colMap) return null;
+
+  var rows = [];
+  var lastDate = '';
+  for (var j = headerIdx + 1; j < lines.length; j++) {
+    var cells = lines[j].split('\t');
+    var row = {};
+    Object.keys(colMap).forEach(function (k) {
+      row[colMap[k]] = (cells[parseInt(k)] || '').trim();
+    });
+    if (row.skip !== undefined) delete row.skip;
+
+    // 날짜 carry-forward (병합 셀 → 빈 문자열)
+    if (row.date) {
+      var d = row.date.replace(/\./g, '-').replace(/\//g, '-');
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(d)) {
+        // 월/일 zero-pad
+        var parts = d.split('-');
+        d = parts[0] + '-' + parts[1].padStart(2,'0') + '-' + parts[2].padStart(2,'0');
+        lastDate = d;
+        row.date = d;
+      } else {
+        row.date = lastDate;
+      }
+    } else {
+      row.date = lastDate;
+    }
+
+    if (!row.material) continue; // 품명 없으면 스킵
+
+    // 부서 자동 감지
+    var cmt = row.comment || '';
+    row.dept = cmt.indexOf('합성생산') !== -1 ? '합성생산' : '정제생산/소자이관';
+
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ── 미리보기 테이블 렌더 ────────────────────────────────────────────── */
+function renderMailPreview(rows) {
+  var wrap = document.getElementById('mailPreview');
+
+  if (!rows) {
+    wrap.innerHTML = '<div class="mail-parse-warn">⚠ 헤더 행을 인식하지 못했습니다.<br>표 전체(헤더 포함)를 복사해 붙여넣어 주세요.</div>';
+    return;
+  }
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="mail-parse-warn">⚠ 인식된 데이터 행이 없습니다.</div>';
+    return;
+  }
+
+  var html = '<div class="mail-preview-wrap">'
+    + '<table class="mail-preview-table"><thead><tr>'
+    + '<th><input type="checkbox" id="mpCheckAll" checked title="전체 선택/해제"></th>'
+    + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot 번호</th><th>비고</th>'
+    + '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>'
+    + '</tr></thead><tbody>';
+
+  rows.forEach(function (row, i) {
+    html += '<tr class="row-selected" data-idx="' + i + '">'
+      + '<td><input type="checkbox" class="mp-chk" checked></td>'
+      + '<td>' + esc(row.date || '') + '</td>'
+      + '<td><select class="dept-sel">'
+      + '<option value="합성생산"'     + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
+      + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자</option>'
+      + '</select></td>'
+      + '<td>' + esc(row.material || '') + '</td>'
+      + '<td>' + esc(row.lot      || '') + '</td>'
+      + '<td>' + esc(row.comment  || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table>'
+    + '<div class="mail-import-footer">'
+    + '<span class="mail-import-count" id="mpCount">' + rows.length + '개 선택됨</span>'
+    + '<button type="button" class="btn btn-primary" id="btnMailImport">등록하기</button>'
+    + '</div></div>';
+
+  wrap.innerHTML = html;
+
+  function updateCount() {
+    var n = wrap.querySelectorAll('.mp-chk:checked').length;
+    document.getElementById('mpCount').textContent = n + '개 선택됨';
+  }
+
+  document.getElementById('mpCheckAll').addEventListener('change', function () {
+    var chk = this.checked;
+    wrap.querySelectorAll('.mp-chk').forEach(function (cb) {
+      cb.checked = chk;
+      cb.closest('tr').classList.toggle('row-selected', chk);
+    });
+    updateCount();
+  });
+
+  wrap.querySelectorAll('.mp-chk').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      this.closest('tr').classList.toggle('row-selected', this.checked);
+      updateCount();
+    });
+  });
+
+  document.getElementById('btnMailImport').addEventListener('click', function () {
+    var toAdd = [];
+    wrap.querySelectorAll('tbody tr').forEach(function (tr) {
+      var cb = tr.querySelector('.mp-chk');
+      if (!cb || !cb.checked) return;
+      var idx   = parseInt(tr.dataset.idx);
+      var row   = rows[idx];
+      var dept  = tr.querySelector('.dept-sel').value;
+      if (!row.date || !row.material) return;
+      toAdd.push({
+        id:           genId(),
+        dept:         dept,
+        material:     row.material,
+        lot:          row.lot      || '',
+        request:      row.comment  || '',
+        transferDate: row.date,
+        evalStart:    '',
+        evalTarget:   '',
+        urgent:       false,
+        completed:    false,
+        completedAt:  null,
+        createdAt:    getTodayStr(),
+      });
+    });
+
+    if (!toAdd.length) { alert('선택된 항목이 없습니다.'); return; }
+
+    var items = loadItems();
+    toAdd.forEach(function (it) { items.push(it); });
+    saveItems(items);
+
+    // 첫 번째 항목 날짜로 달력 이동
+    var d = new Date(toAdd[0].transferDate + 'T00:00:00');
+    if (!isNaN(d)) { curYear = d.getFullYear(); curMonth = d.getMonth(); }
+    renderCalendar();
+
+    document.getElementById('mailPasteText').value = '';
+    wrap.innerHTML = '<div class="alert-success" style="margin-top:10px;padding:10px;border-radius:8px">'
+      + '✅ ' + toAdd.length + '개 항목이 등록되었습니다.</div>';
+  });
+}
+
+/* ── 분석하기 버튼 ───────────────────────────────────────────────────── */
+document.getElementById('btnMailParse').addEventListener('click', function () {
+  var text = document.getElementById('mailPasteText').value;
+  if (!text.trim()) {
+    document.getElementById('mailPreview').innerHTML = '<div class="mail-parse-warn">⚠ 붙여넣기 내용이 없습니다.</div>';
+    return;
+  }
+  renderMailPreview(parsePastedTable(text));
+});
 
 })();
 </script>
