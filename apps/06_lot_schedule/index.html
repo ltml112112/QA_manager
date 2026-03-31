@@ -935,7 +935,7 @@ textarea.form-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 24px 64px rgba(0,0,0,.45);
-  width: min(980px, 94vw);
+  width: min(1120px, 96vw);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
@@ -978,68 +978,67 @@ textarea.form-input {
   padding: 14px 18px;
 }
 
-/* 그리드 테이블 */
-.mail-grid-wrap { overflow-x: auto; }
-.mail-grid {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 12.5px;
-}
-.mail-grid colgroup col.col-chk  { width: 32px; }
-.mail-grid colgroup col.col-date { width: 110px; }
-.mail-grid colgroup col.col-mat  { width: 100px; }
-.mail-grid colgroup col.col-lot  { width: 180px; }
-.mail-grid colgroup col.col-cmt  { width: 180px; }
-.mail-grid colgroup col.col-dept { width: 110px; }
-
-.mail-grid th {
+/* ── 드롭존 ──────────────────────────────────────────────────────────── */
+.mail-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
   background: var(--surface-2);
-  color: var(--text-muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 7px 8px;
-  border: 1px solid var(--border);
-  white-space: nowrap;
-  text-align: left;
+  cursor: default;
+  transition: border-color .18s, background .18s;
   user-select: none;
 }
-.mail-grid td {
+.mail-dropzone.drag-over {
+  border-color: var(--accent);
+  background: rgba(190,0,57,.06);
+}
+.mail-dz-icon  { font-size: 36px; margin-bottom: 10px; }
+.mail-dz-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.mail-dz-hint  { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+.mail-dz-hint b { color: var(--text); }
+
+/* ── 파싱 결과 미리보기 ──────────────────────────────────────────────── */
+.mail-preview-wrap { overflow-x: auto; margin-top: 4px; }
+.mail-preview-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.mail-preview-table th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 8px;
   border: 1px solid var(--border);
-  padding: 1px 2px;
+  white-space: nowrap;
+}
+.mail-preview-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
   vertical-align: middle;
 }
-.mail-grid td.td-chk  { text-align: center; padding: 0; }
-.mail-grid td.td-dept { padding: 1px 3px; }
-
-.mg-input {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 12px;
-  font-family: inherit;
-  padding: 5px 6px;
-  outline: none;
-}
-.mg-input:focus { background: rgba(190,0,57,.06); }
-.mg-input.has-val { background: rgba(190,0,57,.03); }
-
-.mg-dept {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  background: transparent;
-  color: var(--text);
+.mail-preview-table td.td-chk  { text-align: center; width: 28px; }
+.mail-preview-table td.td-dept { width: 96px; }
+.mail-preview-table td.ref-col { color: var(--text-faint); font-size: 11px; }
+.mp-dept {
   font-size: 11.5px;
-  font-family: inherit;
-  padding: 5px 4px;
-  outline: none;
-  cursor: pointer;
+  padding: 2px 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  width: 92px;
 }
-.mg-dept:focus { background: rgba(190,0,57,.06); }
+.mail-parse-warn {
+  font-size: 12px;
+  color: var(--warning);
+  padding: 10px 14px;
+  background: rgba(245,158,11,.08);
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+}
 
 .mail-popup-footer {
   display: flex;
@@ -1232,36 +1231,28 @@ textarea.form-input {
 
     <div class="mail-popup-header">
       <span class="mail-popup-header-title">📧 메일 데이터 붙여넣기</span>
-      <span class="mail-popup-header-hint">첫 번째 날짜 셀을 클릭한 뒤 Ctrl+V 로 붙여넣으세요</span>
+      <span class="mail-popup-header-hint">이메일 표를 드래그하거나 Ctrl+V 로 붙여넣으세요</span>
       <button type="button" class="mail-popup-close" id="btnMailPopupClose">✕</button>
     </div>
 
-    <div class="mail-popup-body">
-      <div class="mail-grid-wrap">
-        <table class="mail-grid" id="mailGrid">
-          <colgroup>
-            <col class="col-chk"><col class="col-date"><col class="col-mat">
-            <col class="col-lot"><col class="col-cmt"><col class="col-dept">
-          </colgroup>
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="mgCheckAll" checked title="전체 선택/해제"></th>
-              <th>날짜<span style="color:var(--accent)">*</span></th>
-              <th>품명<span style="color:var(--accent)">*</span></th>
-              <th>Lot 번호</th>
-              <th>비고</th>
-              <th>부서</th>
-            </tr>
-          </thead>
-          <tbody id="mailGridBody"></tbody>
-        </table>
+    <div class="mail-popup-body" id="mailPopupBody">
+      <!-- 드롭존 -->
+      <div class="mail-dropzone" id="mailDropzone">
+        <div class="mail-dz-icon">📋</div>
+        <div class="mail-dz-title">이메일 표를 여기에 드래그하거나 붙여넣으세요</div>
+        <div class="mail-dz-hint">
+          이메일에서 표 전체 선택 후 이 영역으로 <b>드래그 드롭</b><br>
+          또는 복사(Ctrl+C) 후 <b>Ctrl+V</b>
+        </div>
       </div>
+      <!-- 파싱 결과 -->
+      <div id="mailParseResult"></div>
     </div>
 
     <div class="mail-popup-footer">
-      <span class="mg-count" id="mgCount">입력된 행 없음</span>
-      <button type="button" class="btn btn-secondary" id="btnMailGridClear">초기화</button>
-      <button type="button" class="btn btn-primary"   id="btnMailGridImport">등록하기</button>
+      <span class="mg-count" id="mgCount"></span>
+      <button type="button" class="btn btn-secondary" id="btnMailGridClear" style="display:none">↩ 다시 입력</button>
+      <button type="button" class="btn btn-primary"   id="btnMailGridImport" style="display:none">등록하기</button>
     </div>
 
   </div>
@@ -2368,14 +2359,10 @@ setFormDefaults();
 renderCalendar();
 
 /* ════════════════════════════════════════════════════════════════════════
-   메일 붙여넣기 팝업 그리드
+   메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서
    ════════════════════════════════════════════════════════════════════════ */
 
-/* ── 그리드 상수 ─────────────────────────────────────────────────────── */
-var MG_INIT_ROWS = 20; // 초기 빈 행 수
-// 컬럼 인덱스 (체크박스 제외): 0=날짜, 1=품명, 2=Lot, 3=비고 → 부서는 select
-var MG_COL_DATE = 0, MG_COL_MAT = 1, MG_COL_LOT = 2, MG_COL_CMT = 3;
-var MG_COL_COUNT = 4;
+var mailParsedRows = null; // 파싱된 결과 저장
 
 /* ── 날짜 정규화 ─────────────────────────────────────────────────────── */
 function normDate(s) {
@@ -2391,206 +2378,199 @@ function autoDept(comment) {
   return (comment && comment.indexOf('합성생산') !== -1) ? '합성생산' : '정제생산/소자이관';
 }
 
-/* ── 그리드 행 생성 ──────────────────────────────────────────────────── */
-function createGridRow(rowIdx) {
-  var tr = document.createElement('tr');
-  tr.dataset.row = rowIdx;
-
-  // 체크박스
-  var tdChk = document.createElement('td');
-  tdChk.className = 'td-chk';
-  var chk = document.createElement('input');
-  chk.type = 'checkbox'; chk.className = 'mg-row-chk'; chk.checked = false;
-  tdChk.appendChild(chk);
-  tr.appendChild(tdChk);
-
-  // 텍스트 입력 4칸
-  [MG_COL_DATE, MG_COL_MAT, MG_COL_LOT, MG_COL_CMT].forEach(function (colIdx) {
-    var td = document.createElement('td');
-    var inp = document.createElement('input');
-    inp.type = 'text';
-    inp.className = 'mg-input';
-    inp.dataset.row = rowIdx;
-    inp.dataset.col = colIdx;
-    inp.setAttribute('autocomplete', 'off');
-    td.appendChild(inp);
-    tr.appendChild(td);
-  });
-
-  // 부서 select
-  var tdDept = document.createElement('td');
-  tdDept.className = 'td-dept';
-  var sel = document.createElement('select');
-  sel.className = 'mg-dept';
-  ['합성생산', '정제생산/소자이관'].forEach(function (v) {
-    var opt = document.createElement('option');
-    opt.value = v; opt.textContent = v === '합성생산' ? '합성생산' : '정제/소자이관';
-    sel.appendChild(opt);
-  });
-  sel.value = '정제생산/소자이관';
-  tdDept.appendChild(sel);
-  tr.appendChild(tdDept);
-
-  return tr;
-}
-
-/* ── 그리드 초기화 ───────────────────────────────────────────────────── */
-function initMailGrid() {
-  var tbody = document.getElementById('mailGridBody');
-  tbody.innerHTML = '';
-  for (var i = 0; i < MG_INIT_ROWS; i++) {
-    tbody.appendChild(createGridRow(i));
-  }
-  bindGridEvents();
-  updateMgCount();
-}
-
-/* ── 현재 행 수 ──────────────────────────────────────────────────────── */
-function getGridRowCount() {
-  return document.getElementById('mailGridBody').rows.length;
-}
-
-/* ── 특정 셀 input 반환 ──────────────────────────────────────────────── */
-function getGridInput(rowIdx, colIdx) {
-  return document.querySelector('#mailGridBody .mg-input[data-row="' + rowIdx + '"][data-col="' + colIdx + '"]');
-}
-function getGridDept(rowIdx) {
-  var tr = document.querySelector('#mailGridBody tr[data-row="' + rowIdx + '"]');
-  return tr ? tr.querySelector('.mg-dept') : null;
-}
-function getGridChk(rowIdx) {
-  var tr = document.querySelector('#mailGridBody tr[data-row="' + rowIdx + '"]');
-  return tr ? tr.querySelector('.mg-row-chk') : null;
-}
-
-/* ── 행 추가 ─────────────────────────────────────────────────────────── */
-function ensureGridRows(needed) {
-  var tbody = document.getElementById('mailGridBody');
-  while (getGridRowCount() < needed) {
-    tbody.appendChild(createGridRow(getGridRowCount()));
-    bindRowEvents(tbody.rows[tbody.rows.length - 1]);
-  }
-}
-
-/* ── 카운트 갱신 ─────────────────────────────────────────────────────── */
-function updateMgCount() {
-  var filled = 0;
-  var tbody = document.getElementById('mailGridBody');
-  for (var i = 0; i < tbody.rows.length; i++) {
-    var date = getGridInput(i, MG_COL_DATE);
-    var mat  = getGridInput(i, MG_COL_MAT);
-    if (date && date.value.trim() && mat && mat.value.trim()) filled++;
-  }
-  var el = document.getElementById('mgCount');
-  if (el) el.textContent = filled ? filled + '개 입력됨' : '입력된 행 없음';
-}
-
-/* ── has-val 클래스 토글 ──────────────────────────────────────────────── */
-function refreshInputStyle(inp) {
-  inp.classList.toggle('has-val', !!inp.value.trim());
-}
-
-/* ── 날짜 carry-forward 적용 ─────────────────────────────────────────── */
-function applyDateCarryForward() {
-  var last = '';
-  var n = getGridRowCount();
-  for (var i = 0; i < n; i++) {
-    var inp = getGridInput(i, MG_COL_DATE);
-    if (!inp) continue;
-    var v = normDate(inp.value);
-    if (v && v !== inp.value) inp.value = v;
-    if (v) { last = v; }
-    else if (last) { inp.value = last; refreshInputStyle(inp); }
-  }
-}
-
-/* ── 부서 자동 업데이트 ──────────────────────────────────────────────── */
-function applyAutoDept() {
-  var n = getGridRowCount();
-  for (var i = 0; i < n; i++) {
-    var cmt  = getGridInput(i, MG_COL_CMT);
-    var dept = getGridDept(i);
-    if (cmt && dept) dept.value = autoDept(cmt.value);
-  }
-}
-
-/* ── 체크박스 동기 (날짜+품명 있는 행 자동 체크) ─────────────────────── */
-function applyAutoCheck() {
-  var n = getGridRowCount();
-  for (var i = 0; i < n; i++) {
-    var date = getGridInput(i, MG_COL_DATE);
-    var mat  = getGridInput(i, MG_COL_MAT);
-    var chk  = getGridChk(i);
-    if (!chk) continue;
-    chk.checked = !!(date && date.value.trim() && mat && mat.value.trim());
-  }
-  // 전체 체크박스 상태 동기
-  var total   = document.querySelectorAll('#mailGridBody .mg-row-chk').length;
-  var checked = document.querySelectorAll('#mailGridBody .mg-row-chk:checked').length;
-  var all = document.getElementById('mgCheckAll');
-  if (all) all.checked = total > 0 && checked === total;
-}
-
-/* ── 붙여넣기 처리 ───────────────────────────────────────────────────── */
-function handleGridPaste(e, startRowIdx, startColIdx) {
-  e.preventDefault();
-  var raw  = (e.clipboardData || window.clipboardData).getData('text/plain');
-  var pRows = raw.split(/\r?\n/).filter(function (l) { return l.trim(); })
-                 .map(function (l) { return l.split('\t'); });
-
-  ensureGridRows(startRowIdx + pRows.length);
-
-  pRows.forEach(function (pRow, ri) {
-    pRow.forEach(function (val, ci) {
-      var r = startRowIdx + ri;
-      var c = startColIdx + ci;
-      if (c >= MG_COL_COUNT) return; // 컬럼 범위 초과 무시
-      var inp = getGridInput(r, c);
-      if (inp) { inp.value = val.trim(); refreshInputStyle(inp); }
+/* ── HTML 테이블 → 2D 배열 (rowspan/colspan 완전 처리) ──────────────── */
+function htmlTableToGrid(table) {
+  var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+  var grid = [];
+  rows.forEach(function (tr, ri) {
+    if (!grid[ri]) grid[ri] = [];
+    var col = 0;
+    var cells = Array.prototype.slice.call(tr.querySelectorAll('td, th'));
+    cells.forEach(function (cell) {
+      while (grid[ri][col] !== undefined) col++; // 이미 채워진 칸 건너뜀
+      var text = cell.textContent.replace(/\s+/g, ' ').trim();
+      var cs   = parseInt(cell.getAttribute('colspan') || '1');
+      var rs   = parseInt(cell.getAttribute('rowspan') || '1');
+      for (var r = 0; r < rs; r++) {
+        if (!grid[ri + r]) grid[ri + r] = [];
+        for (var c = 0; c < cs; c++) {
+          grid[ri + r][col + c] = text;
+        }
+      }
+      col += cs;
     });
   });
-
-  applyDateCarryForward();
-  applyAutoDept();
-  applyAutoCheck();
-  updateMgCount();
+  return grid;
 }
 
-/* ── 이벤트 바인딩 (단일 행) ─────────────────────────────────────────── */
-function bindRowEvents(tr) {
-  tr.querySelectorAll('.mg-input').forEach(function (inp) {
-    inp.addEventListener('paste', function (e) {
-      handleGridPaste(e, parseInt(inp.dataset.row), parseInt(inp.dataset.col));
+/* ── TSV → 2D 배열 ───────────────────────────────────────────────────── */
+function tsvToGrid(text) {
+  return text.split(/\r?\n/)
+    .filter(function (l) { return l.trim(); })
+    .map(function (l) { return l.split('\t').map(function (c) { return c.trim(); }); });
+}
+
+/* ── 헤더 감지 ───────────────────────────────────────────────────────── */
+// 알려진 8개 컬럼 헤더 (공백·괄호·단위·점 제거 후 소문자로 비교)
+var MAIL_COL_ROLES = {
+  '날짜': 'date',   '일자': 'date',
+  '품명': 'material',
+  'lot번호': 'lot', 'lot': 'lot',
+  '중량': 'weight', '중량g': 'weight',
+  '수령인': 'recipient',
+  '비고': 'comment',
+  '승화정제batchno': 'batchNo', '승화정제batch': 'batchNo',
+  '다음batch이관예정일정': 'skip', '다음batch': 'skip', '이관예정일정': 'skip',
+};
+function normHeaderKey(h) {
+  return h.replace(/\s+/g,'').replace(/[()（）\[\].·]/g,'').replace(/[gｇ]/gi,'').toLowerCase();
+}
+function detectMailHeader(grid) {
+  for (var i = 0; i < Math.min(grid.length, 5); i++) {
+    var row = grid[i] || [];
+    var map = {}, hits = 0;
+    row.forEach(function (cell, j) {
+      var role = MAIL_COL_ROLES[normHeaderKey(cell || '')];
+      if (role) { map[j] = role; hits++; }
     });
-    inp.addEventListener('input', function () {
-      refreshInputStyle(inp);
-      updateMgCount();
+    if (hits >= 3) return { idx: i, colMap: map };
+  }
+  return null;
+}
+
+/* ── 데이터 추출 (헤더 이후 행 → {date,material,lot,comment,...}) ──── */
+function extractMailRows(grid, headerInfo) {
+  var colMap = headerInfo.colMap;
+  var rows = [];
+  // TSV carry-forward: 이전 행 값 저장
+  var prev = {};
+  for (var i = headerInfo.idx + 1; i < grid.length; i++) {
+    var cells = grid[i] || [];
+    var row = {};
+    Object.keys(colMap).forEach(function (k) {
+      var val = (cells[parseInt(k)] || '').trim();
+      var role = colMap[k];
+      // 비어 있으면 이전 행 값 carry-forward
+      row[role] = val || prev[role] || '';
+      if (val) prev[role] = val; // 새 값으로 갱신
     });
+    if (!row.material) continue; // 품명 없는 행 스킵
+    if (row.date) row.date = normDate(row.date);
+    row.dept = autoDept(row.comment || '');
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ── 미리보기 렌더 ────────────────────────────────────────────────────── */
+function renderMailPreview(rows) {
+  var result = document.getElementById('mailParseResult');
+  var dz     = document.getElementById('mailDropzone');
+  var btnClear  = document.getElementById('btnMailGridClear');
+  var btnImport = document.getElementById('btnMailGridImport');
+  var countEl   = document.getElementById('mgCount');
+
+  if (!rows || !rows.length) {
+    result.innerHTML = '<div class="mail-parse-warn">⚠ 인식된 항목이 없습니다. 헤더 행이 포함된 표 전체를 드래그하거나 붙여넣어 주세요.</div>';
+    countEl.textContent = '';
+    btnImport.style.display = 'none';
+    btnClear.style.display  = 'none';
+    dz.style.display = '';
+    return;
+  }
+
+  dz.style.display = 'none';
+  btnClear.style.display  = '';
+  btnImport.style.display = '';
+
+  function updateCount() {
+    var n = result.querySelectorAll('.mp-chk:checked').length;
+    countEl.textContent = n + '개 선택됨';
+  }
+
+  var html = '<div class="mail-preview-wrap">'
+    + '<table class="mail-preview-table"><thead><tr>'
+    + '<th class="td-chk"><input type="checkbox" id="mpCheckAll" checked></th>'
+    + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot 번호</th><th>비고</th>'
+    + '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>'
+    + '</tr></thead><tbody>';
+
+  rows.forEach(function (row, i) {
+    html += '<tr data-idx="' + i + '">'
+      + '<td class="td-chk"><input type="checkbox" class="mp-chk" checked></td>'
+      + '<td>' + esc(row.date     || '') + '</td>'
+      + '<td class="td-dept"><select class="mp-dept">'
+      + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
+      + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
+      + '</select></td>'
+      + '<td>' + esc(row.material  || '') + '</td>'
+      + '<td>' + esc(row.lot       || '') + '</td>'
+      + '<td>' + esc(row.comment   || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>'
+      + '</tr>';
   });
-}
 
-/* ── 이벤트 바인딩 (전체 그리드) ────────────────────────────────────── */
-function bindGridEvents() {
-  document.getElementById('mailGridBody').querySelectorAll('tr').forEach(bindRowEvents);
+  html += '</tbody></table></div>';
+  result.innerHTML = html;
+  updateCount();
 
-  document.getElementById('mgCheckAll').addEventListener('change', function () {
+  document.getElementById('mpCheckAll').addEventListener('change', function () {
     var chk = this.checked;
-    document.querySelectorAll('#mailGridBody .mg-row-chk').forEach(function (cb) {
-      cb.checked = chk;
-    });
+    result.querySelectorAll('.mp-chk').forEach(function (cb) { cb.checked = chk; });
+    updateCount();
   });
+  result.querySelectorAll('.mp-chk').forEach(function (cb) {
+    cb.addEventListener('change', updateCount);
+  });
+}
+
+/* ── 데이터 처리 진입점 (HTML 우선, TSV 폴백) ─────────────────────────── */
+function processMailData(html, plain) {
+  var grid = null, usedHtml = false;
+
+  if (html) {
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    var table = div.querySelector('table');
+    if (table) { grid = htmlTableToGrid(table); usedHtml = true; }
+  }
+  if (!grid && plain) {
+    grid = tsvToGrid(plain);
+  }
+  if (!grid || !grid.length) {
+    document.getElementById('mailParseResult').innerHTML =
+      '<div class="mail-parse-warn">⚠ 표 데이터를 인식하지 못했습니다.</div>';
+    return;
+  }
+
+  var headerInfo = detectMailHeader(grid);
+  if (!headerInfo) {
+    document.getElementById('mailParseResult').innerHTML =
+      '<div class="mail-parse-warn">⚠ 헤더 행(날짜/품명/Lot 번호 등)을 인식하지 못했습니다.<br>표 전체(헤더 포함)를 선택해 주세요.</div>';
+    return;
+  }
+
+  // HTML 경로는 rowspan이 이미 펼쳐져 있으므로 carry-forward 불필요,
+  // TSV 경로는 extractMailRows 내부에서 처리
+  mailParsedRows = extractMailRows(grid, headerInfo);
+  renderMailPreview(mailParsedRows);
+}
+
+/* ── 팝업 상태 리셋 ──────────────────────────────────────────────────── */
+function resetMailPopup() {
+  mailParsedRows = null;
+  document.getElementById('mailParseResult').innerHTML = '';
+  document.getElementById('mailDropzone').style.display = '';
+  document.getElementById('btnMailGridClear').style.display  = 'none';
+  document.getElementById('btnMailGridImport').style.display = 'none';
+  document.getElementById('mgCount').textContent = '';
 }
 
 /* ── 팝업 열기 / 닫기 ────────────────────────────────────────────────── */
-function openMailPopup() {
-  document.getElementById('mailPopupOverlay').classList.add('open');
-  // 첫 날짜 셀에 포커스
-  var first = getGridInput(0, MG_COL_DATE);
-  if (first) setTimeout(function () { first.focus(); }, 80);
-}
-function closeMailPopup() {
-  document.getElementById('mailPopupOverlay').classList.remove('open');
-}
+function openMailPopup()  { document.getElementById('mailPopupOverlay').classList.add('open'); }
+function closeMailPopup() { document.getElementById('mailPopupOverlay').classList.remove('open'); }
 
 document.getElementById('btnOpenMailPopup').addEventListener('click', openMailPopup);
 document.getElementById('btnMailPopupClose').addEventListener('click', closeMailPopup);
@@ -2598,36 +2578,50 @@ document.getElementById('mailPopupOverlay').addEventListener('click', function (
   if (e.target === this) closeMailPopup();
 });
 
-/* ── 초기화 버튼 ─────────────────────────────────────────────────────── */
-document.getElementById('btnMailGridClear').addEventListener('click', function () {
-  if (confirm('입력 내용을 모두 지우겠습니까?')) initMailGrid();
+/* ── 드롭존 이벤트 ───────────────────────────────────────────────────── */
+var dz = document.getElementById('mailDropzone');
+dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', function ()  { dz.classList.remove('drag-over'); });
+dz.addEventListener('drop', function (e) {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  processMailData(
+    e.dataTransfer.getData('text/html'),
+    e.dataTransfer.getData('text/plain')
+  );
 });
+
+/* ── Ctrl+V (팝업 열려 있을 때 전역 붙여넣기) ────────────────────────── */
+document.addEventListener('paste', function (e) {
+  if (!document.getElementById('mailPopupOverlay').classList.contains('open')) return;
+  processMailData(
+    e.clipboardData.getData('text/html'),
+    e.clipboardData.getData('text/plain')
+  );
+});
+
+/* ── 다시 입력 버튼 ──────────────────────────────────────────────────── */
+document.getElementById('btnMailGridClear').addEventListener('click', resetMailPopup);
 
 /* ── 등록하기 ────────────────────────────────────────────────────────── */
 document.getElementById('btnMailGridImport').addEventListener('click', function () {
-  var tbody = document.getElementById('mailGridBody');
+  if (!mailParsedRows || !mailParsedRows.length) { alert('파싱된 데이터가 없습니다.'); return; }
+
   var toAdd = [];
-
-  for (var i = 0; i < tbody.rows.length; i++) {
-    var chk  = getGridChk(i);
-    if (!chk || !chk.checked) continue;
-    var date = getGridInput(i, MG_COL_DATE);
-    var mat  = getGridInput(i, MG_COL_MAT);
-    var lot  = getGridInput(i, MG_COL_LOT);
-    var cmt  = getGridInput(i, MG_COL_CMT);
-    var dept = getGridDept(i);
-
-    var dateVal = normDate(date ? date.value : '');
-    var matVal  = mat  ? mat.value.trim()  : '';
-    if (!dateVal || !matVal) continue;
-
+  document.querySelectorAll('#mailParseResult .mp-chk').forEach(function (cb) {
+    if (!cb.checked) return;
+    var tr   = cb.closest('tr');
+    var idx  = parseInt(tr.dataset.idx);
+    var row  = mailParsedRows[idx];
+    var dept = tr.querySelector('.mp-dept').value;
+    if (!row.date || !row.material) return;
     toAdd.push({
       id:           genId(),
-      dept:         dept ? dept.value : '정제생산/소자이관',
-      material:     matVal,
-      lot:          lot ? lot.value.trim() : '',
-      request:      cmt ? cmt.value.trim() : '',
-      transferDate: dateVal,
+      dept:         dept,
+      material:     row.material,
+      lot:          row.lot      || '',
+      request:      row.comment  || '',
+      transferDate: row.date,
       evalStart:    '',
       evalTarget:   '',
       urgent:       false,
@@ -2635,9 +2629,9 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
       completedAt:  null,
       createdAt:    getTodayStr(),
     });
-  }
+  });
 
-  if (!toAdd.length) { alert('날짜와 품명이 입력된 선택 항목이 없습니다.'); return; }
+  if (!toAdd.length) { alert('날짜와 품명이 있는 선택 항목이 없습니다.'); return; }
 
   var items = loadItems();
   toAdd.forEach(function (it) { items.push(it); });
@@ -2648,12 +2642,9 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
   renderCalendar();
 
   closeMailPopup();
-  initMailGrid(); // 등록 후 그리드 초기화
+  resetMailPopup();
   alert(toAdd.length + '개 항목이 등록되었습니다.');
 });
-
-/* ── 그리드 최초 초기화 ──────────────────────────────────────────────── */
-initMailGrid();
 
 })();
 </script>
