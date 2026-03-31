@@ -249,7 +249,7 @@ html, body {
 /* ── 달력 본문 영역 ──────────────────────────────────────────────────── */
 .cal-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -273,16 +273,24 @@ html, body {
 .cal-dow.sun { color: #ef4444; }
 .cal-dow.sat { color: #3b82f6; }
 
+/* 달력 그리드 래퍼 — 슬라이드 애니메이션용 클리핑 컨테이너 */
+.cal-grid-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
 /* 달력 그리드 */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  /* grid-auto-rows는 JS에서 동적으로 설정 */
 }
 
 /* 날짜 셀 */
 .cal-cell {
-  min-height: 90px;
+  min-height: 80px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1060,9 +1068,9 @@ textarea.form-input {
         <div class="cal-dow sat">토</div>
       </div>
 
-      <!-- 날짜 그리드 (JS가 채움) -->
-      <div class="cal-grid" id="calGrid">
-        <!-- STEP 4에서 렌더링 예정 -->
+      <!-- 날짜 그리드 래퍼 (슬라이드 애니메이션 클리핑) -->
+      <div class="cal-grid-wrap" id="calGridWrap">
+        <div class="cal-grid" id="calGrid"></div>
       </div>
 
     </div>
@@ -1103,6 +1111,10 @@ var today    = new Date();
 var curYear  = today.getFullYear();
 var curMonth = today.getMonth(); // 0-indexed
 
+var VISIBLE_ROWS = 6;       // 화면에 표시할 주(행) 수
+var viewStart;               // Date — 캘린더 첫 번째 셀의 일요일
+var isScrolling = false;     // 슬라이드 애니메이션 중 잠금
+
 /* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
 function toDateStr(d) {
   return d.getFullYear() + '-'
@@ -1112,6 +1124,23 @@ function toDateStr(d) {
 var todayStr = toDateStr(today);
 // 오늘 날짜를 항상 최신으로 반환 (페이지를 오래 열어두어도 날짜 갱신)
 function getTodayStr() { return toDateStr(new Date()); }
+
+// n일 더한 Date 반환
+function addDays(d, n) { var r = new Date(d); r.setDate(r.getDate() + n); return r; }
+
+// curYear/curMonth 기준으로 viewStart(첫 일요일) 갱신
+function updateViewStart() {
+  var d = new Date(curYear, curMonth, 1);
+  d.setDate(d.getDate() - d.getDay()); // 해당 월 1일의 직전 일요일
+  viewStart = d;
+}
+
+// viewStart 중간 날짜에서 curYear/curMonth 동기화
+function syncCurYearMonth() {
+  var mid = addDays(viewStart, VISIBLE_ROWS * 3); // 뷰 중간 날짜
+  curYear  = mid.getFullYear();
+  curMonth = mid.getMonth();
+}
 
 /* ── 고유 ID 생성 ─────────────────────────────────────────────────────── */
 function genId() {
@@ -1234,8 +1263,14 @@ function createCard(item, asOf) {
 
 /* ── 달력 타이틀 업데이트 ────────────────────────────────────────────── */
 function updateTitle() {
-  document.getElementById('calTitle').textContent =
-    curYear + '년 ' + (curMonth + 1) + '월';
+  var viewEnd = addDays(viewStart, VISIBLE_ROWS * 7 - 1);
+  var y1 = viewStart.getFullYear(), m1 = viewStart.getMonth();
+  var y2 = viewEnd.getFullYear(),   m2 = viewEnd.getMonth();
+  var label = y1 + '년 ' + (m1 + 1) + '월';
+  if (m1 !== m2) {
+    label += (y1 !== y2 ? ' ~ ' + y2 + '년 ' : '~') + (m2 + 1) + '월';
+  }
+  document.getElementById('calTitle').innerHTML = label + ' <span class="mp-caret">▾</span>';
 }
 
 /* ── 요약 스트립 렌더 ────────────────────────────────────────────────── */
@@ -1270,109 +1305,76 @@ function renderSummary(items) {
   });
 }
 
-/* ── 달력 그리드 렌더링 ──────────────────────────────────────────────── */
+/* ── 달력 그리드 셀 빌드 (애니메이션/일반 렌더 공통) ────────────────── */
 var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
 
-function renderCalendar() {
-  updateTitle();
-  var grid  = document.getElementById('calGrid');
+function buildGridCells(startDate, numRows) {
+  var wrap = document.getElementById('calGridWrap');
+  var grid = document.getElementById('calGrid');
+
+  // 동적 행 높이: 래퍼 높이를 VISIBLE_ROWS 등분 (갭 고려)
+  var wrapH = wrap.clientHeight || (VISIBLE_ROWS * 104);
+  var rowH  = Math.max(80, Math.floor((wrapH - (VISIBLE_ROWS - 1) * 4) / VISIBLE_ROWS));
+  grid.style.gridAutoRows = rowH + 'px';
+
   grid.innerHTML = '';
 
-  var items = loadItems();
-  renderSummary(items);
+  var items       = loadItems();
+  var curTodayStr = getTodayStr();
+  var startStr    = toDateStr(startDate);
+  var endStr      = toDateStr(addDays(startDate, numRows * 7 - 1));
+  var futureView  = endStr >= curTodayStr;   // 뷰가 오늘 이후를 포함하는가
+  var todayInView = curTodayStr >= startStr && curTodayStr <= endStr;
 
-  // 날짜별 아이템 인덱싱
-  // 미완료 항목은 이관월 이후의 달에서도 ��속 표시 (D+N 누적 반영)
-  //  - 현재 달 보기: 이전 달 이관 항목 → 오늘 셀에 표시
-  //  - 미래 달 보기: 이전 달 이관 항목 → 해당 달 1일 셀에 표시
-  //  - 과거 달 보기: 원래 이관일에만 표시
-  var curTodayStr  = getTodayStr(); // 항상 최신 오늘 날짜
-  var nowDate      = new Date();
-  var viewMonthStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-01';
-  var isCurMonth   = (curYear === nowDate.getFullYear() && curMonth === nowDate.getMonth());
-  var isFutureMonth =
-    curYear > nowDate.getFullYear() ||
-    (curYear === nowDate.getFullYear() && curMonth > nowDate.getMonth());
-  var isCurrentOrFutureMonth = isCurMonth || isFutureMonth;
-
-  var byDate    = {};
-  var byDateAsOf = {}; // displayDate → asOf (미래 달 보기 시 projected D+N 기준일)
+  // 날짜별 아이템 인덱싱 + carry-forward
+  var byDate = {}, byDateAsOf = {};
   items.forEach(function (it) {
     if (!it.transferDate) return;
     var displayDate = it.transferDate;
     var asOf;
-    // 미완료 항목만 carry-forward (완료는 이관일 고정)
-    if (!it.completed && isCurrentOrFutureMonth && it.transferDate < viewMonthStr) {
-      displayDate = isCurMonth ? curTodayStr : viewMonthStr;
-      if (isFutureMonth) asOf = displayDate; // 미래 달: displayDate 기준으로 projected
-    } else if (isFutureMonth) {
-      // 미래 달 내 항목: 각 날짜 기준 projected
-      asOf = displayDate;
+    // 미완료 항목이 뷰 시작일보다 이른 경우 carry-forward
+    if (!it.completed && it.transferDate < startStr) {
+      if (!futureView) return; // 과거 뷰: 해당 달에 없으면 표시 안 함
+      displayDate = todayInView ? curTodayStr : startStr;
     }
-    if (!byDate[displayDate]) {
-      byDate[displayDate] = [];
-      byDateAsOf[displayDate] = asOf;
-    }
+    // 미래 날짜 → projected D+N
+    if (displayDate > curTodayStr) asOf = displayDate;
+    if (!byDate[displayDate]) { byDate[displayDate] = []; byDateAsOf[displayDate] = asOf; }
     byDate[displayDate].push(it);
   });
 
-  var firstDay = new Date(curYear, curMonth, 1);
-  var lastDay  = new Date(curYear, curMonth + 1, 0);
-  var startDow = firstDay.getDay();
-  var prevLast = new Date(curYear, curMonth, 0).getDate();
-  var total    = Math.ceil((startDow + lastDay.getDate()) / 7) * 7;
-
+  var total = numRows * 7;
   for (var i = 0; i < total; i++) {
-    var dayNum, dateStr, otherMonth = false;
+    var cellDate = addDays(startDate, i);
+    var dateStr  = toDateStr(cellDate);
+    var dayNum   = cellDate.getDate();
+    var dow      = i % 7;
 
-    if (i < startDow) {
-      dayNum = prevLast - startDow + i + 1;
-      var py = curMonth === 0 ? curYear - 1 : curYear;
-      var pm = curMonth === 0 ? 11 : curMonth - 1;
-      dateStr = py + '-' + String(pm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
-      otherMonth = true;
-    } else if (i >= startDow + lastDay.getDate()) {
-      dayNum = i - startDow - lastDay.getDate() + 1;
-      var ny = curMonth === 11 ? curYear + 1 : curYear;
-      var nm = curMonth === 11 ? 0 : curMonth + 1;
-      dateStr = ny + '-' + String(nm + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
-      otherMonth = true;
-    } else {
-      dayNum  = i - startDow + 1;
-      dateStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0');
-    }
-
-    var dow  = i % 7;
     var cell = document.createElement('div');
-    cell.className = 'cal-cell'
-      + (otherMonth ? ' other-month' : '')
-      + (dateStr === curTodayStr ? ' is-today' : '');
+    cell.className = 'cal-cell' + (dateStr === curTodayStr ? ' is-today' : '');
     cell.dataset.date = dateStr;
 
-    // 날짜 숫자
-    var dn = document.createElement('div');
-    dn.className = 'cell-daynum'
-      + (dow === 0 ? ' sun' : '')
-      + (dow === 6 ? ' sat' : '');
-    dn.textContent = dayNum;
-    cell.appendChild(dn);
+    // 날짜 숫자 (매월 1일엔 월 표시 추가)
+    var dnEl = document.createElement('div');
+    dnEl.className = 'cell-daynum' + (dow === 0 ? ' sun' : '') + (dow === 6 ? ' sat' : '');
+    dnEl.textContent = dayNum === 1
+      ? (cellDate.getMonth() + 1) + '/1'
+      : dayNum;
+    cell.appendChild(dnEl);
 
-    // ── 카드 배치 ──
+    // 카드 배치
     var dayItems = byDate[dateStr] || [];
     var toShow   = dayItems.slice(0, MAX_CARDS);
     var overflow = dayItems.length - toShow.length;
-
     var cellAsOf = byDateAsOf[dateStr];
+
     toShow.forEach(function (item) {
       var card = createCard(item, cellAsOf);
       (function(capturedItem) {
         card.addEventListener('click', function (e) {
           e.stopPropagation();
-          if (capturedItem.completed) {
-            openItemModal(capturedItem.id);
-          } else {
-            openModal(e.currentTarget.closest('.cal-cell').dataset.date);
-          }
+          if (capturedItem.completed) openItemModal(capturedItem.id);
+          else openModal(e.currentTarget.closest('.cal-cell').dataset.date);
         });
       })(item);
       cell.appendChild(card);
@@ -1385,12 +1387,72 @@ function renderCalendar() {
       cell.appendChild(more);
     }
 
-    // 셀 클릭 → 모달
-    cell.addEventListener('click', function () {
-      openModal(this.dataset.date);
+    cell.addEventListener('click', function () { openModal(this.dataset.date); });
+    grid.appendChild(cell);
+  }
+}
+
+/* ── 달력 전체 렌더 (그리드 + 타이틀 + 요약) ────────────────────────── */
+function renderCalendar() {
+  buildGridCells(viewStart, VISIBLE_ROWS);
+  updateTitle();
+  renderSummary(loadItems());
+}
+
+/* ── 주(週) 단위 슬라이드 스크롤 ────────────────────────────────────── */
+// 렌더된 첫 번째 행의 실제 높이(px) 반환
+function getRowStride() {
+  var cells = document.querySelectorAll('#calGrid .cal-cell');
+  if (cells.length < 8) return 104;
+  return Math.round(cells[7].getBoundingClientRect().top -
+                    cells[0].getBoundingClientRect().top);
+}
+
+function scrollCalendar(dir) {
+  if (isScrolling) return;
+  isScrolling = true;
+
+  var grid = document.getElementById('calGrid');
+
+  if (dir === 1) {
+    // ── 앞으로(미래): 아래 방향 → 그리드 위로 슬라이드 ──
+    buildGridCells(viewStart, VISIBLE_ROWS + 1); // 여분 1행 추가
+    var stride = getRowStride();
+    grid.style.transition = 'none';
+    grid.style.transform  = 'translateY(0)';
+    requestAnimationFrame(function () {
+      grid.style.transition = 'transform 130ms ease-out';
+      grid.style.transform  = 'translateY(-' + stride + 'px)';
+      grid.addEventListener('transitionend', function onEnd() {
+        grid.removeEventListener('transitionend', onEnd);
+        viewStart = addDays(viewStart, 7);
+        syncCurYearMonth();
+        renderCalendar();
+        isScrolling = false;
+      });
     });
 
-    grid.appendChild(cell);
+  } else {
+    // ── 뒤로(과거): 위 방향 → 그리드 아래로 슬라이드 ──
+    var prevStart = addDays(viewStart, -7);
+    buildGridCells(prevStart, VISIBLE_ROWS + 1); // 첫 행 = 새 과거 주
+    var stride = getRowStride();
+    // 첫 행(새 과거 주)을 위쪽에 숨긴 채 시작
+    grid.style.transition = 'none';
+    grid.style.transform  = 'translateY(-' + stride + 'px)';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { // 두 번 rAF → 스타일 플러시 보장
+        grid.style.transition = 'transform 130ms ease-out';
+        grid.style.transform  = 'translateY(0)';
+        grid.addEventListener('transitionend', function onEnd() {
+          grid.removeEventListener('transitionend', onEnd);
+          viewStart = prevStart;
+          syncCurYearMonth();
+          renderCalendar();
+          isScrolling = false;
+        });
+      });
+    });
   }
 }
 
@@ -1407,20 +1469,21 @@ btnToggleForm.addEventListener('click', function () {
 document.getElementById('btnPrevMonth').addEventListener('click', function () {
   curMonth--;
   if (curMonth < 0) { curMonth = 11; curYear--; }
-  renderCalendar();
+  updateViewStart(); renderCalendar();
 });
 
 document.getElementById('btnNextMonth').addEventListener('click', function () {
   curMonth++;
   if (curMonth > 11) { curMonth = 0; curYear++; }
-  renderCalendar();
+  updateViewStart(); renderCalendar();
 });
 
 document.getElementById('btnSample').addEventListener('click', loadSampleData);
 
 document.getElementById('btnToday').addEventListener('click', function () {
-  curYear  = today.getFullYear();
-  curMonth = today.getMonth();
+  var t = new Date(); t.setDate(t.getDate() - t.getDay()); // 이번 주 일요일
+  viewStart = t;
+  syncCurYearMonth();
   renderCalendar();
   openModal(getTodayStr());
 });
@@ -1577,11 +1640,14 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
     });
     items.push(newItem);
 
-    // 등록된 달로 이동
+    // 등록된 날짜가 포함된 주로 이동
     var d = new Date(fd.transferDate + 'T00:00:00');
     if (!isNaN(d)) {
       curYear  = d.getFullYear();
       curMonth = d.getMonth();
+      d.setDate(d.getDate() - d.getDay()); // 해당 주의 일요일로
+      viewStart = d;
+      syncCurYearMonth();
     }
   }
 
@@ -2106,6 +2172,7 @@ function loadSampleData() {
   ];
   saveItems(sample);
   curYear = 2026; curMonth = 2; // 2026년 3월
+  updateViewStart();
   renderCalendar();
 }
 
@@ -2125,6 +2192,7 @@ function renderMonthPicker() {
     btn.addEventListener('click', function() {
       curYear  = mpYear;
       curMonth = i;
+      updateViewStart();
       renderCalendar();
       closeMonthPicker();
     });
@@ -2164,20 +2232,15 @@ renderCalendar = function() {
   if (mpOpen) renderMonthPicker(); // 선택 강조 동기화
 };
 
-/* ── 휠 스크롤로 월 이동 ────────────────────────────────────────────── */
+/* ── 휠 스크롤로 주(週) 단위 슬라이드 ──────────────────────────────── */
 document.querySelector('.cal-main').addEventListener('wheel', function(e) {
-  // 모달 열려 있으면 스크롤 무시
   if (document.getElementById('modalOverlay').classList.contains('open')) return;
   e.preventDefault();
-  if (e.deltaY > 0) {
-    curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; }
-  } else {
-    curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; }
-  }
-  renderCalendar();
+  scrollCalendar(e.deltaY > 0 ? 1 : -1);
 }, { passive: false });
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+updateViewStart(); // curYear/curMonth → viewStart 초기화
 setFormDefaults();
 renderCalendar();
 
