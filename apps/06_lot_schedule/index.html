@@ -1674,14 +1674,7 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
     return;
   }
 
-  // 한 종류만 있으면 단일 컬럼 (bodyEl padding 유지)
-  if (!synth.length || !refine.length) {
-    var single = synth.length ? synth : refine;
-    single.forEach(function (it) { bodyEl.appendChild(buildDetailCard(it, asOf)); });
-    return;
-  }
-
-  // 두 종류 모두 → 2컬럼
+  // 항상 2컬럼 (한 쪽이 0건이어도 열 유지)
   bodyEl.classList.add('is-2col');
   var twoCol = document.createElement('div');
   twoCol.className = 'modal-2col';
@@ -1692,7 +1685,14 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
   lHd.className = 'modal-col-hd hd-synth';
   lHd.textContent = '합성생산 ' + synth.length + '건';
   lCol.appendChild(lHd);
-  synth.forEach(function (it) { lCol.appendChild(buildDetailCard(it, asOf)); });
+  if (synth.length) {
+    synth.forEach(function (it) { lCol.appendChild(buildDetailCard(it, asOf)); });
+  } else {
+    var lEmpty = document.createElement('div');
+    lEmpty.className = 'modal-empty';
+    lEmpty.textContent = '해당 항목 없음';
+    lCol.appendChild(lEmpty);
+  }
   twoCol.appendChild(lCol);
 
   var rCol = document.createElement('div');
@@ -1701,7 +1701,14 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
   rHd.className = 'modal-col-hd hd-refine';
   rHd.textContent = '정제생산/소자이관 ' + refine.length + '건';
   rCol.appendChild(rHd);
-  refine.forEach(function (it) { rCol.appendChild(buildDetailCard(it, asOf)); });
+  if (refine.length) {
+    refine.forEach(function (it) { rCol.appendChild(buildDetailCard(it, asOf)); });
+  } else {
+    var rEmpty = document.createElement('div');
+    rEmpty.className = 'modal-empty';
+    rEmpty.textContent = '해당 항목 없음';
+    rCol.appendChild(rEmpty);
+  }
   twoCol.appendChild(rCol);
 
   bodyEl.appendChild(twoCol);
