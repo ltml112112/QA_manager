@@ -903,6 +903,157 @@ textarea.form-input {
   margin-top: 6px;
 }
 
+/* ── 메일 붙여넣기 버튼 (폼 하단) ──────────────────────────────────── */
+.btn-mail-import {
+  margin-top: 8px;
+  width: 100%;
+  font-size: 12px;
+  padding: 7px 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.btn-mail-import:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── 메일 붙여넣기 팝업 ──────────────────────────────────────────────── */
+.mail-popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+}
+.mail-popup-overlay.open { display: flex; }
+
+.mail-popup {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 64px rgba(0,0,0,.45);
+  width: min(1440px, 99vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mail-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mail-popup-header-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mail-popup-header-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.mail-popup-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.mail-popup-close:hover { color: var(--text); background: var(--surface-2); }
+
+.mail-popup-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 18px;
+}
+
+/* ── 드롭존 ──────────────────────────────────────────────────────────── */
+.mail-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  background: var(--surface-2);
+  cursor: default;
+  transition: border-color .18s, background .18s;
+  user-select: none;
+}
+.mail-dropzone.drag-over {
+  border-color: var(--accent);
+  background: rgba(190,0,57,.06);
+}
+.mail-dz-icon  { font-size: 36px; margin-bottom: 10px; }
+.mail-dz-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.mail-dz-hint  { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+.mail-dz-hint b { color: var(--text); }
+
+/* ── 파싱 결과 미리보기 ──────────────────────────────────────────────── */
+.mail-preview-wrap { overflow-x: auto; margin-top: 4px; }
+.mail-preview-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.mail-preview-table th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.mail-preview-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+.mail-preview-table td.td-chk  { text-align: center; width: 28px; }
+.mail-preview-table td.td-dept { width: 96px; }
+.mail-preview-table td.ref-col { color: var(--text-faint); font-size: 11px; }
+.mp-dept {
+  font-size: 11.5px;
+  padding: 2px 3px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  width: 92px;
+}
+.mail-parse-warn {
+  font-size: 12px;
+  color: var(--warning);
+  padding: 10px 14px;
+  background: rgba(245,158,11,.08);
+  border-radius: var(--radius-sm);
+  margin-top: 8px;
+}
+
+.mail-popup-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mail-popup-footer .mg-count {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
 </style>
 </head>
 <body>
@@ -1001,6 +1152,10 @@ textarea.form-input {
 
       </form>
 
+      <button type="button" class="btn-mail-import" id="btnOpenMailPopup">
+        📧 메일 붙여넣기로 일괄 등록
+      </button>
+
     </div>
   </aside>
 
@@ -1069,6 +1224,39 @@ textarea.form-input {
   </main>
 
 </div><!-- /.app-layout -->
+
+<!-- ━━━━━━━━━━━━━━━━  메일 붙여넣기 팝업  ━━━━━━━━━━━━━━━━ -->
+<div class="mail-popup-overlay" id="mailPopupOverlay">
+  <div class="mail-popup">
+
+    <div class="mail-popup-header">
+      <span class="mail-popup-header-title">📧 메일 데이터 붙여넣기</span>
+      <span class="mail-popup-header-hint">이메일 표를 드래그하거나 Ctrl+V 로 붙여넣으세요</span>
+      <button type="button" class="mail-popup-close" id="btnMailPopupClose">✕</button>
+    </div>
+
+    <div class="mail-popup-body" id="mailPopupBody">
+      <!-- 드롭존 -->
+      <div class="mail-dropzone" id="mailDropzone">
+        <div class="mail-dz-icon">📋</div>
+        <div class="mail-dz-title">이메일 표를 여기에 드래그하거나 붙여넣으세요</div>
+        <div class="mail-dz-hint">
+          이메일에서 표 전체 선택 후 이 영역으로 <b>드래그 드롭</b><br>
+          또는 복사(Ctrl+C) 후 <b>Ctrl+V</b>
+        </div>
+      </div>
+      <!-- 파싱 결과 -->
+      <div id="mailParseResult"></div>
+    </div>
+
+    <div class="mail-popup-footer">
+      <span class="mg-count" id="mgCount"></span>
+      <button type="button" class="btn btn-secondary" id="btnMailGridClear" style="display:none">↩ 다시 입력</button>
+      <button type="button" class="btn btn-primary"   id="btnMailGridImport" style="display:none">등록하기</button>
+    </div>
+
+  </div>
+</div>
 
 <!-- ━━━━━━━━━━━━━━━━  날짜 클릭 모달  ━━━━━━━━━━━━━━━━ -->
 <div class="modal-overlay" id="modalOverlay">
@@ -2169,6 +2357,321 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
 renderCalendar();
+
+/* ════════════════════════════════════════════════════════════════════════
+   메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서
+   ════════════════════════════════════════════════════════════════════════ */
+
+var mailParsedRows = null; // 파싱된 결과 저장
+
+/* ── 날짜 정규화 ─────────────────────────────────────────────────────── */
+function normDate(s) {
+  if (!s) return '';
+  var d = s.trim().replace(/\./g, '-').replace(/\//g, '-');
+  var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return s.trim();
+  return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+}
+
+/* ── 부서 자동 감지 ──────────────────────────────────────────────────── */
+function autoDept(comment) {
+  return (comment && comment.indexOf('합성생산') !== -1) ? '합성생산' : '정제생산/소자이관';
+}
+
+/* ── 소량 평가 샘플 판별 (중량 기반) ────────────────────────────────── */
+// "1.0g", "1g x 3EA", "0.3" 등 → true  /  "622.0g" 등 대량 → false
+function isSmallSample(weight) {
+  if (!weight) return false;
+  var w = weight.trim();
+  // "x N ea" 패턴이 있으면 무조건 소량 샘플
+  if (/[x×]\s*\d+\s*ea/i.test(w)) return true;
+  // 숫자(g) 추출 후 10g 미만이면 소량
+  var m = w.match(/^([\d.]+)/);
+  if (m) { var v = parseFloat(m[1]); return v > 0 && v < 10; }
+  return false;
+}
+
+/* ── HTML 테이블 → 2D 배열 (rowspan/colspan 완전 처리) ──────────────── */
+function htmlTableToGrid(table) {
+  var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+  var grid = [];
+  rows.forEach(function (tr, ri) {
+    if (!grid[ri]) grid[ri] = [];
+    var col = 0;
+    var cells = Array.prototype.slice.call(tr.querySelectorAll('td, th'));
+    cells.forEach(function (cell) {
+      while (grid[ri][col] !== undefined) col++; // 이미 채워진 칸 건너뜀
+      var text = cell.textContent.replace(/\s+/g, ' ').trim();
+      var cs   = parseInt(cell.getAttribute('colspan') || '1');
+      var rs   = parseInt(cell.getAttribute('rowspan') || '1');
+      for (var r = 0; r < rs; r++) {
+        if (!grid[ri + r]) grid[ri + r] = [];
+        for (var c = 0; c < cs; c++) {
+          grid[ri + r][col + c] = text;
+        }
+      }
+      col += cs;
+    });
+  });
+  return grid;
+}
+
+/* ── TSV → 2D 배열 ───────────────────────────────────────────────────── */
+function tsvToGrid(text) {
+  return text.split(/\r?\n/)
+    .filter(function (l) { return l.trim(); })
+    .map(function (l) { return l.split('\t').map(function (c) { return c.trim(); }); });
+}
+
+/* ── 헤더 감지 ───────────────────────────────────────────────────────── */
+// 알려진 8개 컬럼 헤더 (공백·괄호·단위·점 제거 후 소문자로 비교)
+var MAIL_COL_ROLES = {
+  '날짜': 'date',   '일자': 'date',
+  '품명': 'material',
+  'lot번호': 'lot', 'lot': 'lot',
+  '중량': 'weight', '중량g': 'weight',
+  '수령인': 'recipient',
+  '비고': 'comment',
+  '승화정제batchno': 'batchNo', '승화정제batch': 'batchNo',
+  '다음batch이관예정일정': 'skip', '다음batch': 'skip', '이관예정일정': 'skip',
+};
+function normHeaderKey(h) {
+  return h.replace(/\s+/g,'').replace(/[()（）\[\].·]/g,'').replace(/[gｇ]/gi,'').toLowerCase();
+}
+function detectMailHeader(grid) {
+  for (var i = 0; i < Math.min(grid.length, 5); i++) {
+    var row = grid[i] || [];
+    var map = {}, hits = 0;
+    row.forEach(function (cell, j) {
+      var role = MAIL_COL_ROLES[normHeaderKey(cell || '')];
+      if (role) { map[j] = role; hits++; }
+    });
+    if (hits >= 3) return { idx: i, colMap: map };
+  }
+  return null;
+}
+
+/* ── 데이터 추출 (헤더 이후 행 → {date,material,lot,comment,...}) ──── */
+function extractMailRows(grid, headerInfo) {
+  var colMap = headerInfo.colMap;
+  var rows = [];
+  // TSV carry-forward: 이전 행 값 저장
+  var prev = {};
+  for (var i = headerInfo.idx + 1; i < grid.length; i++) {
+    var cells = grid[i] || [];
+    var row = {};
+    Object.keys(colMap).forEach(function (k) {
+      var val = (cells[parseInt(k)] || '').trim();
+      var role = colMap[k];
+      // 비어 있으면 이전 행 값 carry-forward
+      row[role] = val || prev[role] || '';
+      if (val) prev[role] = val; // 새 값으로 갱신
+    });
+    if (!row.material) continue; // 품명 없는 행 스킵
+    if (row.date) row.date = normDate(row.date);
+    row.dept = autoDept(row.comment || '');
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ── 미리보기 렌더 ────────────────────────────────────────────────────── */
+function renderMailPreview(rows) {
+  var result = document.getElementById('mailParseResult');
+  var dz     = document.getElementById('mailDropzone');
+  var btnClear  = document.getElementById('btnMailGridClear');
+  var btnImport = document.getElementById('btnMailGridImport');
+  var countEl   = document.getElementById('mgCount');
+
+  if (!rows || !rows.length) {
+    result.innerHTML = '<div class="mail-parse-warn">⚠ 인식된 항목이 없습니다. 헤더 행이 포함된 표 전체를 드래그하거나 붙여넣어 주세요.</div>';
+    countEl.textContent = '';
+    btnImport.style.display = 'none';
+    btnClear.style.display  = 'none';
+    dz.style.display = '';
+    return;
+  }
+
+  dz.style.display = 'none';
+  btnClear.style.display  = '';
+  btnImport.style.display = '';
+
+  function updateCount() {
+    var n = result.querySelectorAll('.mp-chk:checked').length;
+    countEl.textContent = n + '개 선택됨';
+  }
+
+  var html = '<div class="mail-preview-wrap">'
+    + '<table class="mail-preview-table"><thead><tr>'
+    + '<th class="td-chk"><input type="checkbox" id="mpCheckAll"></th>'
+    + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot 번호</th><th>비고</th>'
+    + '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>'
+    + '</tr></thead><tbody>';
+
+  rows.forEach(function (row, i) {
+    // 소량 샘플(중량 < 10g 또는 x N ea 패턴)이면 체크 + 정제/소자이관 우선
+    var small = isSmallSample(row.weight);
+    var dept  = small ? '정제생산/소자이관' : row.dept;
+    html += '<tr data-idx="' + i + '">'
+      + '<td class="td-chk"><input type="checkbox" class="mp-chk"' + (small ? ' checked' : '') + '></td>'
+      + '<td>' + esc(row.date     || '') + '</td>'
+      + '<td class="td-dept"><select class="mp-dept">'
+      + '<option value="합성생산"'         + (dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
+      + '<option value="정제생산/소자이관"' + (dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
+      + '</select></td>'
+      + '<td>' + esc(row.material  || '') + '</td>'
+      + '<td>' + esc(row.lot       || '') + '</td>'
+      + '<td>' + esc(row.comment   || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
+      + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  result.innerHTML = html;
+
+  // 전체 체크박스 초기 상태: 모두 체크됐을 때만 체크
+  var allChks = result.querySelectorAll('.mp-chk');
+  var allChecked = allChks.length > 0 && Array.prototype.every.call(allChks, function (cb) { return cb.checked; });
+  document.getElementById('mpCheckAll').checked = allChecked;
+
+  updateCount();
+
+  document.getElementById('mpCheckAll').addEventListener('change', function () {
+    var chk = this.checked;
+    result.querySelectorAll('.mp-chk').forEach(function (cb) { cb.checked = chk; });
+    updateCount();
+  });
+  result.querySelectorAll('.mp-chk').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      var all = result.querySelectorAll('.mp-chk');
+      document.getElementById('mpCheckAll').checked =
+        Array.prototype.every.call(all, function (c) { return c.checked; });
+      updateCount();
+    });
+  });
+}
+
+/* ── 데이터 처리 진입점 (HTML 우선, TSV 폴백) ─────────────────────────── */
+function processMailData(html, plain) {
+  var grid = null, usedHtml = false;
+
+  if (html) {
+    var div = document.createElement('div');
+    div.innerHTML = html;
+    var table = div.querySelector('table');
+    if (table) { grid = htmlTableToGrid(table); usedHtml = true; }
+  }
+  if (!grid && plain) {
+    grid = tsvToGrid(plain);
+  }
+  if (!grid || !grid.length) {
+    document.getElementById('mailParseResult').innerHTML =
+      '<div class="mail-parse-warn">⚠ 표 데이터를 인식하지 못했습니다.</div>';
+    return;
+  }
+
+  var headerInfo = detectMailHeader(grid);
+  if (!headerInfo) {
+    document.getElementById('mailParseResult').innerHTML =
+      '<div class="mail-parse-warn">⚠ 헤더 행(날짜/품명/Lot 번호 등)을 인식하지 못했습니다.<br>표 전체(헤더 포함)를 선택해 주세요.</div>';
+    return;
+  }
+
+  // HTML 경로는 rowspan이 이미 펼쳐져 있으므로 carry-forward 불필요,
+  // TSV 경로는 extractMailRows 내부에서 처리
+  mailParsedRows = extractMailRows(grid, headerInfo);
+  renderMailPreview(mailParsedRows);
+}
+
+/* ── 팝업 상태 리셋 ──────────────────────────────────────────────────── */
+function resetMailPopup() {
+  mailParsedRows = null;
+  document.getElementById('mailParseResult').innerHTML = '';
+  document.getElementById('mailDropzone').style.display = '';
+  document.getElementById('btnMailGridClear').style.display  = 'none';
+  document.getElementById('btnMailGridImport').style.display = 'none';
+  document.getElementById('mgCount').textContent = '';
+}
+
+/* ── 팝업 열기 / 닫기 ────────────────────────────────────────────────── */
+function openMailPopup()  { document.getElementById('mailPopupOverlay').classList.add('open'); }
+function closeMailPopup() { document.getElementById('mailPopupOverlay').classList.remove('open'); }
+
+document.getElementById('btnOpenMailPopup').addEventListener('click', openMailPopup);
+document.getElementById('btnMailPopupClose').addEventListener('click', closeMailPopup);
+document.getElementById('mailPopupOverlay').addEventListener('click', function (e) {
+  if (e.target === this) closeMailPopup();
+});
+
+/* ── 드롭존 이벤트 ───────────────────────────────────────────────────── */
+var dz = document.getElementById('mailDropzone');
+dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', function ()  { dz.classList.remove('drag-over'); });
+dz.addEventListener('drop', function (e) {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  processMailData(
+    e.dataTransfer.getData('text/html'),
+    e.dataTransfer.getData('text/plain')
+  );
+});
+
+/* ── Ctrl+V (팝업 열려 있을 때 전역 붙여넣기) ────────────────────────── */
+document.addEventListener('paste', function (e) {
+  if (!document.getElementById('mailPopupOverlay').classList.contains('open')) return;
+  processMailData(
+    e.clipboardData.getData('text/html'),
+    e.clipboardData.getData('text/plain')
+  );
+});
+
+/* ── 다시 입력 버튼 ──────────────────────────────────────────────────── */
+document.getElementById('btnMailGridClear').addEventListener('click', resetMailPopup);
+
+/* ── 등록하기 ────────────────────────────────────────────────────────── */
+document.getElementById('btnMailGridImport').addEventListener('click', function () {
+  if (!mailParsedRows || !mailParsedRows.length) { alert('파싱된 데이터가 없습니다.'); return; }
+
+  var toAdd = [];
+  document.querySelectorAll('#mailParseResult .mp-chk').forEach(function (cb) {
+    if (!cb.checked) return;
+    var tr   = cb.closest('tr');
+    var idx  = parseInt(tr.dataset.idx);
+    var row  = mailParsedRows[idx];
+    var dept = tr.querySelector('.mp-dept').value;
+    if (!row.date || !row.material) return;
+    toAdd.push({
+      id:           genId(),
+      dept:         dept,
+      material:     row.material,
+      lot:          row.lot      || '',
+      request:      row.comment  || '',
+      transferDate: row.date,
+      evalStart:    '',
+      evalTarget:   '',
+      urgent:       false,
+      completed:    false,
+      completedAt:  null,
+      createdAt:    getTodayStr(),
+    });
+  });
+
+  if (!toAdd.length) { alert('날짜와 품명이 있는 선택 항목이 없습니다.'); return; }
+
+  var items = loadItems();
+  toAdd.forEach(function (it) { items.push(it); });
+  saveItems(items);
+
+  var d = new Date(toAdd[0].transferDate + 'T00:00:00');
+  if (!isNaN(d)) { curYear = d.getFullYear(); curMonth = d.getMonth(); }
+  renderCalendar();
+
+  closeMailPopup();
+  resetMailPopup();
+  alert(toAdd.length + '개 항목이 등록되었습니다.');
+});
 
 })();
 </script>
