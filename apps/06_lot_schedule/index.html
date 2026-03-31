@@ -2152,7 +2152,8 @@ function editInModal(itemId, cardEl) {
   // 날짜 row
   var r2 = document.createElement('div');
   r2.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-  function mkD(val, lbl) {
+  var todayDefault = getTodayStr();
+  function mkD(val, lbl, useDefault) {
     var w = document.createElement('div');
     w.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:100px;';
     var l = document.createElement('div');
@@ -2161,13 +2162,15 @@ function editInModal(itemId, cardEl) {
     var i = document.createElement('input');
     i.type = 'date'; i.className = 'form-input';
     i.style.cssText = 'font-size:12px;padding:4px 6px;';
-    i.value = val || '';
+    i.min = '2000-01-01';
+    i.max = '2099-12-31';
+    i.value = val || (useDefault ? todayDefault : '');
     w.appendChild(l); w.appendChild(i);
     return { w: w, i: i };
   }
-  var dTf = mkD(item.transferDate, '이관일');
-  var dEs = mkD(item.evalStart,    '평가시작');
-  var dEt = mkD(item.evalTarget,   '완료 요청일');
+  var dTf = mkD(item.transferDate, '이관일',      false);
+  var dEs = mkD(item.evalStart,    '평가시작',     true);
+  var dEt = mkD(item.evalTarget,   '완료 요청일',  true);
   r2.appendChild(dTf.w); r2.appendChild(dEs.w); r2.appendChild(dEt.w);
   form.appendChild(r2);
 
