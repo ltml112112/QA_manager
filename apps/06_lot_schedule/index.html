@@ -1282,10 +1282,8 @@ function renderCalendar() {
   renderSummary(items);
 
   // 날짜별 아이템 인덱싱
-  // 미완료 항목은 이관월 이후의 달에서도 ��속 표시 (D+N 누적 반영)
-  //  - 현재 달 보기: 이전 달 이관 항목 → 오늘 셀에 표시
-  //  - 미래 달 보기: 이전 달 이관 항목 → 해당 달 1일 셀에 표시
-  //  - 과거 달 보기: 원래 이관일에만 표시
+  //  - 현재 달 보기: 이전 달 미완료 항목 → 오늘 셀에 표시 (carry-forward)
+  //  - 미래/과거 달 보기: 원래 이관일에만 표시
   var curTodayStr  = getTodayStr(); // 항상 최신 오늘 날짜
   var nowDate      = new Date();
   var viewMonthStr = curYear + '-' + String(curMonth + 1).padStart(2,'0') + '-01';
@@ -1293,7 +1291,6 @@ function renderCalendar() {
   var isFutureMonth =
     curYear > nowDate.getFullYear() ||
     (curYear === nowDate.getFullYear() && curMonth > nowDate.getMonth());
-  var isCurrentOrFutureMonth = isCurMonth || isFutureMonth;
 
   var byDate    = {};
   var byDateAsOf = {}; // displayDate → asOf (미래 달 보기 시 projected D+N 기준일)
@@ -1301,10 +1298,9 @@ function renderCalendar() {
     if (!it.transferDate) return;
     var displayDate = it.transferDate;
     var asOf;
-    // 미완료 항목만 carry-forward (완료는 이관일 고정)
-    if (!it.completed && isCurrentOrFutureMonth && it.transferDate < viewMonthStr) {
-      displayDate = isCurMonth ? curTodayStr : viewMonthStr;
-      if (isFutureMonth) asOf = displayDate; // 미래 달: displayDate 기준으로 projected
+    // 미완료 항목 carry-forward: 현재 달 보기에서만 적용 (미래 달은 해당 월 항목만 표시)
+    if (!it.completed && isCurMonth && it.transferDate < viewMonthStr) {
+      displayDate = curTodayStr;
     } else if (isFutureMonth) {
       // 미래 달 내 항목: 각 날짜 기준 projected
       asOf = displayDate;
