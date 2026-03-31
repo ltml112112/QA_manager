@@ -1783,10 +1783,12 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 
 /* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
-var modalCurrentDate = null;
+var modalCurrentDate   = null;
+var modalCurrentFilter = null;
 
 function openModal(dateStr) {
-  modalCurrentDate = dateStr;
+  modalCurrentDate   = dateStr;
+  modalCurrentFilter = null;
   var overlay = document.getElementById('modalOverlay');
   var titleEl = document.getElementById('modalTitle');
   var bodyEl  = document.getElementById('modalBody');
@@ -1843,7 +1845,8 @@ function openModal(dateStr) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.getElementById('modalBody').classList.remove('is-2col');
-  modalCurrentDate = null;
+  modalCurrentDate   = null;
+  modalCurrentFilter = null;
 }
 
 /* ── 필터 모달 (요약 스트립 칩 클릭) ────────────────────────────────── */
@@ -1859,7 +1862,7 @@ function openFilterModal(filter) {
   switch (filter) {
     case 'synth':  filtered = active.filter(function (it) { return it.dept === '합성생산'; }); break;
     case 'refine': filtered = active.filter(function (it) { return it.dept === '정제생산/소자이관'; }); break;
-    case 'alert':  filtered = active.filter(function (it) { return calcDN(it.transferDate) >= 7 || it.urgent; }); break;
+    case 'alert':  filtered = active.filter(function (it) { return it.urgent; }); break;
     case 'done':   filtered = items.filter(function (it)  { return it.completed; }); break;
     default:       filtered = active;
   }
@@ -1867,7 +1870,8 @@ function openFilterModal(filter) {
     return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
   });
 
-  modalCurrentDate = null;
+  modalCurrentDate   = null;
+  modalCurrentFilter = filter;
   var overlay = document.getElementById('modalOverlay');
   var bodyEl  = document.getElementById('modalBody');
   document.getElementById('modalTitle').textContent =
@@ -2219,7 +2223,8 @@ function deleteItem(id) {
 
 /* ── 완료 / 완료 취소 처리 ───────────────────────────────────────────── */
 function refreshModal() {
-  if (modalCurrentDate) openModal(modalCurrentDate);
+  if (modalCurrentDate)   openModal(modalCurrentDate);
+  else if (modalCurrentFilter) openFilterModal(modalCurrentFilter);
 }
 
 function markComplete(id) {
