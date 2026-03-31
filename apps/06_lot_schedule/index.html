@@ -690,6 +690,10 @@ textarea.form-input {
   flex-shrink: 0;
 }
 .detail-card.is-done { opacity: 0.6; }
+.detail-card.is-urgent {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.25);
+}
 
 /* 메인 행: D+N 왼쪽 | 정보 오른쪽 */
 .dc-main {
@@ -1775,7 +1779,7 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
 // asOf: 기준일 문자열 (없으면 오늘) — 과거 날짜 클릭 시 그 날 기준 경과일 표시
 function buildDetailCard(item, asOf) {
   var wrap = document.createElement('div');
-  wrap.className = 'detail-card' + (item.completed ? ' is-done' : '');
+  wrap.className = 'detail-card' + (item.completed ? ' is-done' : '') + (item.urgent && !item.completed ? ' is-urgent' : '');
   wrap.dataset.id = item.id;
 
   // ── 메인 행: D+N 블록(정제생산만) + 정보 블록 ──
