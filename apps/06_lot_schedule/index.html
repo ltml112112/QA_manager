@@ -1044,6 +1044,13 @@ textarea.form-input {
   min-width: 60px;
 }
 .mp-edit:focus { background: rgba(190,0,57,.07); border-radius: 3px; }
+.mail-preview-table tbody tr.row-checked td {
+  background: rgba(190,0,57,.06);
+}
+.mail-preview-table tbody tr.row-checked {
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1px;
+}
 .mail-parse-warn {
   font-size: 12px;
   color: var(--warning);
@@ -2518,7 +2525,7 @@ function renderMailPreview(rows) {
   rows.forEach(function (row, i) {
     html += '<tr data-idx="' + i + '">'
       + '<td class="td-chk"><input type="checkbox" class="mp-chk"></td>'
-      + '<td><input class="mp-edit mp-date" value="' + esc(row.date     || '') + '"></td>'
+      + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
       + '<td class="td-dept"><select class="mp-dept">'
       + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
       + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
@@ -2538,13 +2545,21 @@ function renderMailPreview(rows) {
 
   updateCount();
 
+  function syncRowStyle(cb) {
+    cb.closest('tr').classList.toggle('row-checked', cb.checked);
+  }
+
   document.getElementById('mpCheckAll').addEventListener('change', function () {
     var chk = this.checked;
-    result.querySelectorAll('.mp-chk').forEach(function (cb) { cb.checked = chk; });
+    result.querySelectorAll('.mp-chk').forEach(function (cb) {
+      cb.checked = chk;
+      syncRowStyle(cb);
+    });
     updateCount();
   });
   result.querySelectorAll('.mp-chk').forEach(function (cb) {
     cb.addEventListener('change', function () {
+      syncRowStyle(cb);
       var all = result.querySelectorAll('.mp-chk');
       document.getElementById('mpCheckAll').checked =
         Array.prototype.every.call(all, function (c) { return c.checked; });
