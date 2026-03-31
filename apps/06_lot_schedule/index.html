@@ -935,7 +935,7 @@ textarea.form-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 24px 64px rgba(0,0,0,.45);
-  width: min(1120px, 96vw);
+  width: min(1440px, 99vw);
   max-height: 88vh;
   display: flex;
   flex-direction: column;
@@ -2378,6 +2378,19 @@ function autoDept(comment) {
   return (comment && comment.indexOf('합성생산') !== -1) ? '합성생산' : '정제생산/소자이관';
 }
 
+/* ── 소량 평가 샘플 판별 (중량 기반) ────────────────────────────────── */
+// "1.0g", "1g x 3EA", "0.3" 등 → true  /  "622.0g" 등 대량 → false
+function isSmallSample(weight) {
+  if (!weight) return false;
+  var w = weight.trim();
+  // "x N ea" 패턴이 있으면 무조건 소량 샘플
+  if (/[x×]\s*\d+\s*ea/i.test(w)) return true;
+  // 숫자(g) 추출 후 10g 미만이면 소량
+  var m = w.match(/^([\d.]+)/);
+  if (m) { var v = parseFloat(m[1]); return v > 0 && v < 10; }
+  return false;
+}
+
 /* ── HTML 테이블 → 2D 배열 (rowspan/colspan 완전 처리) ──────────────── */
 function htmlTableToGrid(table) {
   var rows = Array.prototype.slice.call(table.querySelectorAll('tr'));
@@ -2490,18 +2503,21 @@ function renderMailPreview(rows) {
 
   var html = '<div class="mail-preview-wrap">'
     + '<table class="mail-preview-table"><thead><tr>'
-    + '<th class="td-chk"><input type="checkbox" id="mpCheckAll" checked></th>'
+    + '<th class="td-chk"><input type="checkbox" id="mpCheckAll"></th>'
     + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot 번호</th><th>비고</th>'
     + '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>'
     + '</tr></thead><tbody>';
 
   rows.forEach(function (row, i) {
+    // 소량 샘플(중량 < 10g 또는 x N ea 패턴)이면 체크 + 정제/소자이관 우선
+    var small = isSmallSample(row.weight);
+    var dept  = small ? '정제생산/소자이관' : row.dept;
     html += '<tr data-idx="' + i + '">'
-      + '<td class="td-chk"><input type="checkbox" class="mp-chk" checked></td>'
+      + '<td class="td-chk"><input type="checkbox" class="mp-chk"' + (small ? ' checked' : '') + '></td>'
       + '<td>' + esc(row.date     || '') + '</td>'
       + '<td class="td-dept"><select class="mp-dept">'
-      + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
-      + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
+      + '<option value="합성생산"'         + (dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
+      + '<option value="정제생산/소자이관"' + (dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
       + '</select></td>'
       + '<td>' + esc(row.material  || '') + '</td>'
       + '<td>' + esc(row.lot       || '') + '</td>'
@@ -2514,6 +2530,12 @@ function renderMailPreview(rows) {
 
   html += '</tbody></table></div>';
   result.innerHTML = html;
+
+  // 전체 체크박스 초기 상태: 모두 체크됐을 때만 체크
+  var allChks = result.querySelectorAll('.mp-chk');
+  var allChecked = allChks.length > 0 && Array.prototype.every.call(allChks, function (cb) { return cb.checked; });
+  document.getElementById('mpCheckAll').checked = allChecked;
+
   updateCount();
 
   document.getElementById('mpCheckAll').addEventListener('change', function () {
@@ -2522,7 +2544,12 @@ function renderMailPreview(rows) {
     updateCount();
   });
   result.querySelectorAll('.mp-chk').forEach(function (cb) {
-    cb.addEventListener('change', updateCount);
+    cb.addEventListener('change', function () {
+      var all = result.querySelectorAll('.mp-chk');
+      document.getElementById('mpCheckAll').checked =
+        Array.prototype.every.call(all, function (c) { return c.checked; });
+      updateCount();
+    });
   });
 }
 
