@@ -979,24 +979,48 @@ textarea.form-input {
 }
 
 /* ── 드롭존 ──────────────────────────────────────────────────────────── */
+.mail-dz-row {
+  display: flex;
+  gap: 12px;
+}
 .mail-dropzone {
+  flex: 1;
   border: 2px dashed var(--border);
   border-radius: var(--radius);
-  padding: 48px 24px;
+  padding: 36px 16px;
   text-align: center;
   background: var(--surface-2);
   cursor: default;
   transition: border-color .18s, background .18s;
   user-select: none;
 }
+.mail-dropzone.slot-active {
+  border-color: var(--accent);
+  border-style: solid;
+}
 .mail-dropzone.drag-over {
   border-color: var(--accent);
   background: rgba(190,0,57,.06);
 }
-.mail-dz-icon  { font-size: 36px; margin-bottom: 10px; }
-.mail-dz-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
-.mail-dz-hint  { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+.mail-dz-icon  { font-size: 32px; margin-bottom: 8px; }
+.mail-dz-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+.mail-dz-badge { display: inline-block; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 1px 6px; margin-bottom: 6px; }
+.mail-dz-badge.badge-refine { background: rgba(74,158,255,.15); color: #4a9eff; }
+.mail-dz-badge.badge-synth  { background: rgba(190,0,57,.12);   color: var(--accent); }
+.mail-dz-hint  { font-size: 11px; color: var(--text-muted); line-height: 1.7; }
 .mail-dz-hint b { color: var(--text); }
+/* 날짜 일괄 적용 바 */
+.mail-bulk-date-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.mail-bulk-date-bar label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.mail-bulk-date-bar input[type="date"] { font-size: 12px; padding: 3px 6px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.mail-bulk-date-bar button { font-size: 12px; padding: 3px 12px; }
 
 /* ── 파싱 결과 미리보기 ──────────────────────────────────────────────── */
 .mail-preview-wrap { overflow-x: auto; margin-top: 4px; }
@@ -1256,14 +1280,26 @@ textarea.form-input {
     </div>
 
     <div class="mail-popup-body" id="mailPopupBody">
-      <!-- 드롭존 -->
-      <div class="mail-dropzone" id="mailDropzone">
-        <div class="mail-dz-icon">📋</div>
-        <div class="mail-dz-title">이메일 표를 여기에 드래그하거나 붙여넣으세요</div>
-        <div class="mail-dz-hint">
-          이메일에서 표 전체 선택 후 이 영역으로 <b>드래그 드롭</b><br>
-          또는 복사(Ctrl+C) 후 <b>Ctrl+V</b>
+      <!-- 드롭존 2개 -->
+      <div class="mail-dz-row" id="mailDzRow">
+        <div class="mail-dropzone slot-active" id="mailDropzoneDefault">
+          <div class="mail-dz-icon">📋</div>
+          <div class="mail-dz-badge badge-refine">정제/소자이관</div>
+          <div class="mail-dz-title">정제/소자이관 표</div>
+          <div class="mail-dz-hint">표 드래그 드롭 또는 클릭 후 <b>Ctrl+V</b></div>
         </div>
+        <div class="mail-dropzone" id="mailDropzoneSynth">
+          <div class="mail-dz-icon">📋</div>
+          <div class="mail-dz-badge badge-synth">합성생산</div>
+          <div class="mail-dz-title">합성생산 이관 표</div>
+          <div class="mail-dz-hint">표 드래그 드롭 또는 클릭 후 <b>Ctrl+V</b></div>
+        </div>
+      </div>
+      <!-- 날짜 일괄 적용 바 -->
+      <div class="mail-bulk-date-bar" id="mailBulkDateBar" style="display:none">
+        <label>날짜 일괄 적용</label>
+        <input type="date" id="mailBulkDate" min="2000-01-01" max="2099-12-31">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnMailBulkDate">적용</button>
       </div>
       <!-- 파싱 결과 -->
       <div id="mailParseResult"></div>
@@ -2508,8 +2544,9 @@ function extractMailRows(grid, headerInfo, tableType) {
 
 /* ── 미리보기 렌더 ────────────────────────────────────────────────────── */
 function renderMailPreview(rows, tableType) {
-  var result = document.getElementById('mailParseResult');
-  var dz     = document.getElementById('mailDropzone');
+  var result    = document.getElementById('mailParseResult');
+  var dzRow     = document.getElementById('mailDzRow');
+  var bulkBar   = document.getElementById('mailBulkDateBar');
   var btnClear  = document.getElementById('btnMailGridClear');
   var btnImport = document.getElementById('btnMailGridImport');
   var countEl   = document.getElementById('mgCount');
@@ -2519,11 +2556,13 @@ function renderMailPreview(rows, tableType) {
     countEl.textContent = '';
     btnImport.style.display = 'none';
     btnClear.style.display  = 'none';
-    dz.style.display = '';
+    dzRow.style.display = '';
+    bulkBar.style.display = 'none';
     return;
   }
 
-  dz.style.display = 'none';
+  dzRow.style.display  = 'none';
+  bulkBar.style.display = '';
   btnClear.style.display  = '';
   btnImport.style.display = '';
 
@@ -2603,14 +2642,15 @@ function renderMailPreview(rows, tableType) {
 }
 
 /* ── 데이터 처리 진입점 (HTML 우선, TSV 폴백) ─────────────────────────── */
-function processMailData(html, plain) {
-  var grid = null, usedHtml = false;
+// slotHint: 'default'(정제/소자) | 'synth'(합성생산) — 어느 존에서 붙여넣었는지
+function processMailData(html, plain, slotHint) {
+  var grid = null;
 
   if (html) {
     var div = document.createElement('div');
     div.innerHTML = html;
     var table = div.querySelector('table');
-    if (table) { grid = htmlTableToGrid(table); usedHtml = true; }
+    if (table) { grid = htmlTableToGrid(table); }
   }
   if (!grid && plain) {
     grid = tsvToGrid(plain);
@@ -2628,9 +2668,8 @@ function processMailData(html, plain) {
     return;
   }
 
-  // HTML 경로는 rowspan이 이미 펼쳐져 있으므로 carry-forward 불필요,
-  // TSV 경로는 extractMailRows 내부에서 처리
-  var tableType = detectTableType(headerInfo.colMap);
+  // 존 슬롯으로 tableType 결정 (헤더 감지로 보완)
+  var tableType = (slotHint === 'synth') ? 'synth' : detectTableType(headerInfo.colMap);
   mailTableType = tableType;
   mailParsedRows = extractMailRows(grid, headerInfo, tableType);
   renderMailPreview(mailParsedRows, tableType);
@@ -2641,10 +2680,13 @@ function resetMailPopup() {
   mailParsedRows = null;
   mailTableType = 'default';
   document.getElementById('mailParseResult').innerHTML = '';
-  document.getElementById('mailDropzone').style.display = '';
+  document.getElementById('mailDzRow').style.display = '';
+  document.getElementById('mailBulkDateBar').style.display = 'none';
+  document.getElementById('mailBulkDate').value = '';
   document.getElementById('btnMailGridClear').style.display  = 'none';
   document.getElementById('btnMailGridImport').style.display = 'none';
   document.getElementById('mgCount').textContent = '';
+  setActiveSlot('default');
 }
 
 /* ── 팝업 열기 / 닫기 ────────────────────────────────────────────────── */
@@ -2658,16 +2700,30 @@ document.getElementById('mailPopupOverlay').addEventListener('click', function (
 });
 
 /* ── 드롭존 이벤트 ───────────────────────────────────────────────────── */
-var dz = document.getElementById('mailDropzone');
-dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', function ()  { dz.classList.remove('drag-over'); });
-dz.addEventListener('drop', function (e) {
-  e.preventDefault();
-  dz.classList.remove('drag-over');
-  processMailData(
-    e.dataTransfer.getData('text/html'),
-    e.dataTransfer.getData('text/plain')
-  );
+var mailActiveSlot = 'default'; // 마지막으로 선택된 존 ('default' | 'synth')
+
+function setActiveSlot(slot) {
+  mailActiveSlot = slot;
+  document.getElementById('mailDropzoneDefault').classList.toggle('slot-active', slot === 'default');
+  document.getElementById('mailDropzoneSynth').classList.toggle('slot-active', slot === 'synth');
+}
+
+['mailDropzoneDefault', 'mailDropzoneSynth'].forEach(function (dzId) {
+  var dz   = document.getElementById(dzId);
+  var slot = (dzId === 'mailDropzoneSynth') ? 'synth' : 'default';
+
+  dz.addEventListener('click',     function ()  { setActiveSlot(slot); });
+  dz.addEventListener('dragover',  function (e) { e.preventDefault(); setActiveSlot(slot); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', function ()  { dz.classList.remove('drag-over'); });
+  dz.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    processMailData(
+      e.dataTransfer.getData('text/html'),
+      e.dataTransfer.getData('text/plain'),
+      slot
+    );
+  });
 });
 
 /* ── Ctrl+V (팝업 열려 있을 때 전역 붙여넣기) ────────────────────────── */
@@ -2675,8 +2731,18 @@ document.addEventListener('paste', function (e) {
   if (!document.getElementById('mailPopupOverlay').classList.contains('open')) return;
   processMailData(
     e.clipboardData.getData('text/html'),
-    e.clipboardData.getData('text/plain')
+    e.clipboardData.getData('text/plain'),
+    mailActiveSlot
   );
+});
+
+/* ── 날짜 일괄 적용 ─────────────────────────────────────────────────── */
+document.getElementById('btnMailBulkDate').addEventListener('click', function () {
+  var val = document.getElementById('mailBulkDate').value;
+  if (!val) return;
+  document.querySelectorAll('#mailParseResult .mp-date').forEach(function (inp) {
+    inp.value = val;
+  });
 });
 
 /* ── 다시 입력 버튼 ──────────────────────────────────────────────────── */
