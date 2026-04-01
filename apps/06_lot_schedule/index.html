@@ -2439,19 +2439,35 @@ function tsvToGrid(text) {
 }
 
 /* ── 헤더 감지 ───────────────────────────────────────────────────────── */
-// 알려진 8개 컬럼 헤더 (공백·괄호·단위·점 제거 후 소문자로 비교)
 var MAIL_COL_ROLES = {
+  // ── 공통 / 정제·소자 이관 표 ──
   '날짜': 'date',   '일자': 'date',
   '품명': 'material',
   'lot번호': 'lot', 'lot': 'lot',
-  '중량': 'weight', '중량g': 'weight',
+  '중량': 'weight',
   '수령인': 'recipient',
   '비고': 'comment',
   '승화정제batchno': 'batchNo', '승화정제batch': 'batchNo',
   '다음batch이관예정일정': 'skip', '다음batch': 'skip', '이관예정일정': 'skip',
+  // ── 합성생산 충주 이관 표 ──
+  '이관일자': 'date',
+  '품목명': 'material', '품목명품목코드': 'material',
+  'batchno': 'lot',          // "Batch No." 정규화 결과
+  '무게': 'weight',
+  '합성이력': 'synthHist',   // 합성생산 표 판별 키
+  '생산일자': 'prodDate',
 };
 function normHeaderKey(h) {
+  // 공백 제거 → 괄호·점·중간점 제거 → g(gram 단위) 제거 → 소문자
   return h.replace(/\s+/g,'').replace(/[()（）\[\].·]/g,'').replace(/[gｇ]/gi,'').toLowerCase();
+}
+
+/* ── 표 종류 판별 ────────────────────────────────────────────────────── */
+// colMap 에 'synthHist' 역할이 있으면 합성생산 이관 표
+var mailTableType = 'default'; // 'default' | 'synth'
+function detectTableType(colMap) {
+  for (var k in colMap) { if (colMap[k] === 'synthHist') return 'synth'; }
+  return 'default';
 }
 function detectMailHeader(grid) {
   for (var i = 0; i < Math.min(grid.length, 5); i++) {
@@ -2467,10 +2483,9 @@ function detectMailHeader(grid) {
 }
 
 /* ── 데이터 추출 (헤더 이후 행 → {date,material,lot,comment,...}) ──── */
-function extractMailRows(grid, headerInfo) {
+function extractMailRows(grid, headerInfo, tableType) {
   var colMap = headerInfo.colMap;
   var rows = [];
-  // TSV carry-forward: 이전 행 값 저장
   var prev = {};
   for (var i = headerInfo.idx + 1; i < grid.length; i++) {
     var cells = grid[i] || [];
@@ -2478,20 +2493,21 @@ function extractMailRows(grid, headerInfo) {
     Object.keys(colMap).forEach(function (k) {
       var val = (cells[parseInt(k)] || '').trim();
       var role = colMap[k];
-      // 비어 있으면 이전 행 값 carry-forward
+      if (role === 'skip') return;
       row[role] = val || prev[role] || '';
-      if (val) prev[role] = val; // 새 값으로 갱신
+      if (val) prev[role] = val;
     });
-    if (!row.material) continue; // 품명 없는 행 스킵
+    if (!row.material) continue;
     if (row.date) row.date = normDate(row.date);
-    row.dept = autoDept(row.comment || '');
+    // 합성생산 표는 부서 강제 지정, 기본 표는 비고로 자동 감지
+    row.dept = (tableType === 'synth') ? '합성생산' : autoDept(row.comment || '');
     rows.push(row);
   }
   return rows;
 }
 
 /* ── 미리보기 렌더 ────────────────────────────────────────────────────── */
-function renderMailPreview(rows) {
+function renderMailPreview(rows, tableType) {
   var result = document.getElementById('mailParseResult');
   var dz     = document.getElementById('mailDropzone');
   var btnClear  = document.getElementById('btnMailGridClear');
@@ -2516,15 +2532,33 @@ function renderMailPreview(rows) {
     countEl.textContent = n + '개 선택됨';
   }
 
+  var isSynth = (tableType === 'synth');
+  var refHeaders = isSynth
+    ? '<th class="ref-col">무게</th><th class="ref-col">합성이력</th><th class="ref-col">생산일자</th>'
+    : '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>';
+
+  var typeLabel = isSynth
+    ? '<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px;">합성생산 이관 표</span>'
+    : '<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">정제/소자 이관 표</span>';
+
   var html = '<div class="mail-preview-wrap">'
+    + '<div style="font-size:12px;margin-bottom:8px;">인식된 표 형식:' + typeLabel + '</div>'
     + '<table class="mail-preview-table"><thead><tr>'
     + '<th class="td-chk"><input type="checkbox" id="mpCheckAll" title="전체 선택/해제"></th>'
-    + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot 번호</th><th>비고</th>'
+    + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot / Batch No.</th><th>비고</th>'
     + '<th class="td-chk" title="시급 요청">⚡</th>'
-    + '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>'
+    + refHeaders
     + '</tr></thead><tbody>';
 
   rows.forEach(function (row, i) {
+    var refCols = isSynth
+      ? '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>'
+      : '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>';
+
     html += '<tr data-idx="' + i + '">'
       + '<td class="td-chk"><input type="checkbox" class="mp-chk"></td>'
       + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
@@ -2536,9 +2570,7 @@ function renderMailPreview(rows) {
       + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '"></td>'
       + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
       + '<td class="td-chk"><input type="checkbox" class="mp-urgent"></td>'
-      + '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
-      + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
-      + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>'
+      + refCols
       + '</tr>';
   });
 
@@ -2598,13 +2630,16 @@ function processMailData(html, plain) {
 
   // HTML 경로는 rowspan이 이미 펼쳐져 있으므로 carry-forward 불필요,
   // TSV 경로는 extractMailRows 내부에서 처리
-  mailParsedRows = extractMailRows(grid, headerInfo);
-  renderMailPreview(mailParsedRows);
+  var tableType = detectTableType(headerInfo.colMap);
+  mailTableType = tableType;
+  mailParsedRows = extractMailRows(grid, headerInfo, tableType);
+  renderMailPreview(mailParsedRows, tableType);
 }
 
 /* ── 팝업 상태 리셋 ──────────────────────────────────────────────────── */
 function resetMailPopup() {
   mailParsedRows = null;
+  mailTableType = 'default';
   document.getElementById('mailParseResult').innerHTML = '';
   document.getElementById('mailDropzone').style.display = '';
   document.getElementById('btnMailGridClear').style.display  = 'none';
