@@ -17,7 +17,7 @@ const apps = [
     id:          'lotschedule',
     label:       '소자평가 Lot 일정 관리',
     icon:        '📅',
-    badge:       'NEW',
+    badge:       null,
     src:         './apps/06_lot_schedule/index.html',
     loaderText:  '소자평가 Lot 일정 관리 로딩 중...',
   },
