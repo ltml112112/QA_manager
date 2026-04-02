@@ -1034,6 +1034,12 @@ textarea.form-input {
 .mail-preview-table td.td-chk  { text-align: center; width: 28px; }
 .mail-preview-table td.td-dept { width: 96px; }
 .mail-preview-table td.ref-col { color: var(--text-faint); font-size: 11px; }
+/* 합성생산 배치 그룹 */
+.mail-preview-table tr.batch-active td { box-shadow: inset 0 0 0 1.5px #f97316; }
+.mail-preview-table tr.batch-active:first-of-type td:first-child { box-shadow: inset 0 0 0 1.5px #f97316; }
+.mail-preview-table tr.batch-row { cursor: pointer; }
+.mail-preview-table tr.batch-row:hover td { background: rgba(249,115,22,.06); }
+.batch-sep td { border-top: 2px solid var(--border) !important; padding-top: 4px; }
 .mp-dept {
   font-size: 11.5px;
   padding: 2px 3px;
@@ -2421,8 +2427,10 @@ function normDate(s) {
 }
 
 /* ── 부서 자동 감지 ──────────────────────────────────────────────────── */
-function autoDept(comment) {
-  return (comment && comment.indexOf('합성생산') !== -1) ? '합성생산' : '정제생산/소자이관';
+// 합성생산 표 여부는 원문 문구('합성생산팀 충주 이관내역')로만 판별하므로
+// default 표는 무조건 정제생산/소자이관
+function autoDept() {
+  return '정제생산/소자이관';
 }
 
 
@@ -2483,11 +2491,10 @@ function normHeaderKey(h) {
 }
 
 /* ── 표 종류 판별 ────────────────────────────────────────────────────── */
-// colMap 에 'synthHist' 역할이 있으면 합성생산 이관 표
+// 원문에 '합성생산팀 충주 이관내역' 문구가 있으면 합성생산 이관 표
 var mailTableType = 'default'; // 'default' | 'synth'
-function detectTableType(colMap) {
-  for (var k in colMap) { if (colMap[k] === 'synthHist') return 'synth'; }
-  return 'default';
+function detectTableType(isSynthSource) {
+  return isSynthSource ? 'synth' : 'default';
 }
 function detectMailHeader(grid) {
   for (var i = 0; i < Math.min(grid.length, 5); i++) {
@@ -2519,8 +2526,8 @@ function extractMailRows(grid, headerInfo, tableType) {
     });
     if (!row.material) continue;
     if (row.date) row.date = normDate(row.date);
-    // 합성생산 표는 부서 강제 지정, 기본 표는 비고로 자동 감지
-    row.dept = (tableType === 'synth') ? '합성생산' : autoDept(row.comment || '');
+    // 합성생산 표: 강제 지정 / 기본 표: 정제생산/소자이관 고정
+    row.dept = (tableType === 'synth') ? '합성생산' : '정제생산/소자이관';
     rows.push(row);
   }
   return rows;
@@ -2551,12 +2558,13 @@ function renderMailPreview(rows, tableType) {
   btnClear.style.display  = '';
   btnImport.style.display = '';
 
+  var isSynth = (tableType === 'synth');
+
   function updateCount() {
     var n = result.querySelectorAll('.mp-chk:checked').length;
     countEl.textContent = n + '개 선택됨';
   }
 
-  var isSynth = (tableType === 'synth');
   var refHeaders = isSynth
     ? '<th class="ref-col">무게</th><th class="ref-col">합성이력</th><th class="ref-col">생산일자</th>'
     : '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>';
@@ -2574,37 +2582,104 @@ function renderMailPreview(rows, tableType) {
     + refHeaders
     + '</tr></thead><tbody>';
 
-  rows.forEach(function (row, i) {
-    var refCols = isSynth
-      ? '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>'
-      : '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+  if (isSynth) {
+    // ── 합성생산: Batch No. 기준 그룹화 ──
+    // 순서 유지하며 그룹 목록 생성
+    var batchOrder = [];
+    var batchMap   = {};
+    rows.forEach(function (row, i) {
+      var key = row.lot || ('__nokey__' + i);
+      if (!batchMap[key]) { batchMap[key] = []; batchOrder.push(key); }
+      batchMap[key].push({ row: row, idx: i });
+    });
+
+    batchOrder.forEach(function (batchKey, gi) {
+      var group = batchMap[batchKey];
+      group.forEach(function (entry, bi) {
+        var row    = entry.row;
+        var i      = entry.idx;
+        var isHead = (bi === 0);
+        var sepCls = (gi > 0 && isHead) ? ' batch-sep' : '';
+        var refCols = '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+          + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
+          + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>';
+
+        html += '<tr class="batch-row' + sepCls + '" data-batch="' + esc(batchKey) + '" data-idx="' + i + '" data-head="' + (isHead ? '1' : '0') + '">'
+          + '<td class="td-chk">'
+          + (isHead ? '<input type="checkbox" class="mp-chk">' : '')
+          + '</td>'
+          + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
+          + '<td class="td-dept"><span style="font-size:11.5px;color:var(--accent);font-weight:600;">합성생산</span></td>'
+          + '<td><input class="mp-edit mp-material" value="' + esc(row.material || '') + '"></td>'
+          + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '" ' + (isHead ? '' : 'style="color:var(--text-faint)"') + '></td>'
+          + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
+          + '<td class="td-chk">' + (isHead ? '<input type="checkbox" class="mp-urgent">' : '') + '</td>'
+          + refCols
+          + '</tr>';
+      });
+    });
+  } else {
+    // ── 정제/소자이관: 기존 방식 ──
+    rows.forEach(function (row, i) {
+      var refCols = '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
         + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
         + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>';
 
-    html += '<tr data-idx="' + i + '">'
-      + '<td class="td-chk"><input type="checkbox" class="mp-chk"></td>'
-      + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
-      + '<td class="td-dept"><select class="mp-dept">'
-      + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
-      + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
-      + '</select></td>'
-      + '<td><input class="mp-edit mp-material" value="' + esc(row.material || '') + '"></td>'
-      + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '"></td>'
-      + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
-      + '<td class="td-chk"><input type="checkbox" class="mp-urgent"></td>'
-      + refCols
-      + '</tr>';
-  });
+      html += '<tr data-idx="' + i + '">'
+        + '<td class="td-chk"><input type="checkbox" class="mp-chk"></td>'
+        + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
+        + '<td class="td-dept"><select class="mp-dept">'
+        + '<option value="정제생산/소자이관" selected>정제/소자이관</option>'
+        + '</select></td>'
+        + '<td><input class="mp-edit mp-material" value="' + esc(row.material || '') + '"></td>'
+        + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '"></td>'
+        + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
+        + '<td class="td-chk"><input type="checkbox" class="mp-urgent"></td>'
+        + refCols
+        + '</tr>';
+    });
+  }
 
   html += '</tbody></table></div>';
   result.innerHTML = html;
 
   updateCount();
 
+  // ── 배치 그룹 하이라이트 (합성생산 전용) ──
+  function syncBatchHighlight(batchKey, checked) {
+    result.querySelectorAll('tr.batch-row[data-batch="' + batchKey + '"]').forEach(function (tr) {
+      tr.classList.toggle('batch-active', checked);
+    });
+  }
+
   function syncRowStyle(cb) {
-    cb.closest('tr').classList.toggle('row-checked', cb.checked);
+    if (!isSynth) {
+      cb.closest('tr').classList.toggle('row-checked', cb.checked);
+    }
+  }
+
+  // 배치 행 클릭 → 그룹 체크박스 토글
+  if (isSynth) {
+    result.querySelectorAll('tr.batch-row').forEach(function (tr) {
+      tr.addEventListener('click', function (e) {
+        if (e.target.tagName === 'INPUT') return; // 체크박스/인풋 직접 클릭은 제외
+        var batchKey = tr.dataset.batch;
+        var headTr   = result.querySelector('tr.batch-row[data-batch="' + batchKey + '"][data-head="1"]');
+        if (!headTr) return;
+        var cb = headTr.querySelector('.mp-chk');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        syncBatchHighlight(batchKey, cb.checked);
+        updateCount();
+        syncCheckAll();
+      });
+    });
+  }
+
+  function syncCheckAll() {
+    var all = result.querySelectorAll('.mp-chk');
+    document.getElementById('mpCheckAll').checked =
+      all.length > 0 && Array.prototype.every.call(all, function (c) { return c.checked; });
   }
 
   document.getElementById('mpCheckAll').addEventListener('change', function () {
@@ -2612,15 +2687,22 @@ function renderMailPreview(rows, tableType) {
     result.querySelectorAll('.mp-chk').forEach(function (cb) {
       cb.checked = chk;
       syncRowStyle(cb);
+      if (isSynth) {
+        var batchKey = cb.closest('tr') && cb.closest('tr').dataset.batch;
+        if (batchKey) syncBatchHighlight(batchKey, chk);
+      }
     });
     updateCount();
   });
+
   result.querySelectorAll('.mp-chk').forEach(function (cb) {
     cb.addEventListener('change', function () {
       syncRowStyle(cb);
-      var all = result.querySelectorAll('.mp-chk');
-      document.getElementById('mpCheckAll').checked =
-        Array.prototype.every.call(all, function (c) { return c.checked; });
+      if (isSynth) {
+        var batchKey = cb.closest('tr') && cb.closest('tr').dataset.batch;
+        if (batchKey) syncBatchHighlight(batchKey, cb.checked);
+      }
+      syncCheckAll();
       updateCount();
     });
   });
@@ -2652,7 +2734,10 @@ function processMailData(html, plain) {
     return;
   }
 
-  var tableType = detectTableType(headerInfo.colMap);
+  // 원문(HTML 또는 plain)에 '합성생산팀 충주 이관내역' 문구가 있으면 합성생산 표
+  var rawText = (html || '') + (plain || '');
+  var isSynthSource = rawText.indexOf('합성생산팀 충주 이관내역') !== -1;
+  var tableType = detectTableType(isSynthSource);
   mailTableType = tableType;
   mailParsedRows = extractMailRows(grid, headerInfo, tableType);
   renderMailPreview(mailParsedRows, tableType);
@@ -2720,15 +2805,18 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
   if (!mailParsedRows || !mailParsedRows.length) { alert('파싱된 데이터가 없습니다.'); return; }
 
   var toAdd = [];
+  var isSynthImport = (mailTableType === 'synth');
   document.querySelectorAll('#mailParseResult .mp-chk').forEach(function (cb) {
     if (!cb.checked) return;
-    var tr       = cb.closest('tr');
-    var dept     = tr.querySelector('.mp-dept').value;
-    var dateVal  = normDate(tr.querySelector('.mp-date').value.trim());
-    var matVal   = tr.querySelector('.mp-material').value.trim();
-    var lotVal   = tr.querySelector('.mp-lot').value.trim();
-    var cmtVal   = tr.querySelector('.mp-comment').value.trim();
-    var urgVal   = tr.querySelector('.mp-urgent').checked;
+    var tr = cb.closest('tr');
+    // 합성생산 표: 헤드 행만 등록 (배치당 1건)
+    if (isSynthImport && tr.dataset.head !== '1') return;
+    var dept    = isSynthImport ? '합성생산' : tr.querySelector('.mp-dept').value;
+    var dateVal = normDate(tr.querySelector('.mp-date').value.trim());
+    var matVal  = tr.querySelector('.mp-material').value.trim();
+    var lotVal  = tr.querySelector('.mp-lot').value.trim();
+    var cmtVal  = tr.querySelector('.mp-comment').value.trim();
+    var urgVal  = tr.querySelector('.mp-urgent') ? tr.querySelector('.mp-urgent').checked : false;
     if (!dateVal || !matVal) return;
     toAdd.push({
       id:           genId(),
