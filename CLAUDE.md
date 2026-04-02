@@ -661,7 +661,51 @@ STATE = {
 - 좌측 사이드바 없음 — 캘린더가 화면 전체 너비 사용
 - 세 가지 팝업: 메일 일괄 등록 / 개별 등록 / 날짜·조회 모달
 
-### 아이템 데이터 스키마 (localStorage)
+### 데이터 저장 — Firebase Realtime Database
+
+**저장소**: Firebase Realtime Database (`qa-manager-9c145` 프로젝트)
+**경로**: `lot_schedule/` (배열)
+**실시간 동기화**: `DB_REF.on('value', ...)` 리스너 — 다른 사용자 변경 즉시 반영
+
+```
+Firebase DB
+└── lot_schedule/   ← DB_REF 참조 경로
+    ├── 0: { id, dept, material, ... }
+    ├── 1: { ... }
+    └── ...
+```
+
+- **`loadItems()`**: `window._cachedItems` 캐시 반환 (동기)
+- **`saveItems(items)`**: `DB_REF.set(items)` — 배열 전체 덮어쓰기
+- **`setupRealtimeSync()`**: 앱 시작 시 1회 호출 — 최초 연결 시 localStorage 데이터 자동 마이그레이션 후 실시간 구독 시작
+- **localStorage** (`qa_lot_schedule_v1`): 마이그레이션 소스로만 사용 (이후 미사용)
+
+#### Firebase 설정 (index.html 내 하드코딩)
+
+```javascript
+var firebaseConfig = {
+  apiKey:            "AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc",
+  databaseURL:       "https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "qa-manager-9c145",
+  // ... 나머지 필드
+};
+var DB_REF = firebase.database().ref('lot_schedule');
+```
+
+> Firebase SDK: `firebase-app-compat` + `firebase-database-compat` v10.12.0 (CDN)
+> 보안 규칙: 현재 테스트 모드 (`.read/.write: true`) — 추후 도메인 제한 예정
+
+#### 다른 앱에서 Firebase 추가 시
+
+같은 `firebaseConfig`를 재사용하고 **`db.ref('경로')`만 다르게** 지정:
+
+```javascript
+// 예시
+var DB_REF = db.ref('oled_sessions');   // 01번 앱
+var DB_REF = db.ref('hplc_reports');    // 03번 앱
+```
+
+### 아이템 데이터 스키마
 
 ```javascript
 {
@@ -679,8 +723,6 @@ STATE = {
   createdAt:    'YYYY-MM-DD',
 }
 ```
-
-저장 키: `qa_lot_schedule_v1` (localStorage)
 
 ### 캘린더 셀 표시 규칙
 
@@ -746,7 +788,8 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 
 | 함수 | 역할 |
 |------|------|
-| `loadItems()` / `saveItems(items)` | localStorage 읽기/쓰기 |
+| `loadItems()` / `saveItems(items)` | Firebase 캐시 반환 / Firebase 저장 (전체 덮어쓰기) |
+| `setupRealtimeSync()` | Firebase 실시간 리스너 시작 — localStorage 마이그레이션 포함 |
 | `genId()` | 고유 ID 생성 |
 | `calcDN(transferDate, asOf)` | 이관일 기준 D+N 계산 |
 | `renderCalendar()` | 달력 전체 재렌더 |
@@ -834,3 +877,4 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | 브랜치 | 내용 |
 |--------|------|
 | `claude/department-sorting-distinction-fHBNk` | `06_lot_schedule` 전체 기능 개발 — 부서 구분 로직·메일 파싱·배치 그룹화·UI 개편·검색 |
+| `claude/setup-firebase-project-yydA7` | `06_lot_schedule` Firebase Realtime Database 연동 — 실시간 다중 사용자 동기화 |
