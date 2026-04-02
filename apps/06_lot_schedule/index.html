@@ -1032,30 +1032,53 @@ textarea.form-input {
   vertical-align: middle;
 }
 .mail-preview-table td.td-chk  { text-align: center; width: 28px; }
-.mail-preview-table td.td-dept { width: 96px; }
 .mail-preview-table td.ref-col { color: var(--text-faint); font-size: 11px; }
-.mp-dept {
+.mail-preview-table td.td-act  { text-align: right; width: 60px; white-space: nowrap; }
+.mail-preview-table tbody tr   { cursor: pointer; }
+.mail-preview-table tbody tr.mp-editing { background: rgba(190,0,57,.04); }
+/* 편집 모드 인풋 */
+.mp-einput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  padding: 2px 5px;
+  outline: none;
+}
+.mp-einput:focus { border-color: var(--accent); }
+.mp-edept {
   font-size: 11.5px;
   padding: 2px 3px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--surface);
   color: var(--text);
-  width: 92px;
-}
-.mp-edit {
   width: 100%;
-  box-sizing: border-box;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 12px;
-  font-family: inherit;
-  padding: 3px 4px;
-  outline: none;
-  min-width: 60px;
 }
-.mp-edit:focus { background: rgba(190,0,57,.07); border-radius: 3px; }
+/* 수정 / 저장 / 취소 버튼 */
+.mp-btn-edit {
+  font-size: 11px; padding: 2px 7px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface-2); color: var(--text-muted);
+  cursor: pointer; white-space: nowrap;
+}
+.mp-btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+.mp-btn-save {
+  font-size: 11px; padding: 2px 7px;
+  border: 1px solid var(--accent); border-radius: 4px;
+  background: var(--accent); color: #fff;
+  cursor: pointer; white-space: nowrap;
+}
+.mp-btn-cancel {
+  font-size: 11px; padding: 2px 5px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface-2); color: var(--text-muted);
+  cursor: pointer;
+}
 .mail-preview-table tbody tr.row-checked td {
   background: rgba(190,0,57,.06);
 }
@@ -2551,20 +2574,56 @@ function renderMailPreview(rows, tableType) {
   btnClear.style.display  = '';
   btnImport.style.display = '';
 
-  function updateCount() {
-    var n = result.querySelectorAll('.mp-chk:checked').length;
-    countEl.textContent = n + '개 선택됨';
-  }
-
   var isSynth = (tableType === 'synth');
   var refHeaders = isSynth
     ? '<th class="ref-col">무게</th><th class="ref-col">합성이력</th><th class="ref-col">생산일자</th>'
     : '<th class="ref-col">중량</th><th class="ref-col">수령인</th><th class="ref-col">승화 Batch</th>';
-
   var typeLabel = isSynth
     ? '<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px;">합성생산 이관 표</span>'
     : '<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">정제/소자 이관 표</span>';
 
+  /* ── 행 렌더 헬퍼 ── */
+  function refCellsOf(row) {
+    return isSynth
+      ? '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>'
+      : '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
+        + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>';
+  }
+
+  function viewRowHtml(row, i, checked, urgent) {
+    return '<td class="td-chk"><input type="checkbox" class="mp-chk"' + (checked ? ' checked' : '') + '></td>'
+      + '<td>' + esc(row.date     || '') + '</td>'
+      + '<td>' + esc(row.dept     || '') + '</td>'
+      + '<td>' + esc(row.material || '') + '</td>'
+      + '<td>' + esc(row.lot      || '') + '</td>'
+      + '<td>' + esc(row.comment  || '') + '</td>'
+      + '<td class="td-chk"><input type="checkbox" class="mp-urgent"' + (urgent ? ' checked' : '') + '></td>'
+      + refCellsOf(row)
+      + '<td class="td-act"><button class="mp-btn-edit" data-act="edit">✏ 수정</button></td>';
+  }
+
+  function editRowHtml(row, i, checked, urgent) {
+    return '<td class="td-chk"><input type="checkbox" class="mp-chk"' + (checked ? ' checked' : '') + '></td>'
+      + '<td><input type="date" class="mp-einput mp-e-date" value="' + esc(row.date || '') + '" min="2000-01-01" max="2099-12-31"></td>'
+      + '<td><select class="mp-edept">'
+        + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
+        + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
+        + '</select></td>'
+      + '<td><input class="mp-einput" value="' + esc(row.material || '') + '"></td>'
+      + '<td><input class="mp-einput" value="' + esc(row.lot      || '') + '"></td>'
+      + '<td><input class="mp-einput" value="' + esc(row.comment  || '') + '"></td>'
+      + '<td class="td-chk"><input type="checkbox" class="mp-urgent"' + (urgent ? ' checked' : '') + '></td>'
+      + refCellsOf(row)
+      + '<td class="td-act">'
+        + '<button class="mp-btn-save" data-act="save">저장</button> '
+        + '<button class="mp-btn-cancel" data-act="cancel">✕</button>'
+        + '</td>';
+  }
+
+  /* ── 초기 HTML 구성 ── */
   var html = '<div class="mail-preview-wrap">'
     + '<div style="font-size:12px;margin-bottom:8px;">인식된 표 형식:' + typeLabel + '</div>'
     + '<table class="mail-preview-table"><thead><tr>'
@@ -2572,58 +2631,108 @@ function renderMailPreview(rows, tableType) {
     + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot / Batch No.</th><th>비고</th>'
     + '<th class="td-chk" title="시급 요청">⚡</th>'
     + refHeaders
+    + '<th class="td-act"></th>'
     + '</tr></thead><tbody>';
 
   rows.forEach(function (row, i) {
-    var refCols = isSynth
-      ? '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>'
-      : '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
-        + '<td class="ref-col">' + esc(row.batchNo   || '') + '</td>';
-
-    html += '<tr data-idx="' + i + '">'
-      + '<td class="td-chk"><input type="checkbox" class="mp-chk"></td>'
-      + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
-      + '<td class="td-dept"><select class="mp-dept">'
-      + '<option value="합성생산"'         + (row.dept === '합성생산'          ? ' selected' : '') + '>합성생산</option>'
-      + '<option value="정제생산/소자이관"' + (row.dept === '정제생산/소자이관' ? ' selected' : '') + '>정제/소자이관</option>'
-      + '</select></td>'
-      + '<td><input class="mp-edit mp-material" value="' + esc(row.material || '') + '"></td>'
-      + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '"></td>'
-      + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
-      + '<td class="td-chk"><input type="checkbox" class="mp-urgent"></td>'
-      + refCols
-      + '</tr>';
+    html += '<tr data-idx="' + i + '">' + viewRowHtml(row, i, false, false) + '</tr>';
   });
-
   html += '</tbody></table></div>';
   result.innerHTML = html;
 
-  updateCount();
-
-  function syncRowStyle(cb) {
-    cb.closest('tr').classList.toggle('row-checked', cb.checked);
+  /* ── 유틸 ── */
+  function updateCount() {
+    var n = result.querySelectorAll('.mp-chk:checked').length;
+    countEl.textContent = n + '개 선택됨';
+  }
+  function syncRowStyle(tr) {
+    var cb = tr.querySelector('.mp-chk');
+    tr.classList.toggle('row-checked', !!(cb && cb.checked));
+  }
+  function syncAllCheckAll() {
+    var all = result.querySelectorAll('.mp-chk');
+    document.getElementById('mpCheckAll').checked =
+      all.length > 0 && Array.prototype.every.call(all, function (c) { return c.checked; });
   }
 
+  /* ── 전체 선택 ── */
   document.getElementById('mpCheckAll').addEventListener('change', function () {
     var chk = this.checked;
     result.querySelectorAll('.mp-chk').forEach(function (cb) {
       cb.checked = chk;
-      syncRowStyle(cb);
+      syncRowStyle(cb.closest('tr'));
     });
     updateCount();
   });
-  result.querySelectorAll('.mp-chk').forEach(function (cb) {
-    cb.addEventListener('change', function () {
-      syncRowStyle(cb);
-      var all = result.querySelectorAll('.mp-chk');
-      document.getElementById('mpCheckAll').checked =
-        Array.prototype.every.call(all, function (c) { return c.checked; });
+
+  /* ── tbody 이벤트 위임 ── */
+  result.querySelector('tbody').addEventListener('click', function (e) {
+    var tr = e.target.closest('tr');
+    if (!tr) return;
+    var idx = parseInt(tr.dataset.idx, 10);
+    var act = e.target.dataset.act;
+
+    /* 수정 버튼 */
+    if (act === 'edit') {
+      var cb = tr.querySelector('.mp-chk');
+      var urg = tr.querySelector('.mp-urgent');
+      tr.classList.add('mp-editing');
+      tr.innerHTML = editRowHtml(rows[idx], idx, cb && cb.checked, urg && urg.checked);
+      tr.querySelector('.mp-e-date').focus();
+      return;
+    }
+
+    /* 저장 버튼 */
+    if (act === 'save') {
+      var cb  = tr.querySelector('.mp-chk');
+      var urg = tr.querySelector('.mp-urgent');
+      rows[idx].date     = tr.querySelector('.mp-e-date').value;
+      rows[idx].dept     = tr.querySelector('.mp-edept').value;
+      rows[idx].material = tr.querySelectorAll('.mp-einput')[1].value;
+      rows[idx].lot      = tr.querySelectorAll('.mp-einput')[2].value;
+      rows[idx].comment  = tr.querySelectorAll('.mp-einput')[3].value;
+      tr.classList.remove('mp-editing');
+      tr.innerHTML = viewRowHtml(rows[idx], idx, cb && cb.checked, urg && urg.checked);
+      syncRowStyle(tr);
+      return;
+    }
+
+    /* 취소 버튼 */
+    if (act === 'cancel') {
+      var cb  = tr.querySelector('.mp-chk');
+      var urg = tr.querySelector('.mp-urgent');
+      tr.classList.remove('mp-editing');
+      tr.innerHTML = viewRowHtml(rows[idx], idx, cb && cb.checked, urg && urg.checked);
+      syncRowStyle(tr);
+      return;
+    }
+
+    /* 체크박스 직접 클릭 — 브라우저가 이미 상태 변경했으므로 스타일만 동기화 */
+    if (e.target.classList.contains('mp-chk')) {
+      syncRowStyle(tr);
+      syncAllCheckAll();
       updateCount();
-    });
+      return;
+    }
+
+    /* 편집 모드 중 다른 셀 클릭 — 무시 */
+    if (tr.classList.contains('mp-editing')) return;
+
+    /* 그 외 인터랙티브 요소 클릭 — 무시 */
+    var tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON') return;
+
+    /* 행 클릭 → 체크 토글 */
+    var cb = tr.querySelector('.mp-chk');
+    if (cb) {
+      cb.checked = !cb.checked;
+      syncRowStyle(tr);
+      syncAllCheckAll();
+      updateCount();
+    }
   });
+
+  updateCount();
 }
 
 /* ── 데이터 처리 진입점 (HTML 우선, TSV 폴백) ─────────────────────────── */
@@ -2706,9 +2815,14 @@ document.addEventListener('paste', function (e) {
 /* ── 날짜 일괄 적용 ─────────────────────────────────────────────────── */
 document.getElementById('btnMailBulkDate').addEventListener('click', function () {
   var val = document.getElementById('mailBulkDate').value;
-  if (!val) return;
-  document.querySelectorAll('#mailParseResult .mp-date').forEach(function (inp) {
-    inp.value = val;
+  if (!val || !mailParsedRows) return;
+  mailParsedRows.forEach(function (row) { row.date = val; });
+  // 현재 뷰 모드 행의 날짜 셀 갱신 (편집 중인 행 제외)
+  document.querySelectorAll('#mailParseResult tbody tr:not(.mp-editing)').forEach(function (tr) {
+    var idx = parseInt(tr.dataset.idx, 10);
+    if (isNaN(idx)) return;
+    var cells = tr.querySelectorAll('td');
+    if (cells[1]) cells[1].textContent = val;
   });
 });
 
@@ -2722,20 +2836,20 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
   var toAdd = [];
   document.querySelectorAll('#mailParseResult .mp-chk').forEach(function (cb) {
     if (!cb.checked) return;
-    var tr       = cb.closest('tr');
-    var dept     = tr.querySelector('.mp-dept').value;
-    var dateVal  = normDate(tr.querySelector('.mp-date').value.trim());
-    var matVal   = tr.querySelector('.mp-material').value.trim();
-    var lotVal   = tr.querySelector('.mp-lot').value.trim();
-    var cmtVal   = tr.querySelector('.mp-comment').value.trim();
-    var urgVal   = tr.querySelector('.mp-urgent').checked;
+    var tr    = cb.closest('tr');
+    var idx   = parseInt(tr.dataset.idx, 10);
+    var row   = mailParsedRows[idx];
+    if (!row) return;
+    var dateVal = normDate((row.date || '').trim());
+    var matVal  = (row.material || '').trim();
+    var urgVal  = !!(tr.querySelector('.mp-urgent') && tr.querySelector('.mp-urgent').checked);
     if (!dateVal || !matVal) return;
     toAdd.push({
       id:           genId(),
-      dept:         dept,
+      dept:         row.dept     || '',
       material:     matVal,
-      lot:          lotVal,
-      request:      cmtVal,
+      lot:          (row.lot     || '').trim(),
+      request:      (row.comment || '').trim(),
       transferDate: dateVal,
       evalStart:    '',
       evalTarget:   '',
