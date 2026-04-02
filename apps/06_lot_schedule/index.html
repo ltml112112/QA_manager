@@ -597,9 +597,8 @@ textarea.form-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 920px;
-  max-height: 80vh;
+  width: min(960px, calc(100vw - 40px));
+  height: min(82vh, 860px);
   display: flex;
   flex-direction: column;
   transform: translateY(8px);
@@ -608,6 +607,45 @@ textarea.form-input {
 .modal-overlay.open .modal-box {
   transform: translateY(0);
 }
+
+/* 검색 바 (검색 모드 전용) */
+.modal-search-bar {
+  display: none;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modal-box.search-mode .modal-search-bar { display: flex; }
+.modal-search-input {
+  flex: 1;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color .15s;
+}
+.modal-search-input:focus { border-color: var(--accent); }
+.modal-search-input::placeholder { color: var(--text-faint); }
+.modal-search-btn {
+  height: 34px;
+  padding: 0 16px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background .15s;
+}
+.modal-search-btn:hover { background: var(--accent-hover); }
 
 /* 모달 헤더 */
 .modal-header {
@@ -1267,24 +1305,6 @@ textarea.form-input {
   </div>
 </div>
 
-<!-- ━━━━━━━━━━━━━━━━  검색 팝업  ━━━━━━━━━━━━━━━━ -->
-<div class="indiv-popup-overlay" id="searchPopupOverlay">
-  <div class="indiv-popup" style="width:420px;">
-    <div class="indiv-popup-header">
-      <span class="indiv-popup-title">🔍 항목 조회</span>
-      <button type="button" class="indiv-popup-close" id="btnSearchPopupClose">✕</button>
-    </div>
-    <div class="indiv-popup-body" style="padding-bottom:8px;">
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <input type="text" id="searchInput" class="form-input" style="flex:1;"
-          placeholder="품명 · Lot번호 · 요청사항 · 부서 · 비고 검색">
-        <button type="button" class="btn btn-primary" id="btnDoSearch" style="white-space:nowrap;">검색</button>
-      </div>
-      <div id="searchResultArea"></div>
-    </div>
-  </div>
-</div>
-
 <!-- ━━━━━━━━━━━━━━━━  메일 붙여넣기 팝업  ━━━━━━━━━━━━━━━━ -->
 <div class="mail-popup-overlay" id="mailPopupOverlay">
   <div class="mail-popup">
@@ -1326,12 +1346,17 @@ textarea.form-input {
   </div>
 </div>
 
-<!-- ━━━━━━━━━━━━━━━━  날짜 클릭 모달  ━━━━━━━━━━━━━━━━ -->
+<!-- ━━━━━━━━━━━━━━━━  날짜 클릭 / 검색 모달  ━━━━━━━━━━━━━━━━ -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal-box">
+  <div class="modal-box" id="modalBox">
     <div class="modal-header">
       <span class="modal-title" id="modalTitle"></span>
       <button class="modal-close" id="btnModalClose" title="닫기">×</button>
+    </div>
+    <div class="modal-search-bar" id="modalSearchBar">
+      <input type="text" class="modal-search-input" id="modalSearchInput"
+        placeholder="품명 · Lot번호 · 요청사항 · 부서 · 비고 검색…">
+      <button class="modal-search-btn" id="btnModalDoSearch">검색</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
   </div>
@@ -1908,6 +1933,8 @@ function openModal(dateStr) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.getElementById('modalBody').classList.remove('is-2col');
+  document.getElementById('modalBox').classList.remove('search-mode');
+  document.getElementById('modalSearchInput').value = '';
   modalCurrentDate   = null;
   modalCurrentFilter = null;
 }
@@ -1953,19 +1980,32 @@ function openFilterModal(filter) {
   overlay.classList.add('open');
 }
 
-/* ── 검색 팝업 ───────────────────────────────────────────────────────── */
-function openSearchPopup() {
-  document.getElementById('searchPopupOverlay').classList.add('open');
-  document.getElementById('searchInput').focus();
-}
-function closeSearchPopup() {
-  document.getElementById('searchPopupOverlay').classList.remove('open');
+/* ── 검색 모드 (기존 modal-box 재사용) ──────────────────────────────── */
+function openSearchModal() {
+  var box     = document.getElementById('modalBox');
+  var overlay = document.getElementById('modalOverlay');
+  var bodyEl  = document.getElementById('modalBody');
+  var input   = document.getElementById('modalSearchInput');
+  modalCurrentDate   = null;
+  modalCurrentFilter = null;
+  box.classList.add('search-mode');
+  document.getElementById('modalTitle').textContent = '🔍 항목 조회';
+  bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
+  bodyEl.classList.remove('is-2col');
+  overlay.classList.add('open');
+  setTimeout(function () { input.focus(); }, 120);
 }
 
-function doSearch() {
-  var q = document.getElementById('searchInput').value.trim().toLowerCase();
-  var area = document.getElementById('searchResultArea');
-  if (!q) { area.innerHTML = ''; return; }
+function runModalSearch() {
+  var q      = document.getElementById('modalSearchInput').value.trim().toLowerCase();
+  var bodyEl = document.getElementById('modalBody');
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
+  if (!q) {
+    bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
+    return;
+  }
 
   var items = loadItems();
   var filtered = items.filter(function (it) {
@@ -1977,47 +2017,20 @@ function doSearch() {
     return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
   });
 
+  document.getElementById('modalTitle').textContent =
+    '🔍 "' + document.getElementById('modalSearchInput').value.trim() + '" — ' + filtered.length + '건';
+
   if (!filtered.length) {
-    area.innerHTML = '<div class="modal-empty" style="padding:20px 0;">일치하는 항목이 없습니다.</div>';
-    return;
+    bodyEl.innerHTML = '<div class="modal-empty">일치하는 항목이 없습니다.</div>';
+  } else {
+    renderBodyTwoCols(bodyEl, filtered, null);
   }
-
-  // 2컬럼 결과를 검색 팝업 내부에 렌더
-  area.innerHTML = '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">'
-    + '"' + document.getElementById('searchInput').value.trim() + '" 검색 결과 — ' + filtered.length + '건</div>';
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;gap:12px;';
-  var synth  = filtered.filter(function (it) { return it.dept === '합성생산'; });
-  var refine = filtered.filter(function (it) { return it.dept !== '합성생산'; });
-
-  function makeCol(label, color, arr) {
-    if (!arr.length) return null;
-    var col = document.createElement('div');
-    col.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;';
-    var hd = document.createElement('div');
-    hd.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
-      + 'padding-bottom:6px;border-bottom:2px solid ' + color + ';color:' + color + ';flex-shrink:0;';
-    hd.textContent = label + ' ' + arr.length + '건';
-    col.appendChild(hd);
-    arr.forEach(function (it) { col.appendChild(buildDetailCard(it)); });
-    return col;
-  }
-
-  var sc = makeCol('합성생산', '#ef4444', synth);
-  var rc = makeCol('정제/소자이관', '#9333ea', refine);
-  if (sc) wrap.appendChild(sc);
-  if (rc) wrap.appendChild(rc);
-  area.appendChild(wrap);
 }
 
-document.getElementById('btnOpenSearch').addEventListener('click', openSearchPopup);
-document.getElementById('btnSearchPopupClose').addEventListener('click', closeSearchPopup);
-document.getElementById('searchPopupOverlay').addEventListener('click', function (e) {
-  if (e.target === this) closeSearchPopup();
-});
-document.getElementById('btnDoSearch').addEventListener('click', doSearch);
-document.getElementById('searchInput').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') doSearch();
+document.getElementById('btnOpenSearch').addEventListener('click', openSearchModal);
+document.getElementById('btnModalDoSearch').addEventListener('click', runModalSearch);
+document.getElementById('modalSearchInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') runModalSearch();
 });
 
 /* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
