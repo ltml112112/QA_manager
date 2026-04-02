@@ -2421,8 +2421,10 @@ function normDate(s) {
 }
 
 /* ── 부서 자동 감지 ──────────────────────────────────────────────────── */
-function autoDept(comment) {
-  return (comment && comment.indexOf('합성생산') !== -1) ? '합성생산' : '정제생산/소자이관';
+// 합성생산 표 여부는 원문 문구('합성생산팀 충주 이관내역')로만 판별하므로
+// default 표는 무조건 정제생산/소자이관
+function autoDept() {
+  return '정제생산/소자이관';
 }
 
 
@@ -2483,11 +2485,10 @@ function normHeaderKey(h) {
 }
 
 /* ── 표 종류 판별 ────────────────────────────────────────────────────── */
-// colMap 에 'synthHist' 역할이 있으면 합성생산 이관 표
+// 원문에 '합성생산팀 충주 이관내역' 문구가 있으면 합성생산 이관 표
 var mailTableType = 'default'; // 'default' | 'synth'
-function detectTableType(colMap) {
-  for (var k in colMap) { if (colMap[k] === 'synthHist') return 'synth'; }
-  return 'default';
+function detectTableType(isSynthSource) {
+  return isSynthSource ? 'synth' : 'default';
 }
 function detectMailHeader(grid) {
   for (var i = 0; i < Math.min(grid.length, 5); i++) {
@@ -2519,8 +2520,8 @@ function extractMailRows(grid, headerInfo, tableType) {
     });
     if (!row.material) continue;
     if (row.date) row.date = normDate(row.date);
-    // 합성생산 표는 부서 강제 지정, 기본 표는 비고로 자동 감지
-    row.dept = (tableType === 'synth') ? '합성생산' : autoDept(row.comment || '');
+    // 합성생산 표: 강제 지정 / 기본 표: 정제생산/소자이관 고정
+    row.dept = (tableType === 'synth') ? '합성생산' : '정제생산/소자이관';
     rows.push(row);
   }
   return rows;
@@ -2652,7 +2653,10 @@ function processMailData(html, plain) {
     return;
   }
 
-  var tableType = detectTableType(headerInfo.colMap);
+  // 원문(HTML 또는 plain)에 '합성생산팀 충주 이관내역' 문구가 있으면 합성생산 표
+  var rawText = (html || '') + (plain || '');
+  var isSynthSource = rawText.indexOf('합성생산팀 충주 이관내역') !== -1;
+  var tableType = detectTableType(isSynthSource);
   mailTableType = tableType;
   mailParsedRows = extractMailRows(grid, headerInfo, tableType);
   renderMailPreview(mailParsedRows, tableType);
