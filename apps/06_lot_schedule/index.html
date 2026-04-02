@@ -22,55 +22,49 @@ html, body {
   overflow: hidden;
 }
 
-/* ── 좌측 폼 패널 ────────────────────────────────────────────────────── */
-.form-panel {
-  width: 280px;
-  min-width: 280px;
+/* ── 개별 등록 팝업 ──────────────────────────────────────────────────── */
+.indiv-popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+.indiv-popup-overlay.open { display: flex; }
+.indiv-popup {
   background: var(--surface);
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 360px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  flex-shrink: 0;
-  transition: width 0.25s ease, min-width 0.25s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,.4);
 }
-
-.form-panel.collapsed {
-  width: 0;
-  min-width: 0;
-}
-
-/* 패널 내부 (width 고정 — 접힐 때 콘텐츠가 안 찌그러지게) */
-.form-panel-inner {
-  width: 280px;
-  padding: 0 16px 16px;
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.form-panel-header {
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  z-index: 1;
-  padding: 14px 0 10px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 14px;
+.indiv-popup-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-
-.form-panel-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
+.indiv-popup-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.indiv-popup-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 16px; padding: 2px 6px;
+  border-radius: 4px; transition: background .15s;
+}
+.indiv-popup-close:hover { background: var(--surface-2); }
+.indiv-popup-body {
+  padding: 16px 18px;
+  overflow-y: auto;
   flex: 1;
 }
 
-/* ── 우측 캘린더 메인 ────────────────────────────────────────────────── */
+/* ── 캘린더 메인 ─────────────────────────────────────────────────────── */
 .cal-main {
   flex: 1;
   display: flex;
@@ -214,21 +208,37 @@ html, body {
 }
 .btn-today:hover { background: var(--accent-glow); }
 
-/* 폼 토글 버튼 */
-.btn-toggle-form {
-  padding: 0 10px;
+/* 등록 버튼 (topbar용 — 높이 30px 맞춤) */
+.btn-reg-mail {
+  padding: 0 14px;
+  height: 30px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-reg-mail:hover { background: var(--accent-hover); }
+.btn-reg-indiv {
+  padding: 0 12px;
   height: 30px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
   font-family: var(--font-body);
   white-space: nowrap;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
-.btn-toggle-form:hover { background: var(--surface-2); }
+.btn-reg-indiv:hover { background: var(--surface-2); border-color: var(--border-hover); }
 
 /* 샘플 버튼 */
 .btn-sample {
@@ -264,10 +274,10 @@ html, body {
 }
 .cal-dow {
   text-align: center;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-muted);
-  padding: 4px 0;
+  padding: 6px 0;
   letter-spacing: 0.02em;
 }
 .cal-dow.sun { color: #ef4444; }
@@ -855,9 +865,9 @@ textarea.form-input {
 }
 
 .sum-chip {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 3px 9px;
+  padding: 4px 12px;
   border-radius: 10px;
   border: 1px solid transparent;
   cursor: default;
@@ -903,32 +913,6 @@ textarea.form-input {
   margin-top: 6px;
 }
 
-/* ── 개별 등록 접기/펼치기 토글 ─────────────────────────────────────── */
-.manual-form-toggle {
-  width: 100%;
-  margin-top: 10px;
-  padding: 7px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.manual-form-toggle:hover { color: var(--text); border-color: var(--border-hover); }
-.manual-form-toggle .mft-arrow { font-size: 10px; transition: transform .2s; }
-.manual-form-toggle.open .mft-arrow { transform: rotate(180deg); }
-.manual-form-body {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height .25s ease;
-}
-.manual-form-body.open { max-height: 900px; }
 
 /* ── 메일 붙여넣기 팝업 ──────────────────────────────────────────────── */
 .mail-popup-overlay {
@@ -1124,118 +1108,13 @@ textarea.form-input {
 
 <div class="app-layout">
 
-  <!-- ━━━━━━━━━━━━━━━━  좌측: 폼 패널  ━━━━━━━━━━━━━━━━ -->
-  <aside class="form-panel" id="formPanel">
-    <div class="form-panel-inner">
-
-      <div class="form-panel-header">
-        <span>📝</span>
-        <span class="form-panel-title">소자평가 일정 등록</span>
-      </div>
-
-      <!-- ── 메인: 메일 붙여넣기 일괄 등록 ── -->
-      <button type="button" class="btn btn-primary btn-block" id="btnOpenMailPopup">
-        📧 메일 붙여넣기로 일괄 등록
-      </button>
-
-      <!-- ── 서브: 개별 등록 (접힘/펼침) ── -->
-      <button type="button" class="manual-form-toggle" id="btnManualFormToggle">
-        <span>✏ 개별 등록</span>
-        <span class="mft-arrow">▼</span>
-      </button>
-      <div class="manual-form-body" id="manualFormBody">
-        <form id="scheduleForm" autocomplete="off" novalidate style="padding-top:10px;">
-          <input type="hidden" id="fEditId">
-
-          <!-- 부서/상태 -->
-          <div class="form-group">
-            <label class="fld-label">부서 / 상태<span class="req">*</span></label>
-            <div class="radio-group" id="fDeptGroup">
-              <label class="radio-chip synth" id="chipSynth">
-                <input type="radio" name="fDept" value="합성생산">
-                <span class="chip-dot" style="background:#ef4444"></span>
-                합성생산
-              </label>
-              <label class="radio-chip refine" id="chipRefine">
-                <input type="radio" name="fDept" value="정제생산/소자이관">
-                <span class="chip-dot" style="background:#9333ea"></span>
-                정제생산/소자이관
-              </label>
-            </div>
-          </div>
-
-          <!-- 재료명 (자동완성) -->
-          <div class="form-group">
-            <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
-            <div class="ac-wrap">
-              <input class="form-input" type="text" id="fMaterial"
-                placeholder="예) PG1088" autocomplete="off" required>
-              <div class="ac-dropdown" id="acDropdown"></div>
-            </div>
-          </div>
-
-          <!-- Lot 번호 -->
-          <div class="form-group">
-            <label class="fld-label" for="fLot">Lot 번호</label>
-            <input class="form-input" type="text" id="fLot"
-              placeholder="예) P-NC05-Tol">
-          </div>
-
-          <!-- 요청사항 -->
-          <div class="form-group">
-            <label class="fld-label" for="fRequest">요청사항</label>
-            <input class="form-input" type="text" id="fRequest"
-              placeholder="예) Lot 평가(미정)">
-          </div>
-
-          <hr class="form-divider">
-
-          <!-- 샘플 이관/시작일 -->
-          <div class="form-group">
-            <label class="fld-label" for="fTransferDate">샘플 이관<span class="req">*</span></label>
-            <input class="form-input" type="date" id="fTransferDate" required>
-          </div>
-
-          <!-- 소자평가 시작일 -->
-          <div class="form-group">
-            <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
-            <input class="form-input" type="date" id="fEvalStart">
-          </div>
-
-          <!-- 소자평가 완료 요청일 -->
-          <div class="form-group">
-            <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
-            <input class="form-input" type="date" id="fEvalTarget">
-          </div>
-
-          <hr class="form-divider">
-
-          <!-- 긴급 출하 대응 -->
-          <div class="urgent-row" id="urgentRow">
-            <input type="checkbox" id="fUrgent">
-            <label for="fUrgent">⚡ 시급 요청</label>
-          </div>
-
-          <!-- 등록 / 수정 버튼 -->
-          <button type="submit" class="btn btn-secondary btn-block" id="btnSubmit">
-            등록하기
-          </button>
-          <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit">
-            취소
-          </button>
-
-        </form>
-      </div>
-
-    </div>
-  </aside>
-
-  <!-- ━━━━━━━━━━━━━━━━  우측: 캘린더 메인  ━━━━━━━━━━━━━━━━ -->
+  <!-- ━━━━━━━━━━━━━━━━  캘린더 메인 (풀 너비)  ━━━━━━━━━━━━━━━━ -->
   <main class="cal-main">
 
     <!-- 상단 헤더 바 -->
     <div class="cal-topbar">
-      <button class="btn-toggle-form" id="btnToggleForm">◀ 폼</button>
+      <button class="btn-reg-mail"  id="btnOpenMailPopup">📧 메일 일괄 등록</button>
+      <button class="btn-reg-indiv" id="btnOpenIndivPopup">✏ 개별 등록</button>
       <button class="nav-btn" id="btnPrevMonth" title="이전 달">&#8249;</button>
       <div class="cal-title-wrap">
         <h2 class="cal-title" id="calTitle" title="클릭하여 년/월 선택">— 년 — 월 <span class="mp-caret">▾</span></h2>
@@ -1295,6 +1174,81 @@ textarea.form-input {
   </main>
 
 </div><!-- /.app-layout -->
+
+<!-- ━━━━━━━━━━━━━━━━  개별 등록 팝업  ━━━━━━━━━━━━━━━━ -->
+<div class="indiv-popup-overlay" id="indivPopupOverlay">
+  <div class="indiv-popup">
+    <div class="indiv-popup-header">
+      <span class="indiv-popup-title">✏ 소자평가 일정 개별 등록</span>
+      <button type="button" class="indiv-popup-close" id="btnIndivPopupClose">✕</button>
+    </div>
+    <div class="indiv-popup-body">
+      <form id="scheduleForm" autocomplete="off" novalidate>
+        <input type="hidden" id="fEditId">
+
+        <div class="form-group">
+          <label class="fld-label">부서 / 상태<span class="req">*</span></label>
+          <div class="radio-group" id="fDeptGroup">
+            <label class="radio-chip synth" id="chipSynth">
+              <input type="radio" name="fDept" value="합성생산">
+              <span class="chip-dot" style="background:#ef4444"></span>합성생산
+            </label>
+            <label class="radio-chip refine" id="chipRefine">
+              <input type="radio" name="fDept" value="정제생산/소자이관">
+              <span class="chip-dot" style="background:#9333ea"></span>정제생산/소자이관
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input class="form-input" type="text" id="fMaterial"
+              placeholder="예) PG1088" autocomplete="off" required>
+            <div class="ac-dropdown" id="acDropdown"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="fld-label" for="fLot">Lot 번호</label>
+          <input class="form-input" type="text" id="fLot" placeholder="예) P-NC05-Tol">
+        </div>
+
+        <div class="form-group">
+          <label class="fld-label" for="fRequest">요청사항</label>
+          <input class="form-input" type="text" id="fRequest" placeholder="예) Lot 평가(미정)">
+        </div>
+
+        <hr class="form-divider">
+
+        <div class="form-group">
+          <label class="fld-label" for="fTransferDate">샘플 이관<span class="req">*</span></label>
+          <input class="form-input" type="date" id="fTransferDate" required>
+        </div>
+
+        <div class="form-group">
+          <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
+          <input class="form-input" type="date" id="fEvalStart">
+        </div>
+
+        <div class="form-group">
+          <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
+          <input class="form-input" type="date" id="fEvalTarget">
+        </div>
+
+        <hr class="form-divider">
+
+        <div class="urgent-row" id="urgentRow">
+          <input type="checkbox" id="fUrgent">
+          <label for="fUrgent">⚡ 시급 요청</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">등록하기</button>
+        <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit" style="display:none;margin-top:6px;">취소</button>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- ━━━━━━━━━━━━━━━━  메일 붙여넣기 팝업  ━━━━━━━━━━━━━━━━ -->
 <div class="mail-popup-overlay" id="mailPopupOverlay">
@@ -1650,30 +1604,18 @@ function renderCalendar() {
   }
 }
 
-/* ── 폼 패널 토글 ────────────────────────────────────────────────────── */
-var formPanel      = document.getElementById('formPanel');
-var btnToggleForm  = document.getElementById('btnToggleForm');
-
-btnToggleForm.addEventListener('click', function () {
-  var collapsed = formPanel.classList.toggle('collapsed');
-  btnToggleForm.textContent = collapsed ? '▶ 폼' : '◀ 폼';
-});
-
-/* ── 개별 등록 접기/펼치기 ───────────────────────────────────────────── */
-var btnManualToggle  = document.getElementById('btnManualFormToggle');
-var manualFormBody   = document.getElementById('manualFormBody');
-
-function openManualForm() {
-  manualFormBody.classList.add('open');
-  btnManualToggle.classList.add('open');
+/* ── 개별 등록 팝업 열기/닫기 ───────────────────────────────────────── */
+function openIndivPopup() {
+  document.getElementById('indivPopupOverlay').classList.add('open');
 }
-function closeManualForm() {
-  manualFormBody.classList.remove('open');
-  btnManualToggle.classList.remove('open');
+function closeIndivPopup() {
+  document.getElementById('indivPopupOverlay').classList.remove('open');
 }
 
-btnManualToggle.addEventListener('click', function () {
-  manualFormBody.classList.contains('open') ? closeManualForm() : openManualForm();
+document.getElementById('btnOpenIndivPopup').addEventListener('click', openIndivPopup);
+document.getElementById('btnIndivPopupClose').addEventListener('click', closeIndivPopup);
+document.getElementById('indivPopupOverlay').addEventListener('click', function (e) {
+  if (e.target === this) closeIndivPopup();
 });
 
 /* ── 월 네비게이션 ───────────────────────────────────────────────────── */
@@ -1816,9 +1758,7 @@ function fillForm(item) {
   document.getElementById('fUrgent').checked        = !!item.urgent;
   document.getElementById('btnSubmit').textContent  = '수정 저장';
   document.getElementById('btnCancelEdit').style.display = 'block';
-  formPanel.classList.remove('collapsed');
-  btnToggleForm.textContent = '◀ 폼';
-  openManualForm();
+  openIndivPopup();
 }
 
 /* ── 폼 제출 (신규 등록 + 수정 저장 통합) ───────────────────────────── */
@@ -1861,10 +1801,14 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 
   saveItems(items);
   resetForm();
+  closeIndivPopup();
   renderCalendar();
 });
 
-document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
+document.getElementById('btnCancelEdit').addEventListener('click', function () {
+  resetForm();
+  closeIndivPopup();
+});
 
 /* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
 var modalCurrentDate   = null;
@@ -2184,7 +2128,6 @@ function editItem(id) {
   if (!item) return;
   closeModal();
   fillForm(item);
-  document.getElementById('scheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ── 인라인 수정 (모달 내 카드 → 폼 변환) ───────────────────────────── */
