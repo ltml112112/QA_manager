@@ -28,6 +28,7 @@ const apps = [
     badge:       null,
     src:         './apps/03_hplc_dsc/index.html',
     loaderText:  'HPLC/DSC Report 자동화 로딩 중...',
+    locked:      true,
   },
   {
     id:          'lgd',
@@ -37,6 +38,7 @@ const apps = [
     src:         'https://script.google.com/macros/s/AKfycbxv4hTJIlnNUr0qjmfAdHrV4WrjLfPz5MkiW3Te4BIWj5iLO6_4btqs82huib6U4Wsq/exec',
     loaderText:  'LGD 사전심사자료 자동화 로딩 중...',
     sandbox:     'allow-scripts allow-forms allow-same-origin allow-popups allow-downloads',
+    locked:      true,
   },
   {
     id:          'sdc',
@@ -45,6 +47,7 @@ const apps = [
     badge:       null,
     src:         './apps/04_sdc_eval/index.html',
     loaderText:  'SDC 사전심사자료 자동화 로딩 중...',
+    locked:      true,
   },
   {
     id:          'cpl',
@@ -53,20 +56,38 @@ const apps = [
     badge:       null,
     src:         './apps/05_cpl_quality/index.html',
     loaderText:  'Lot 추적관리 & SQC 로딩 중...',
+    locked:      true,
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── 잠금 해제 상태 관리 ───────────────────────────────────────────────────────
+var _UK = 'qa_p_ulk';
+var _UC = [57, 52, 48, 52, 49, 52]; // '9','4','0','4','1','4'
+
+function _isUnlocked() {
+  return localStorage.getItem(_UK) === '1';
+}
+
+function _checkPass(input) {
+  var expected = _UC.map(function(c) { return String.fromCharCode(c); }).join('');
+  return input === expected;
+}
 
 /**
  * apps 배열을 순회하여 탭 버튼과 iframe 래퍼를 DOM에 삽입합니다.
  * index.html의 .tab-nav 와 .frame-area 요소에 의존합니다.
  */
 function renderApps() {
-  const nav       = document.querySelector('.tab-nav');
-  const frameArea = document.querySelector('.frame-area');
+  var nav       = document.querySelector('.tab-nav');
+  var frameArea = document.querySelector('.frame-area');
+  var unlocked  = _isUnlocked();
+  var firstVisible = true;
 
-  apps.forEach(function(app, index) {
-    var isFirst = index === 0;
+  apps.forEach(function(app) {
+    var hidden   = app.locked && !unlocked;
+    var isFirst  = firstVisible && !hidden;
+    if (isFirst) firstVisible = false;
 
     // ── 탭 버튼 ──────────────────────────────────────────────────────────────
     var btn = document.createElement('button');
@@ -76,6 +97,7 @@ function renderApps() {
     btn.setAttribute('aria-selected', isFirst ? 'true' : 'false');
     btn.setAttribute('aria-controls', 'tab-' + app.id);
     btn.id = 'tabbtn-' + app.id;
+    if (hidden) btn.style.display = 'none';
 
     var iconSpan = document.createElement('span');
     iconSpan.setAttribute('aria-hidden', 'true');
@@ -101,6 +123,7 @@ function renderApps() {
     wrap.id = 'tab-' + app.id;
     wrap.setAttribute('role', 'tabpanel');
     wrap.setAttribute('aria-labelledby', 'tabbtn-' + app.id);
+    if (hidden) wrap.style.display = 'none';
 
     var loader = document.createElement('div');
     loader.className = 'loader';
@@ -111,15 +134,133 @@ function renderApps() {
 
     var iframe = document.createElement('iframe');
     iframe.id    = 'iframe-' + app.id;
-    iframe.src   = app.src;
     iframe.title = app.label;
     if (app.sandbox) { iframe.setAttribute('sandbox', app.sandbox); }
     iframe.addEventListener('load', function() { hideLoader(app.id); });
+
+    // 잠긴 탭은 src를 아직 설정하지 않음 (해제 시 설정)
+    if (!hidden) {
+      iframe.src = app.src;
+    }
+    iframe.dataset.src = app.src;
 
     wrap.appendChild(loader);
     wrap.appendChild(iframe);
     frameArea.appendChild(wrap);
   });
+}
+
+// ── 잠금 해제 후 탭 표시 ─────────────────────────────────────────────────────
+function _revealLockedTabs() {
+  apps.forEach(function(app) {
+    if (!app.locked) return;
+    var btn  = document.getElementById('tabbtn-' + app.id);
+    var wrap = document.getElementById('tab-' + app.id);
+    var iframe = document.getElementById('iframe-' + app.id);
+    if (btn)  btn.style.display  = '';
+    if (wrap) wrap.style.display = '';
+    // src가 아직 없으면 이제 로드
+    if (iframe && !iframe.src && iframe.dataset.src) {
+      iframe.src = iframe.dataset.src;
+    }
+  });
+}
+
+// ── 비밀번호 모달 ─────────────────────────────────────────────────────────────
+function _createPassModal() {
+  var overlay = document.createElement('div');
+  overlay.id = 'pass-overlay';
+  overlay.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:9999',
+    'display:flex', 'align-items:center', 'justify-content:center',
+    'background:rgba(0,0,0,0.45)', 'backdrop-filter:blur(4px)',
+  ].join(';');
+
+  var box = document.createElement('div');
+  box.style.cssText = [
+    'background:var(--portal-surface)', 'border:1px solid var(--portal-border)',
+    'border-radius:14px', 'padding:28px 32px', 'width:300px',
+    'box-shadow:0 8px 32px rgba(0,0,0,0.18)',
+    'display:flex', 'flex-direction:column', 'gap:14px',
+  ].join(';');
+
+  var label = document.createElement('div');
+  label.style.cssText = 'font-size:13px;color:var(--portal-text-muted);text-align:center;letter-spacing:0.02em;';
+  label.textContent = '접근 코드를 입력하세요';
+
+  var inp = document.createElement('input');
+  inp.type = 'password';
+  inp.placeholder = '• • • • • •';
+  inp.autocomplete = 'off';
+  inp.style.cssText = [
+    'width:100%', 'padding:10px 14px', 'border-radius:8px',
+    'border:1px solid var(--portal-border)', 'background:var(--portal-bg)',
+    'color:var(--portal-text)', 'font-size:18px', 'text-align:center',
+    'letter-spacing:6px', 'outline:none', 'box-sizing:border-box',
+    'transition:border-color .15s',
+  ].join(';');
+
+  var err = document.createElement('div');
+  err.style.cssText = 'font-size:12px;color:#ef4444;text-align:center;min-height:16px;';
+
+  function _close() {
+    overlay.remove();
+  }
+
+  function _attempt() {
+    if (_checkPass(inp.value.trim())) {
+      localStorage.setItem(_UK, '1');
+      _revealLockedTabs();
+      _close();
+    } else {
+      err.textContent = '코드가 올바르지 않습니다.';
+      inp.value = '';
+      inp.style.borderColor = '#ef4444';
+      setTimeout(function() { inp.style.borderColor = ''; err.textContent = ''; }, 1500);
+    }
+  }
+
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') _attempt();
+    if (e.key === 'Escape') _close();
+  });
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) _close();
+  });
+
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '취소';
+  cancelBtn.style.cssText = [
+    'flex:1', 'padding:9px', 'border-radius:8px', 'border:1px solid var(--portal-border)',
+    'background:transparent', 'color:var(--portal-text-muted)', 'cursor:pointer',
+    'font-size:13px',
+  ].join(';');
+  cancelBtn.addEventListener('click', _close);
+
+  var confirmBtn = document.createElement('button');
+  confirmBtn.textContent = '확인';
+  confirmBtn.style.cssText = [
+    'flex:1', 'padding:9px', 'border-radius:8px', 'border:none',
+    'background:var(--portal-accent)', 'color:#fff', 'cursor:pointer',
+    'font-size:13px', 'font-weight:600',
+  ].join(';');
+  confirmBtn.addEventListener('click', _attempt);
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(confirmBtn);
+
+  box.appendChild(label);
+  box.appendChild(inp);
+  box.appendChild(err);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  setTimeout(function() { inp.focus(); }, 50);
 }
 
 // ── 탭 전환 ──────────────────────────────────────────────────────────────────
@@ -155,11 +296,23 @@ function hideLoader(id) {
     });
   }
 
+  // 가동 중 초록 점 — 비밀번호 트리거 (이미 해제된 경우 무시)
+  var statusDot = document.querySelector('.status-dot');
+  if (statusDot) {
+    statusDot.style.cursor = 'pointer';
+    statusDot.addEventListener('click', function() {
+      if (_isUnlocked()) return; // 이미 해제됨
+      _createPassModal();
+    });
+  }
+
   // 탭 키보드 내비게이션 — 위/아래 화살표로 탭 전환
   document.querySelector('.tab-nav').addEventListener('keydown', function(e) {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
-    var btns = Array.from(document.querySelectorAll('.tab-btn'));
+    var btns = Array.from(document.querySelectorAll('.tab-btn')).filter(function(b) {
+      return b.style.display !== 'none';
+    });
     var current = btns.findIndex(function(b) { return b.classList.contains('active'); });
     var next = e.key === 'ArrowDown'
       ? (current + 1) % btns.length
