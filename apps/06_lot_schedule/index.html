@@ -493,6 +493,51 @@ html, body {
   margin-left: 2px;
 }
 
+/* ── 3분할 날짜 피커 ─────────────────────────────────────────────────── */
+.date-parts-wrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 0 10px;
+  height: 36px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.date-parts-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(190,0,57,.15);
+}
+.dp-year {
+  width: 44px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+.dp-year::-webkit-outer-spin-button,
+.dp-year::-webkit-inner-spin-button { -webkit-appearance: none; }
+.dp-sep {
+  color: var(--text-muted);
+  font-size: 12px;
+  user-select: none;
+  flex-shrink: 0;
+}
+.dp-month, .dp-day {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 /* textarea 크기 조절 허용 (세로만) */
 textarea.form-input {
   resize: vertical;
@@ -1285,13 +1330,61 @@ textarea.form-input {
         </div>
 
         <div class="form-group">
-          <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
-          <input class="form-input" type="date" id="fEvalStart">
+          <label class="fld-label">소자평가 시작일</label>
+          <div class="date-parts-wrap">
+            <input class="dp-year" type="number" id="fEvalStart_y" min="2020" max="2040">
+            <span class="dp-sep">년</span>
+            <select class="dp-month" id="fEvalStart_m">
+              <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+              <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+              <option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
+              <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+            </select>
+            <select class="dp-day" id="fEvalStart_d">
+              <option value="">일</option>
+              <option value="01">1</option><option value="02">2</option><option value="03">3</option>
+              <option value="04">4</option><option value="05">5</option><option value="06">6</option>
+              <option value="07">7</option><option value="08">8</option><option value="09">9</option>
+              <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+              <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+              <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+              <option value="19">19</option><option value="20">20</option><option value="21">21</option>
+              <option value="22">22</option><option value="23">23</option><option value="24">24</option>
+              <option value="25">25</option><option value="26">26</option><option value="27">27</option>
+              <option value="28">28</option><option value="29">29</option><option value="30">30</option>
+              <option value="31">31</option>
+            </select>
+            <span class="dp-sep">일</span>
+          </div>
         </div>
 
         <div class="form-group">
-          <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
-          <input class="form-input" type="date" id="fEvalTarget">
+          <label class="fld-label">소자평가 완료 요청일</label>
+          <div class="date-parts-wrap">
+            <input class="dp-year" type="number" id="fEvalTarget_y" min="2020" max="2040">
+            <span class="dp-sep">년</span>
+            <select class="dp-month" id="fEvalTarget_m">
+              <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+              <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+              <option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
+              <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+            </select>
+            <select class="dp-day" id="fEvalTarget_d">
+              <option value="">일</option>
+              <option value="01">1</option><option value="02">2</option><option value="03">3</option>
+              <option value="04">4</option><option value="05">5</option><option value="06">6</option>
+              <option value="07">7</option><option value="08">8</option><option value="09">9</option>
+              <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+              <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+              <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+              <option value="19">19</option><option value="20">20</option><option value="21">21</option>
+              <option value="22">22</option><option value="23">23</option><option value="24">24</option>
+              <option value="25">25</option><option value="26">26</option><option value="27">27</option>
+              <option value="28">28</option><option value="29">29</option><option value="30">30</option>
+              <option value="31">31</option>
+            </select>
+            <span class="dp-sep">일</span>
+          </div>
         </div>
 
         <hr class="form-divider">
@@ -1794,11 +1887,40 @@ function renderAC(query) {
   });
 })();
 
+/* ── 3분할 날짜 피커 헬퍼 ────────────────────────────────────────────── */
+function getDatePartsVal(prefix) {
+  var y = document.getElementById(prefix + '_y').value;
+  var m = document.getElementById(prefix + '_m').value;
+  var d = document.getElementById(prefix + '_d').value;
+  if (!y || !m || !d) return '';
+  return String(y).padStart(4, '0') + '-' + m + '-' + d;
+}
+
+function setDatePartsVal(prefix, dateStr) {
+  var parts = getTodayStr().split('-');
+  if (dateStr && dateStr.length === 10) {
+    parts = dateStr.split('-');
+    document.getElementById(prefix + '_d').value = parts[2];
+  } else {
+    document.getElementById(prefix + '_d').value = '';
+  }
+  document.getElementById(prefix + '_y').value = parts[0];
+  document.getElementById(prefix + '_m').value = parts[1];
+}
+
+function initDatePartsDefaults(prefix) {
+  var parts = getTodayStr().split('-');
+  document.getElementById(prefix + '_y').value = parts[0];
+  document.getElementById(prefix + '_m').value = parts[1];
+  document.getElementById(prefix + '_d').value = '';
+}
+
 /* ── 폼 기본값 세팅 (리셋 후 날짜 기본값 채우기) ────────────────────── */
 function setFormDefaults() {
   var t = getTodayStr();
   document.getElementById('fTransferDate').value = t;
-  document.getElementById('fEvalStart').value    = t;
+  initDatePartsDefaults('fEvalStart');
+  initDatePartsDefaults('fEvalTarget');
 }
 
 /* ── 폼 리셋 헬퍼 ────────────────────────────────────────────────────── */
@@ -1830,8 +1952,8 @@ function readFormData() {
     lot:          document.getElementById('fLot').value.trim(),
     request:      document.getElementById('fRequest').value.trim(),
     transferDate: document.getElementById('fTransferDate').value,
-    evalStart:    document.getElementById('fEvalStart').value,
-    evalTarget:   document.getElementById('fEvalTarget').value,
+    evalStart:    getDatePartsVal('fEvalStart'),
+    evalTarget:   getDatePartsVal('fEvalTarget'),
     urgent:       document.getElementById('fUrgent').checked,
   };
 }
@@ -1847,8 +1969,8 @@ function fillForm(item) {
   document.getElementById('fLot').value             = item.lot      || '';
   document.getElementById('fRequest').value         = item.request  || '';
   document.getElementById('fTransferDate').value    = item.transferDate;
-  document.getElementById('fEvalStart').value       = item.evalStart  || '';
-  document.getElementById('fEvalTarget').value      = item.evalTarget || '';
+  setDatePartsVal('fEvalStart',  item.evalStart  || '');
+  setDatePartsVal('fEvalTarget', item.evalTarget || '');
   document.getElementById('fUrgent').checked        = !!item.urgent;
   document.getElementById('btnSubmit').textContent  = '수정 저장';
   document.getElementById('btnCancelEdit').style.display = 'block';
@@ -2336,9 +2458,61 @@ function editInModal(itemId, cardEl) {
     w.appendChild(l); w.appendChild(i);
     return { w: w, i: i };
   }
+  function mkDateParts(val, lbl) {
+    var w = document.createElement('div');
+    w.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;min-width:150px;';
+    var l = document.createElement('div');
+    l.style.cssText = 'font-size:10px;color:var(--text-muted);';
+    l.textContent = lbl;
+    var defParts = getTodayStr().split('-');
+    var existParts = (val && val.length === 10) ? val.split('-') : [];
+    var wrap = document.createElement('div');
+    wrap.className = 'date-parts-wrap';
+    wrap.style.cssText = 'height:30px;padding:0 7px;';
+    var yInp = document.createElement('input');
+    yInp.type = 'number'; yInp.className = 'dp-year';
+    yInp.style.cssText = 'font-size:12px;width:40px;';
+    yInp.min = '2020'; yInp.max = '2040';
+    yInp.value = existParts[0] || defParts[0];
+    var sep1 = document.createElement('span');
+    sep1.className = 'dp-sep'; sep1.textContent = '년';
+    var mSel = document.createElement('select');
+    mSel.className = 'dp-month'; mSel.style.cssText = 'font-size:12px;';
+    ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'].forEach(function(mn, idx) {
+      var o = document.createElement('option');
+      o.value = String(idx + 1).padStart(2, '0');
+      o.textContent = mn;
+      mSel.appendChild(o);
+    });
+    mSel.value = existParts[1] || defParts[1];
+    var dSel = document.createElement('select');
+    dSel.className = 'dp-day'; dSel.style.cssText = 'font-size:12px;';
+    var emO = document.createElement('option'); emO.value = ''; emO.textContent = '일';
+    dSel.appendChild(emO);
+    for (var d = 1; d <= 31; d++) {
+      var o = document.createElement('option');
+      o.value = String(d).padStart(2, '0'); o.textContent = String(d);
+      dSel.appendChild(o);
+    }
+    dSel.value = existParts[2] || '';
+    var sep2 = document.createElement('span');
+    sep2.className = 'dp-sep'; sep2.textContent = '일';
+    wrap.appendChild(yInp); wrap.appendChild(sep1);
+    wrap.appendChild(mSel); wrap.appendChild(dSel); wrap.appendChild(sep2);
+    w.appendChild(l); w.appendChild(wrap);
+    var mockI = {};
+    Object.defineProperty(mockI, 'value', {
+      get: function() {
+        var y = yInp.value, m = mSel.value, dd = dSel.value;
+        if (!y || !m || !dd) return '';
+        return String(y).padStart(4, '0') + '-' + m + '-' + dd;
+      }
+    });
+    return { w: w, i: mockI };
+  }
   var dTf = mkD(item.transferDate, '이관일');
-  var dEs = mkD(item.evalStart,    '평가시작');
-  var dEt = mkD(item.evalTarget,   '완료 요청일');
+  var dEs = mkDateParts(item.evalStart,    '평가시작');
+  var dEt = mkDateParts(item.evalTarget,   '완료 요청일');
   r2.appendChild(dTf.w); r2.appendChild(dEs.w); r2.appendChild(dEt.w);
   form.appendChild(r2);
 
