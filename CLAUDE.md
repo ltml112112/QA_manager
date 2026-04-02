@@ -9,6 +9,7 @@
 3. **LGD 사전심사자료 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
 4. **SDC 사전심사자료 자동화** - Google Apps Script 기반 구현 예정 (개발 중)
 5. **소재 Lot 이력 & TREND 분석** - 전 소재 Lot 계보 추적 + 공정별 SPC TREND 시각화
+6. **소자평가 Lot 일정 관리** - 합성생산/정제소자이관 소자평가 일정 캘린더 관리
 
 **호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
@@ -37,8 +38,10 @@ QA_manager/
     │   └── index.html                # HPLC/DSC Report 자동생성
     ├── 04_sdc_eval/
     │   └── index.html                # SDC 사전심사자료 자동화 (개발 중 플레이스홀더)
-    └── 05_cpl_quality/
-        └── index.html                # 소재 Lot 이력 & TREND 분석 (단일 파일 앱)
+    ├── 05_cpl_quality/
+    │   └── index.html                # 소재 Lot 이력 & TREND 분석 (단일 파일 앱)
+    └── 06_lot_schedule/
+        └── index.html                # 소자평가 Lot 일정 관리 (단일 파일 앱)
 ```
 
 ---
@@ -638,6 +641,169 @@ STATE = {
 
 ---
 
+## 6. 소자평가 Lot 일정 관리 (`apps/06_lot_schedule/`)
+
+합성생산·정제생산/소자이관 부서의 소자평가 이관 일정을 월별 캘린더로 관리하는 도구.
+단일 HTML 파일(`index.html`)에 CSS·HTML·JS 전부 포함.
+
+### 화면 레이아웃
+
+```
+[topbar: 📧 메일 일괄 등록 | ✏ 개별 등록 | ‹ 년/월 › | 오늘 | 📋 샘플 | 🔍 조회]
+──────────────────────────────────────────────────────────────────
+[요약 스트립: 진행 중 N건 | 합성 N | 정제/소자 N | ⚡ 시급 N | 완료 N]
+[범례 바: 합성생산 · 정제소자이관 · 시급요청 · 완료  +  완료 표시 토글]
+──────────────────────────────────────────────────────────────────
+[캘린더 풀 너비: 일 ~ 토  7열 그리드]
+  각 셀: 날짜 숫자 + Lot 카드 (최대 3개, 이후 "+N개")
+```
+
+- 좌측 사이드바 없음 — 캘린더가 화면 전체 너비 사용
+- 세 가지 팝업: 메일 일괄 등록 / 개별 등록 / 날짜·조회 모달
+
+### 아이템 데이터 스키마 (localStorage)
+
+```javascript
+{
+  id:           string,          // genId() — Date.now().toString(36) + random
+  dept:         string,          // '합성생산' | '정제생산/소자이관'
+  material:     string,          // 재료명 (예: PG1088)
+  lot:          string,          // Lot 번호
+  request:      string,          // 요청사항
+  transferDate: 'YYYY-MM-DD',    // 샘플 이관일 (필수)
+  evalStart:    'YYYY-MM-DD',    // 소자평가 시작일 (선택)
+  evalTarget:   'YYYY-MM-DD',    // 소자평가 완료 요청일 (선택)
+  urgent:       boolean,         // 시급 요청 여부
+  completed:    boolean,         // 소자평가 완료 여부
+  completedAt:  'YYYY-MM-DD'|null,
+  createdAt:    'YYYY-MM-DD',
+}
+```
+
+저장 키: `qa_lot_schedule_v1` (localStorage)
+
+### 캘린더 셀 표시 규칙
+
+| 부서 | 기준 | 표시 조건 |
+|------|------|----------|
+| 합성생산 | `transferDate` | 이관 당일 셀에만 표시 |
+| 정제생산/소자이관 | `transferDate` ~ 완료 | 이관일부터 완료일(또는 오늘)까지 모든 셀에 표시 |
+
+- 셀당 최대 3개 카드, 초과 시 `+N개` 더보기 클릭 → 날짜 모달
+- D+N 뱃지: 이관일 기준 경과일 (7일 이상이면 빨간색)
+
+### 날짜 클릭 / 조회 모달 (공통)
+
+- **고정 크기**: `min(960px, 100vw-40px)` × `min(82vh, 860px)` — Lot 수에 무관
+- **오늘 클릭**: 합성생산 오늘 이관 + 정제소자 전체 미완료 2컬럼
+- **과거/미래 날짜 클릭**: 해당 날 기준 활성 항목 2컬럼
+- **조회(🔍) 버튼**: 동일 모달에 검색 바 추가 표시 — 품명·Lot·요청사항·부서·비고 통합 검색, Enter 지원
+- **2컬럼 레이아웃**: 합성생산(왼쪽) | 정제/소자이관(오른쪽), 한 종류만 있으면 단일 컬럼
+
+### 팝업 3종
+
+#### ① 메일 일괄 등록 팝업
+
+이메일에서 표를 복사(Ctrl+C → Ctrl+V) 하거나 드래그 드롭으로 붙여 넣으면 행 파싱 → 미리보기 → 일괄 등록.
+
+**표 종류 자동 판별 로직:**
+- 붙여넣은 텍스트(HTML + plain)에 `"합성생산팀 충주 이관내역"` 문구 포함 → **합성생산 표**
+- 없으면 → **정제생산/소자이관 표**
+
+**합성생산 표 미리보기 특이사항:**
+- 같은 Batch No. 행들이 그룹으로 묶임
+- 그룹 첫 번째 행에만 체크박스 표시 (배치당 1건 등록)
+- 체크박스 클릭 또는 행 클릭(비편집 모드) → 같은 배치 전체 행에 주황 외곽선 표시
+- 우측 상단 `✏ 수정` 버튼: 편집 모드 토글 (입력 필드 활성화)
+- 등록 시 배치 헤드 행만 처리 → 배치당 1건
+
+**헤더 컬럼 키워드 매핑 (`MAIL_COL_ROLES`):**
+
+| 역할 | 인식 키워드 |
+|------|-----------|
+| `date` | 날짜, 일자, 이관일자 |
+| `material` | 품명, 품목명, 품목명품목코드 |
+| `lot` | lot번호, lot, batchno |
+| `weight` | 중량, 무게 |
+| `recipient` | 수령인 |
+| `comment` | 비고 |
+| `batchNo` | 승화정제batchno, 승화정제batch |
+| `synthHist` | 합성이력 |
+| `prodDate` | 생산일자 |
+
+#### ② 개별 등록 팝업
+
+topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
+수정 버튼 클릭 시에도 자동 열림. 등록/취소 시 자동 닫힘.
+
+필드: 부서(라디오) · 재료명(자동완성) · Lot번호 · 요청사항 · 샘플이관일* · 소자평가시작일 · 완료요청일 · ⚡ 시급
+
+#### ③ 날짜·조회 모달
+
+위 "날짜 클릭 / 조회 모달" 섹션 참고.
+
+### 주요 함수 목록
+
+| 함수 | 역할 |
+|------|------|
+| `loadItems()` / `saveItems(items)` | localStorage 읽기/쓰기 |
+| `genId()` | 고유 ID 생성 |
+| `calcDN(transferDate, asOf)` | 이관일 기준 D+N 계산 |
+| `renderCalendar()` | 달력 전체 재렌더 |
+| `renderSummary(items)` | 요약 스트립 칩 렌더 |
+| `openModal(dateStr)` | 날짜 클릭 모달 오픈 |
+| `openFilterModal(filter)` | 요약 칩 클릭 필터 모달 |
+| `openSearchModal()` | 조회 버튼 → 검색 모드 모달 |
+| `runModalSearch()` | 검색 실행 및 결과 렌더 |
+| `openIndivPopup()` / `closeIndivPopup()` | 개별 등록 팝업 |
+| `openMailPopup()` / `closeMailPopup()` | 메일 일괄 등록 팝업 |
+| `renderBodyTwoCols(bodyEl, items, asOf)` | 모달 2컬럼 렌더 |
+| `buildDetailCard(item, asOf)` | 모달 디테일 카드 DOM 생성 |
+| `fillForm(item)` | 수정 폼 채우기 + 팝업 열기 |
+| `resetForm()` | 폼 초기화 |
+| `editInModal(itemId, cardEl)` | 모달 내 인라인 수정 |
+| `markComplete(id)` / `markUncomplete(id)` | 완료 처리/취소 |
+| `deleteItem(id)` | 아이템 삭제 |
+| `refreshModal()` | 현재 모달 상태 그대로 재렌더 |
+| `processMailData(html, plain)` | 메일 파싱 진입점 |
+| `detectTableType(isSynthSource)` | 합성/정제 표 판별 |
+| `detectMailHeader(grid)` | 헤더 행 감지 |
+| `extractMailRows(grid, headerInfo, tableType)` | 데이터 행 추출 |
+| `renderMailPreview(rows, tableType)` | 미리보기 테이블 렌더 |
+| `normDate(s)` | 날짜 문자열 정규화 |
+| `htmlTableToGrid(table)` / `tsvToGrid(plain)` | HTML·TSV → 2D 배열 |
+
+### CSS 클래스 구조
+
+| 클래스 | 설명 |
+|--------|------|
+| `.app-layout` | 전체 flex 컨테이너 (캘린더 풀 너비) |
+| `.cal-main` | 캘린더 메인 영역 |
+| `.cal-topbar` | 상단 버튼 바 |
+| `.cal-body` | 캘린더 그리드 스크롤 영역 |
+| `.cal-dow-row` / `.cal-grid` | 요일 헤더 / 날짜 그리드 |
+| `.cal-cell` | 날짜 셀 |
+| `.lot-card.dept-synth` | 합성생산 카드 (빨간색 좌측 바) |
+| `.lot-card.dept-refine` | 정제/소자이관 카드 (보라색 좌측 바) |
+| `.lot-card.is-urgent` | 시급 카드 (점선 테두리) |
+| `.lot-card.is-done` | 완료 카드 (취소선, 투명도) |
+| `.dn-badge.dn-normal / .dn-alert / .dn-done` | D+N 뱃지 |
+| `.summary-strip` / `.sum-chip` | 요약 스트립 |
+| `.modal-overlay` / `.modal-box` | 날짜·조회 모달 (고정 크기) |
+| `.modal-search-bar` | 검색 모드 전용 검색 바 |
+| `.modal-box.search-mode` | 검색 바 표시 토글 |
+| `.modal-2col` / `.modal-col` | 2컬럼 레이아웃 |
+| `.detail-card` | 모달 내 아이템 카드 |
+| `.indiv-popup-overlay` / `.indiv-popup` | 개별 등록 팝업 |
+| `.mail-popup-overlay` / `.mail-popup` | 메일 일괄 등록 팝업 |
+| `.mail-preview-table` | 메일 파싱 미리보기 테이블 |
+| `.batch-row` | 합성생산 배치 그룹 행 |
+| `.batch-active` | 배치 체크 상태 (주황 외곽선) |
+| `.batch-pos-first` / `.batch-pos-last` | 배치 그룹 첫/마지막 행 (외곽선 제어) |
+| `.mp-edit-btn.active` | 미리보기 수정 모드 버튼 상태 |
+
+---
+
 ## 개발 시 주의사항
 
 1. **앱 수정 후 파일 저장 → 배포**만 하면 바로 반영됨 (base64 재인코딩 불필요)
@@ -662,3 +828,9 @@ STATE = {
 
 - 작업 브랜치: `claude/` 접두사 사용
 - PR 머지 대상: `main`
+
+### 최근 작업 브랜치 이력
+
+| 브랜치 | 내용 |
+|--------|------|
+| `claude/department-sorting-distinction-fHBNk` | `06_lot_schedule` 전체 기능 개발 — 부서 구분 로직·메일 파싱·배치 그룹화·UI 개편·검색 |
