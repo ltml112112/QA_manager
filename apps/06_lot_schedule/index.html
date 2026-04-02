@@ -7,6 +7,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../assets/css/global_style.css">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <title>소자평가 Lot test 일정 관리</title>
 <style>
 
@@ -1376,6 +1379,20 @@ window.addEventListener('message', function (e) {
   if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
 });
 
+/* ── Firebase 초기화 ─────────────────────────────────────────────────── */
+var firebaseConfig = {
+  apiKey:            "AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc",
+  authDomain:        "qa-manager-9c145.firebaseapp.com",
+  databaseURL:       "https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "qa-manager-9c145",
+  storageBucket:     "qa-manager-9c145.firebasestorage.app",
+  messagingSenderId: "1037146076792",
+  appId:             "1:1037146076792:web:b8ddcdb31d527d2d545f8d"
+};
+firebase.initializeApp(firebaseConfig);
+var _db    = firebase.database();
+var DB_REF = _db.ref('lot_schedule');
+
 /* ── 상수 ────────────────────────────────────────────────────────────── */
 var STORAGE_KEY  = 'qa_lot_schedule_v1';
 
@@ -1416,15 +1433,32 @@ function genId() {
   }
 */
 function loadItems() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch (e) {
-    return [];
-  }
+  return window._cachedItems || [];
 }
 
 function saveItems(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  window._cachedItems = items;
+  DB_REF.set(items.length ? items : null);
+}
+
+/* ── 실시간 동기화 ───────────────────────────────────────────────────── */
+function setupRealtimeSync() {
+  // Firebase가 비어있으면 localStorage 기존 데이터로 마이그레이션
+  DB_REF.once('value', function (snap) {
+    if (snap.val() === null) {
+      var legacy = [];
+      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
+      if (legacy.length > 0) {
+        DB_REF.set(legacy);
+      }
+    }
+    // 실시간 구독 시작 (변경 즉시 재렌더)
+    DB_REF.on('value', function (s) {
+      var data = s.val();
+      window._cachedItems = Array.isArray(data) ? data : [];
+      renderCalendar();
+    });
+  });
 }
 
 /* ── D+N 계산 ────────────────────────────────────────────────────────── */
@@ -2518,7 +2552,7 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
-renderCalendar();
+setupRealtimeSync();
 
 /* ════════════════════════════════════════════════════════════════════════
    메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서
