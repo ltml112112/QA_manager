@@ -79,8 +79,8 @@ html, body {
 .cal-topbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 12px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -93,7 +93,7 @@ html, body {
 }
 
 .cal-title {
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--text);
   text-align: center;
@@ -101,13 +101,13 @@ html, body {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   transition: background 0.15s;
 }
 .cal-title:hover { background: var(--surface-2); }
-.cal-title .mp-caret { font-size: 11px; opacity: 0.55; }
+.cal-title .mp-caret { font-size: 13px; opacity: 0.55; }
 
 /* ── 월 선택 피커 ────────────────────────────────────────────────────── */
 .month-picker {
@@ -171,14 +171,14 @@ html, body {
 
 /* 네비게이션 버튼 공통 */
 .nav-btn {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -191,57 +191,16 @@ html, body {
   border-color: var(--border-hover);
 }
 
-/* 검색 영역 */
-.topbar-search {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;   /* 우측 정렬 */
-}
-.topbar-search-input {
-  height: 30px;
-  width: 200px;
-  padding: 0 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--text);
-  font-size: 12px;
-  font-family: var(--font-body);
-  outline: none;
-  transition: border-color .15s, width .2s;
-}
-.topbar-search-input:focus {
-  border-color: var(--accent);
-  width: 260px;
-}
-.topbar-search-input::placeholder { color: var(--text-faint); }
-.btn-search {
-  padding: 0 12px;
-  height: 30px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: var(--font-body);
-  white-space: nowrap;
-  transition: background .15s, border-color .15s, color .15s;
-}
-.btn-search:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
-
 /* 오늘 버튼 */
 .btn-today {
-  padding: 0 11px;
-  height: 30px;
+  padding: 0 14px;
+  height: 36px;
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   transition: background 0.15s;
@@ -249,16 +208,16 @@ html, body {
 }
 .btn-today:hover { background: var(--accent-glow); }
 
-/* 등록 버튼 (topbar용 — 높이 30px 맞춤) */
+/* 등록·조회 버튼 (topbar용) */
 .btn-reg-mail {
-  padding: 0 14px;
-  height: 30px;
+  padding: 0 16px;
+  height: 36px;
   background: var(--accent);
   border: none;
   color: #fff;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   white-space: nowrap;
@@ -266,31 +225,47 @@ html, body {
 }
 .btn-reg-mail:hover { background: var(--accent-hover); }
 .btn-reg-indiv {
-  padding: 0 12px;
-  height: 30px;
+  padding: 0 14px;
+  height: 36px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   white-space: nowrap;
   transition: background 0.15s, border-color 0.15s;
 }
 .btn-reg-indiv:hover { background: var(--surface-2); border-color: var(--border-hover); }
+.btn-search {
+  padding: 0 14px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  margin-left: auto;   /* 우측 끝으로 */
+  transition: background .15s, border-color .15s, color .15s;
+}
+.btn-search:hover { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
 
 /* 샘플 버튼 */
 .btn-sample {
-  padding: 0 10px;
-  height: 30px;
+  padding: 0 12px;
+  height: 36px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-faint);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-body);
   white-space: nowrap;
   transition: background 0.15s;
@@ -897,8 +872,8 @@ textarea.form-input {
 .summary-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 10px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1171,11 +1146,7 @@ textarea.form-input {
       <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
       <button class="btn-today" id="btnToday">오늘</button>
       <button class="btn-sample" id="btnSample" title="샘플 데이터 로드">📋 샘플</button>
-      <div class="topbar-search">
-        <input type="text" class="topbar-search-input" id="topbarSearchInput"
-          placeholder="🔍 품명 · Lot · 요청사항 검색">
-        <button class="btn-search" id="btnTopbarSearch">조회</button>
-      </div>
+      <button class="btn-search" id="btnOpenSearch">🔍 조회</button>
     </div>
 
     <!-- 요약 스트립 -->
@@ -1292,6 +1263,24 @@ textarea.form-input {
         <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">등록하기</button>
         <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit" style="display:none;margin-top:6px;">취소</button>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━  검색 팝업  ━━━━━━━━━━━━━━━━ -->
+<div class="indiv-popup-overlay" id="searchPopupOverlay">
+  <div class="indiv-popup" style="width:420px;">
+    <div class="indiv-popup-header">
+      <span class="indiv-popup-title">🔍 항목 조회</span>
+      <button type="button" class="indiv-popup-close" id="btnSearchPopupClose">✕</button>
+    </div>
+    <div class="indiv-popup-body" style="padding-bottom:8px;">
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <input type="text" id="searchInput" class="form-input" style="flex:1;"
+          placeholder="품명 · Lot번호 · 요청사항 · 부서 · 비고 검색">
+        <button type="button" class="btn btn-primary" id="btnDoSearch" style="white-space:nowrap;">검색</button>
+      </div>
+      <div id="searchResultArea"></div>
     </div>
   </div>
 </div>
@@ -1964,10 +1953,19 @@ function openFilterModal(filter) {
   overlay.classList.add('open');
 }
 
-/* ── 검색 모달 ───────────────────────────────────────────────────────── */
-function openSearchModal(query) {
-  var q = query.trim().toLowerCase();
-  if (!q) return;
+/* ── 검색 팝업 ───────────────────────────────────────────────────────── */
+function openSearchPopup() {
+  document.getElementById('searchPopupOverlay').classList.add('open');
+  document.getElementById('searchInput').focus();
+}
+function closeSearchPopup() {
+  document.getElementById('searchPopupOverlay').classList.remove('open');
+}
+
+function doSearch() {
+  var q = document.getElementById('searchInput').value.trim().toLowerCase();
+  var area = document.getElementById('searchResultArea');
+  if (!q) { area.innerHTML = ''; return; }
 
   var items = loadItems();
   var filtered = items.filter(function (it) {
@@ -1979,32 +1977,48 @@ function openSearchModal(query) {
     return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
   });
 
-  modalCurrentDate   = null;
-  modalCurrentFilter = null;
-  var overlay = document.getElementById('modalOverlay');
-  var bodyEl  = document.getElementById('modalBody');
-  document.getElementById('modalTitle').textContent =
-    '🔍 "' + query.trim() + '" 검색 결과 (' + filtered.length + '건)';
-  bodyEl.innerHTML = '';
-  bodyEl.classList.remove('is-2col');
-
   if (!filtered.length) {
-    bodyEl.innerHTML = '<div class="modal-empty">일치하는 항목이 없습니다.</div>';
-  } else {
-    renderBodyTwoCols(bodyEl, filtered, null);
+    area.innerHTML = '<div class="modal-empty" style="padding:20px 0;">일치하는 항목이 없습니다.</div>';
+    return;
   }
-  overlay.classList.add('open');
+
+  // 2컬럼 결과를 검색 팝업 내부에 렌더
+  area.innerHTML = '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">'
+    + '"' + document.getElementById('searchInput').value.trim() + '" 검색 결과 — ' + filtered.length + '건</div>';
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;gap:12px;';
+  var synth  = filtered.filter(function (it) { return it.dept === '합성생산'; });
+  var refine = filtered.filter(function (it) { return it.dept !== '합성생산'; });
+
+  function makeCol(label, color, arr) {
+    if (!arr.length) return null;
+    var col = document.createElement('div');
+    col.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;';
+    var hd = document.createElement('div');
+    hd.style.cssText = 'font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
+      + 'padding-bottom:6px;border-bottom:2px solid ' + color + ';color:' + color + ';flex-shrink:0;';
+    hd.textContent = label + ' ' + arr.length + '건';
+    col.appendChild(hd);
+    arr.forEach(function (it) { col.appendChild(buildDetailCard(it)); });
+    return col;
+  }
+
+  var sc = makeCol('합성생산', '#ef4444', synth);
+  var rc = makeCol('정제/소자이관', '#9333ea', refine);
+  if (sc) wrap.appendChild(sc);
+  if (rc) wrap.appendChild(rc);
+  area.appendChild(wrap);
 }
 
-(function () {
-  var input = document.getElementById('topbarSearchInput');
-  document.getElementById('btnTopbarSearch').addEventListener('click', function () {
-    openSearchModal(input.value);
-  });
-  input.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') openSearchModal(input.value);
-  });
-})();
+document.getElementById('btnOpenSearch').addEventListener('click', openSearchPopup);
+document.getElementById('btnSearchPopupClose').addEventListener('click', closeSearchPopup);
+document.getElementById('searchPopupOverlay').addEventListener('click', function (e) {
+  if (e.target === this) closeSearchPopup();
+});
+document.getElementById('btnDoSearch').addEventListener('click', doSearch);
+document.getElementById('searchInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') doSearch();
+});
 
 /* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
 function openItemModal(itemId) {
