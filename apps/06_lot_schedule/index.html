@@ -903,20 +903,32 @@ textarea.form-input {
   margin-top: 6px;
 }
 
-/* ── 메일 붙여넣기 버튼 (폼 하단) ──────────────────────────────────── */
-.btn-mail-import {
-  margin-top: 8px;
+/* ── 개별 등록 접기/펼치기 토글 ─────────────────────────────────────── */
+.manual-form-toggle {
   width: 100%;
+  margin-top: 10px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 12px;
-  padding: 7px 0;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
+  font-weight: 600;
   color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: border-color .12s, color .12s;
+  transition: color .15s, border-color .15s;
 }
-.btn-mail-import:hover { border-color: var(--accent); color: var(--accent); }
+.manual-form-toggle:hover { color: var(--text); border-color: var(--border-hover); }
+.manual-form-toggle .mft-arrow { font-size: 10px; transition: transform .2s; }
+.manual-form-toggle.open .mft-arrow { transform: rotate(180deg); }
+.manual-form-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .25s ease;
+}
+.manual-form-body.open { max-height: 900px; }
 
 /* ── 메일 붙여넣기 팝업 ──────────────────────────────────────────────── */
 .mail-popup-overlay {
@@ -1034,12 +1046,26 @@ textarea.form-input {
 .mail-preview-table td.td-chk  { text-align: center; width: 28px; }
 .mail-preview-table td.td-dept { width: 96px; }
 .mail-preview-table td.ref-col { color: var(--text-faint); font-size: 11px; }
-/* 합성생산 배치 그룹 */
-.mail-preview-table tr.batch-active td { box-shadow: inset 0 0 0 1.5px #f97316; }
-.mail-preview-table tr.batch-active:first-of-type td:first-child { box-shadow: inset 0 0 0 1.5px #f97316; }
+/* 합성생산 배치 그룹 — 외곽선만 */
 .mail-preview-table tr.batch-row { cursor: pointer; }
-.mail-preview-table tr.batch-row:hover td { background: rgba(249,115,22,.06); }
-.batch-sep td { border-top: 2px solid var(--border) !important; padding-top: 4px; }
+.mail-preview-table tr.batch-row:hover td { background: rgba(249,115,22,.04); }
+.mail-preview-table tr.batch-active td { border-left: none; border-right: none; background: rgba(249,115,22,.05); }
+.mail-preview-table tr.batch-active td:first-child { border-left: 2px solid #f97316; }
+.mail-preview-table tr.batch-active td:last-child  { border-right: 2px solid #f97316; }
+.mail-preview-table tr.batch-pos-first td { border-top: 2px solid #f97316; }
+.mail-preview-table tr.batch-pos-last  td { border-bottom: 2px solid #f97316; }
+.batch-sep td { border-top: 2px solid var(--border) !important; }
+/* 편집 모드 */
+.mail-preview-table.edit-mode .mp-edit:focus { background: rgba(190,0,57,.07); border-radius: 3px; }
+.mail-preview-table:not(.edit-mode) .mp-edit { pointer-events: none; }
+.mail-preview-table:not(.edit-mode) .mp-dept  { pointer-events: none; }
+.mail-preview-table:not(.edit-mode) tr { cursor: pointer; }
+.mp-edit-btn {
+  font-size: 11px; padding: 3px 10px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-muted); cursor: pointer; transition: all .15s;
+}
+.mp-edit-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(190,0,57,.06); }
 .mp-dept {
   font-size: 11.5px;
   padding: 2px 3px;
@@ -1107,92 +1133,99 @@ textarea.form-input {
         <span class="form-panel-title">소자평가 일정 등록</span>
       </div>
 
-      <!-- ── 등록 / 수정 폼 ── -->
-      <form id="scheduleForm" autocomplete="off" novalidate>
-        <input type="hidden" id="fEditId">
-
-        <!-- 부서/상태 -->
-        <div class="form-group">
-          <label class="fld-label">부서 / 상태<span class="req">*</span></label>
-          <div class="radio-group" id="fDeptGroup">
-            <label class="radio-chip synth" id="chipSynth">
-              <input type="radio" name="fDept" value="합성생산">
-              <span class="chip-dot" style="background:#ef4444"></span>
-              합성생산
-            </label>
-            <label class="radio-chip refine" id="chipRefine">
-              <input type="radio" name="fDept" value="정제생산/소자이관">
-              <span class="chip-dot" style="background:#9333ea"></span>
-              정제생산/소자이관
-            </label>
-          </div>
-        </div>
-
-        <!-- 재료명 (자동완성) -->
-        <div class="form-group">
-          <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
-          <div class="ac-wrap">
-            <input class="form-input" type="text" id="fMaterial"
-              placeholder="예) PG1088" autocomplete="off" required>
-            <div class="ac-dropdown" id="acDropdown"></div>
-          </div>
-        </div>
-
-        <!-- Lot 번호 -->
-        <div class="form-group">
-          <label class="fld-label" for="fLot">Lot 번호</label>
-          <input class="form-input" type="text" id="fLot"
-            placeholder="예) P-NC05-Tol">
-        </div>
-
-        <!-- 요청사항 -->
-        <div class="form-group">
-          <label class="fld-label" for="fRequest">요청사항</label>
-          <input class="form-input" type="text" id="fRequest"
-            placeholder="예) Lot 평가(미정)">
-        </div>
-
-        <hr class="form-divider">
-
-        <!-- 샘플 이관/시작일 -->
-        <div class="form-group">
-          <label class="fld-label" for="fTransferDate">샘플 이관<span class="req">*</span></label>
-          <input class="form-input" type="date" id="fTransferDate" required>
-        </div>
-
-        <!-- 소자평가 시작일 -->
-        <div class="form-group">
-          <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
-          <input class="form-input" type="date" id="fEvalStart">
-        </div>
-
-        <!-- 소자평가 완료 요청일 -->
-        <div class="form-group">
-          <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
-          <input class="form-input" type="date" id="fEvalTarget">
-        </div>
-
-        <hr class="form-divider">
-
-        <!-- 긴급 출하 대응 -->
-        <div class="urgent-row" id="urgentRow">
-          <input type="checkbox" id="fUrgent">
-          <label for="fUrgent">⚡ 시급 요청</label>
-        </div>
-
-        <!-- 등록 / 수정 버튼 -->
-        <button type="submit" class="btn btn-primary btn-block" id="btnSubmit">
-          등록하기
-        </button>
-        <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit">
-          취소
-        </button>
-
-      </form>
-
-      <button type="button" class="btn-mail-import" id="btnOpenMailPopup">
+      <!-- ── 메인: 메일 붙여넣기 일괄 등록 ── -->
+      <button type="button" class="btn btn-primary btn-block" id="btnOpenMailPopup">
         📧 메일 붙여넣기로 일괄 등록
       </button>
+
+      <!-- ── 서브: 개별 등록 (접힘/펼침) ── -->
+      <button type="button" class="manual-form-toggle" id="btnManualFormToggle">
+        <span>✏ 개별 등록</span>
+        <span class="mft-arrow">▼</span>
+      </button>
+      <div class="manual-form-body" id="manualFormBody">
+        <form id="scheduleForm" autocomplete="off" novalidate style="padding-top:10px;">
+          <input type="hidden" id="fEditId">
+
+          <!-- 부서/상태 -->
+          <div class="form-group">
+            <label class="fld-label">부서 / 상태<span class="req">*</span></label>
+            <div class="radio-group" id="fDeptGroup">
+              <label class="radio-chip synth" id="chipSynth">
+                <input type="radio" name="fDept" value="합성생산">
+                <span class="chip-dot" style="background:#ef4444"></span>
+                합성생산
+              </label>
+              <label class="radio-chip refine" id="chipRefine">
+                <input type="radio" name="fDept" value="정제생산/소자이관">
+                <span class="chip-dot" style="background:#9333ea"></span>
+                정제생산/소자이관
+              </label>
+            </div>
+          </div>
+
+          <!-- 재료명 (자동완성) -->
+          <div class="form-group">
+            <label class="fld-label" for="fMaterial">재료명<span class="req">*</span></label>
+            <div class="ac-wrap">
+              <input class="form-input" type="text" id="fMaterial"
+                placeholder="예) PG1088" autocomplete="off" required>
+              <div class="ac-dropdown" id="acDropdown"></div>
+            </div>
+          </div>
+
+          <!-- Lot 번호 -->
+          <div class="form-group">
+            <label class="fld-label" for="fLot">Lot 번호</label>
+            <input class="form-input" type="text" id="fLot"
+              placeholder="예) P-NC05-Tol">
+          </div>
+
+          <!-- 요청사항 -->
+          <div class="form-group">
+            <label class="fld-label" for="fRequest">요청사항</label>
+            <input class="form-input" type="text" id="fRequest"
+              placeholder="예) Lot 평가(미정)">
+          </div>
+
+          <hr class="form-divider">
+
+          <!-- 샘플 이관/시작일 -->
+          <div class="form-group">
+            <label class="fld-label" for="fTransferDate">샘플 이관<span class="req">*</span></label>
+            <input class="form-input" type="date" id="fTransferDate" required>
+          </div>
+
+          <!-- 소자평가 시작일 -->
+          <div class="form-group">
+            <label class="fld-label" for="fEvalStart">소자평가 시작일</label>
+            <input class="form-input" type="date" id="fEvalStart">
+          </div>
+
+          <!-- 소자평가 완료 요청일 -->
+          <div class="form-group">
+            <label class="fld-label" for="fEvalTarget">소자평가 완료 요청일</label>
+            <input class="form-input" type="date" id="fEvalTarget">
+          </div>
+
+          <hr class="form-divider">
+
+          <!-- 긴급 출하 대응 -->
+          <div class="urgent-row" id="urgentRow">
+            <input type="checkbox" id="fUrgent">
+            <label for="fUrgent">⚡ 시급 요청</label>
+          </div>
+
+          <!-- 등록 / 수정 버튼 -->
+          <button type="submit" class="btn btn-secondary btn-block" id="btnSubmit">
+            등록하기
+          </button>
+          <button type="button" class="btn btn-secondary btn-block" id="btnCancelEdit">
+            취소
+          </button>
+
+        </form>
+      </div>
 
     </div>
   </aside>
@@ -1626,6 +1659,23 @@ btnToggleForm.addEventListener('click', function () {
   btnToggleForm.textContent = collapsed ? '▶ 폼' : '◀ 폼';
 });
 
+/* ── 개별 등록 접기/펼치기 ───────────────────────────────────────────── */
+var btnManualToggle  = document.getElementById('btnManualFormToggle');
+var manualFormBody   = document.getElementById('manualFormBody');
+
+function openManualForm() {
+  manualFormBody.classList.add('open');
+  btnManualToggle.classList.add('open');
+}
+function closeManualForm() {
+  manualFormBody.classList.remove('open');
+  btnManualToggle.classList.remove('open');
+}
+
+btnManualToggle.addEventListener('click', function () {
+  manualFormBody.classList.contains('open') ? closeManualForm() : openManualForm();
+});
+
 /* ── 월 네비게이션 ───────────────────────────────────────────────────── */
 document.getElementById('btnPrevMonth').addEventListener('click', function () {
   curMonth--;
@@ -1768,6 +1818,7 @@ function fillForm(item) {
   document.getElementById('btnCancelEdit').style.display = 'block';
   formPanel.classList.remove('collapsed');
   btnToggleForm.textContent = '◀ 폼';
+  openManualForm();
 }
 
 /* ── 폼 제출 (신규 등록 + 수정 저장 통합) ───────────────────────────── */
@@ -2573,9 +2624,15 @@ function renderMailPreview(rows, tableType) {
     ? '<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px;">합성생산 이관 표</span>'
     : '<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">정제/소자 이관 표</span>';
 
+  // 상단 바: 표 형식 + 수정 버튼(우측)
+  var topBar = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<div style="font-size:12px;">인식된 표 형식:' + typeLabel + '</div>'
+    + '<button type="button" class="mp-edit-btn" id="mpEditToggle">✏ 수정</button>'
+    + '</div>';
+
   var html = '<div class="mail-preview-wrap">'
-    + '<div style="font-size:12px;margin-bottom:8px;">인식된 표 형식:' + typeLabel + '</div>'
-    + '<table class="mail-preview-table"><thead><tr>'
+    + topBar
+    + '<table class="mail-preview-table" id="mpTable"><thead><tr>'
     + '<th class="td-chk"><input type="checkbox" id="mpCheckAll" title="전체 선택/해제"></th>'
     + '<th>날짜</th><th>부서</th><th>품명</th><th>Lot / Batch No.</th><th>비고</th>'
     + '<th class="td-chk" title="시급 요청">⚡</th>'
@@ -2584,7 +2641,6 @@ function renderMailPreview(rows, tableType) {
 
   if (isSynth) {
     // ── 합성생산: Batch No. 기준 그룹화 ──
-    // 순서 유지하며 그룹 목록 생성
     var batchOrder = [];
     var batchMap   = {};
     rows.forEach(function (row, i) {
@@ -2595,23 +2651,24 @@ function renderMailPreview(rows, tableType) {
 
     batchOrder.forEach(function (batchKey, gi) {
       var group = batchMap[batchKey];
+      var last  = group.length - 1;
       group.forEach(function (entry, bi) {
         var row    = entry.row;
         var i      = entry.idx;
         var isHead = (bi === 0);
+        var isLast = (bi === last);
+        var posCls = (isHead ? ' batch-pos-first' : '') + (isLast ? ' batch-pos-last' : '');
         var sepCls = (gi > 0 && isHead) ? ' batch-sep' : '';
         var refCols = '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
           + '<td class="ref-col">' + esc(row.synthHist || '') + '</td>'
           + '<td class="ref-col">' + esc(row.prodDate  || '') + '</td>';
 
-        html += '<tr class="batch-row' + sepCls + '" data-batch="' + esc(batchKey) + '" data-idx="' + i + '" data-head="' + (isHead ? '1' : '0') + '">'
-          + '<td class="td-chk">'
-          + (isHead ? '<input type="checkbox" class="mp-chk">' : '')
-          + '</td>'
+        html += '<tr class="batch-row' + posCls + sepCls + '" data-batch="' + esc(batchKey) + '" data-idx="' + i + '" data-head="' + (isHead ? '1' : '0') + '">'
+          + '<td class="td-chk">' + (isHead ? '<input type="checkbox" class="mp-chk">' : '') + '</td>'
           + '<td><input type="date" class="mp-edit mp-date" value="' + esc(row.date || '') + '"></td>'
           + '<td class="td-dept"><span style="font-size:11.5px;color:var(--accent);font-weight:600;">합성생산</span></td>'
           + '<td><input class="mp-edit mp-material" value="' + esc(row.material || '') + '"></td>'
-          + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '" ' + (isHead ? '' : 'style="color:var(--text-faint)"') + '></td>'
+          + '<td><input class="mp-edit mp-lot"      value="' + esc(row.lot      || '') + '" ' + (!isHead ? 'style="color:var(--text-faint)"' : '') + '></td>'
           + '<td><input class="mp-edit mp-comment"  value="' + esc(row.comment  || '') + '"></td>'
           + '<td class="td-chk">' + (isHead ? '<input type="checkbox" class="mp-urgent">' : '') + '</td>'
           + refCols
@@ -2619,7 +2676,7 @@ function renderMailPreview(rows, tableType) {
       });
     });
   } else {
-    // ── 정제/소자이관: 기존 방식 ──
+    // ── 정제/소자이관 ──
     rows.forEach(function (row, i) {
       var refCols = '<td class="ref-col">' + esc(row.weight    || '') + '</td>'
         + '<td class="ref-col">' + esc(row.recipient || '') + '</td>'
@@ -2642,37 +2699,24 @@ function renderMailPreview(rows, tableType) {
 
   html += '</tbody></table></div>';
   result.innerHTML = html;
-
   updateCount();
 
-  // ── 배치 그룹 하이라이트 (합성생산 전용) ──
+  var table   = document.getElementById('mpTable');
+  var editBtn = document.getElementById('mpEditToggle');
+  var editMode = false;
+
+  // ── 수정 버튼 토글 ──
+  editBtn.addEventListener('click', function () {
+    editMode = !editMode;
+    table.classList.toggle('edit-mode', editMode);
+    editBtn.classList.toggle('active', editMode);
+    editBtn.textContent = editMode ? '✔ 완료' : '✏ 수정';
+  });
+
+  // ── 배치 그룹 외곽 하이라이트 ──
   function syncBatchHighlight(batchKey, checked) {
     result.querySelectorAll('tr.batch-row[data-batch="' + batchKey + '"]').forEach(function (tr) {
       tr.classList.toggle('batch-active', checked);
-    });
-  }
-
-  function syncRowStyle(cb) {
-    if (!isSynth) {
-      cb.closest('tr').classList.toggle('row-checked', cb.checked);
-    }
-  }
-
-  // 배치 행 클릭 → 그룹 체크박스 토글
-  if (isSynth) {
-    result.querySelectorAll('tr.batch-row').forEach(function (tr) {
-      tr.addEventListener('click', function (e) {
-        if (e.target.tagName === 'INPUT') return; // 체크박스/인풋 직접 클릭은 제외
-        var batchKey = tr.dataset.batch;
-        var headTr   = result.querySelector('tr.batch-row[data-batch="' + batchKey + '"][data-head="1"]');
-        if (!headTr) return;
-        var cb = headTr.querySelector('.mp-chk');
-        if (!cb) return;
-        cb.checked = !cb.checked;
-        syncBatchHighlight(batchKey, cb.checked);
-        updateCount();
-        syncCheckAll();
-      });
     });
   }
 
@@ -2682,25 +2726,56 @@ function renderMailPreview(rows, tableType) {
       all.length > 0 && Array.prototype.every.call(all, function (c) { return c.checked; });
   }
 
+  // ── 행 클릭 → 체크 토글 (편집 모드 아닐 때) ──
+  result.querySelectorAll('tbody tr').forEach(function (tr) {
+    tr.addEventListener('click', function (e) {
+      if (editMode) return;                                    // 편집 모드면 무시
+      if (e.target.type === 'checkbox') return;               // 체크박스 직접 클릭은 자체 처리
+
+      if (isSynth) {
+        // 배치 그룹 토글
+        var batchKey = tr.dataset.batch;
+        var headTr   = result.querySelector('tr.batch-row[data-batch="' + batchKey + '"][data-head="1"]');
+        if (!headTr) return;
+        var cb = headTr.querySelector('.mp-chk');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        syncBatchHighlight(batchKey, cb.checked);
+      } else {
+        // 개별 행 토글
+        var cb = tr.querySelector('.mp-chk');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        tr.classList.toggle('row-checked', cb.checked);
+      }
+      syncCheckAll();
+      updateCount();
+    });
+  });
+
+  // ── 전체 선택 ──
   document.getElementById('mpCheckAll').addEventListener('change', function () {
     var chk = this.checked;
     result.querySelectorAll('.mp-chk').forEach(function (cb) {
       cb.checked = chk;
-      syncRowStyle(cb);
       if (isSynth) {
-        var batchKey = cb.closest('tr') && cb.closest('tr').dataset.batch;
-        if (batchKey) syncBatchHighlight(batchKey, chk);
+        var bk = cb.closest('tr') && cb.closest('tr').dataset.batch;
+        if (bk) syncBatchHighlight(bk, chk);
+      } else {
+        cb.closest('tr').classList.toggle('row-checked', chk);
       }
     });
     updateCount();
   });
 
+  // ── 체크박스 직접 변경 ──
   result.querySelectorAll('.mp-chk').forEach(function (cb) {
     cb.addEventListener('change', function () {
-      syncRowStyle(cb);
       if (isSynth) {
-        var batchKey = cb.closest('tr') && cb.closest('tr').dataset.batch;
-        if (batchKey) syncBatchHighlight(batchKey, cb.checked);
+        var bk = cb.closest('tr') && cb.closest('tr').dataset.batch;
+        if (bk) syncBatchHighlight(bk, cb.checked);
+      } else {
+        cb.closest('tr').classList.toggle('row-checked', cb.checked);
       }
       syncCheckAll();
       updateCount();
