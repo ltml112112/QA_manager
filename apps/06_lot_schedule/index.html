@@ -79,8 +79,8 @@ html, body {
 .cal-topbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 12px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -93,7 +93,7 @@ html, body {
 }
 
 .cal-title {
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--text);
   text-align: center;
@@ -101,13 +101,13 @@ html, body {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: var(--radius-sm);
   transition: background 0.15s;
 }
 .cal-title:hover { background: var(--surface-2); }
-.cal-title .mp-caret { font-size: 11px; opacity: 0.55; }
+.cal-title .mp-caret { font-size: 13px; opacity: 0.55; }
 
 /* ── 월 선택 피커 ────────────────────────────────────────────────────── */
 .month-picker {
@@ -171,14 +171,14 @@ html, body {
 
 /* 네비게이션 버튼 공통 */
 .nav-btn {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -193,14 +193,14 @@ html, body {
 
 /* 오늘 버튼 */
 .btn-today {
-  padding: 0 11px;
-  height: 30px;
+  padding: 0 14px;
+  height: 36px;
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   transition: background 0.15s;
@@ -208,16 +208,16 @@ html, body {
 }
 .btn-today:hover { background: var(--accent-glow); }
 
-/* 등록 버튼 (topbar용 — 높이 30px 맞춤) */
+/* 등록·조회 버튼 (topbar용) */
 .btn-reg-mail {
-  padding: 0 14px;
-  height: 30px;
+  padding: 0 16px;
+  height: 36px;
   background: var(--accent);
   border: none;
   color: #fff;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   white-space: nowrap;
@@ -225,31 +225,47 @@ html, body {
 }
 .btn-reg-mail:hover { background: var(--accent-hover); }
 .btn-reg-indiv {
-  padding: 0 12px;
-  height: 30px;
+  padding: 0 14px;
+  height: 36px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-body);
   white-space: nowrap;
   transition: background 0.15s, border-color 0.15s;
 }
 .btn-reg-indiv:hover { background: var(--surface-2); border-color: var(--border-hover); }
+.btn-search {
+  padding: 0 14px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  margin-left: auto;   /* 우측 끝으로 */
+  transition: background .15s, border-color .15s, color .15s;
+}
+.btn-search:hover { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
 
 /* 샘플 버튼 */
 .btn-sample {
-  padding: 0 10px;
-  height: 30px;
+  padding: 0 12px;
+  height: 36px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-faint);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-family: var(--font-body);
   white-space: nowrap;
   transition: background 0.15s;
@@ -581,9 +597,8 @@ textarea.form-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 920px;
-  max-height: 80vh;
+  width: min(960px, calc(100vw - 40px));
+  height: min(82vh, 860px);
   display: flex;
   flex-direction: column;
   transform: translateY(8px);
@@ -592,6 +607,45 @@ textarea.form-input {
 .modal-overlay.open .modal-box {
   transform: translateY(0);
 }
+
+/* 검색 바 (검색 모드 전용) */
+.modal-search-bar {
+  display: none;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modal-box.search-mode .modal-search-bar { display: flex; }
+.modal-search-input {
+  flex: 1;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color .15s;
+}
+.modal-search-input:focus { border-color: var(--accent); }
+.modal-search-input::placeholder { color: var(--text-faint); }
+.modal-search-btn {
+  height: 34px;
+  padding: 0 16px;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  transition: background .15s;
+}
+.modal-search-btn:hover { background: var(--accent-hover); }
 
 /* 모달 헤더 */
 .modal-header {
@@ -856,8 +910,8 @@ textarea.form-input {
 .summary-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 10px 20px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1130,6 +1184,7 @@ textarea.form-input {
       <button class="nav-btn" id="btnNextMonth" title="다음 달">&#8250;</button>
       <button class="btn-today" id="btnToday">오늘</button>
       <button class="btn-sample" id="btnSample" title="샘플 데이터 로드">📋 샘플</button>
+      <button class="btn-search" id="btnOpenSearch">🔍 조회</button>
     </div>
 
     <!-- 요약 스트립 -->
@@ -1291,12 +1346,17 @@ textarea.form-input {
   </div>
 </div>
 
-<!-- ━━━━━━━━━━━━━━━━  날짜 클릭 모달  ━━━━━━━━━━━━━━━━ -->
+<!-- ━━━━━━━━━━━━━━━━  날짜 클릭 / 검색 모달  ━━━━━━━━━━━━━━━━ -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal-box">
+  <div class="modal-box" id="modalBox">
     <div class="modal-header">
       <span class="modal-title" id="modalTitle"></span>
       <button class="modal-close" id="btnModalClose" title="닫기">×</button>
+    </div>
+    <div class="modal-search-bar" id="modalSearchBar">
+      <input type="text" class="modal-search-input" id="modalSearchInput"
+        placeholder="품명 · Lot번호 · 요청사항 · 부서 · 비고 검색…">
+      <button class="modal-search-btn" id="btnModalDoSearch">검색</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
   </div>
@@ -1873,6 +1933,8 @@ function openModal(dateStr) {
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   document.getElementById('modalBody').classList.remove('is-2col');
+  document.getElementById('modalBox').classList.remove('search-mode');
+  document.getElementById('modalSearchInput').value = '';
   modalCurrentDate   = null;
   modalCurrentFilter = null;
 }
@@ -1917,6 +1979,59 @@ function openFilterModal(filter) {
   }
   overlay.classList.add('open');
 }
+
+/* ── 검색 모드 (기존 modal-box 재사용) ──────────────────────────────── */
+function openSearchModal() {
+  var box     = document.getElementById('modalBox');
+  var overlay = document.getElementById('modalOverlay');
+  var bodyEl  = document.getElementById('modalBody');
+  var input   = document.getElementById('modalSearchInput');
+  modalCurrentDate   = null;
+  modalCurrentFilter = null;
+  box.classList.add('search-mode');
+  document.getElementById('modalTitle').textContent = '🔍 항목 조회';
+  bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
+  bodyEl.classList.remove('is-2col');
+  overlay.classList.add('open');
+  setTimeout(function () { input.focus(); }, 120);
+}
+
+function runModalSearch() {
+  var q      = document.getElementById('modalSearchInput').value.trim().toLowerCase();
+  var bodyEl = document.getElementById('modalBody');
+  bodyEl.innerHTML = '';
+  bodyEl.classList.remove('is-2col');
+
+  if (!q) {
+    bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
+    return;
+  }
+
+  var items = loadItems();
+  var filtered = items.filter(function (it) {
+    return [it.material, it.lot, it.request, it.dept, it.comment || ''].some(function (v) {
+      return (v || '').toLowerCase().indexOf(q) !== -1;
+    });
+  });
+  filtered.sort(function (a, b) {
+    return (calcDN(b.transferDate) || 0) - (calcDN(a.transferDate) || 0);
+  });
+
+  document.getElementById('modalTitle').textContent =
+    '🔍 "' + document.getElementById('modalSearchInput').value.trim() + '" — ' + filtered.length + '건';
+
+  if (!filtered.length) {
+    bodyEl.innerHTML = '<div class="modal-empty">일치하는 항목이 없습니다.</div>';
+  } else {
+    renderBodyTwoCols(bodyEl, filtered, null);
+  }
+}
+
+document.getElementById('btnOpenSearch').addEventListener('click', openSearchModal);
+document.getElementById('btnModalDoSearch').addEventListener('click', runModalSearch);
+document.getElementById('modalSearchInput').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') runModalSearch();
+});
 
 /* ── 단일 아이템 모달 (완료 카드 클릭) ──────────────────────────────── */
 function openItemModal(itemId) {
