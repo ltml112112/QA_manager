@@ -166,6 +166,38 @@ function _revealLockedTabs() {
   });
 }
 
+// ── 잠긴 탭 숨기기/보이기 토글 ───────────────────────────────────────────────
+var _lockedHidden = false;
+
+function _toggleLockedVisibility() {
+  _lockedHidden = !_lockedHidden;
+
+  apps.forEach(function(app) {
+    if (!app.locked) return;
+    var btn  = document.getElementById('tabbtn-' + app.id);
+    var wrap = document.getElementById('tab-' + app.id);
+    if (btn)  btn.style.display  = _lockedHidden ? 'none' : '';
+    if (wrap && _lockedHidden) wrap.style.display = 'none';
+    else if (wrap) wrap.style.display = '';
+  });
+
+  // 현재 활성 탭이 숨겨졌으면 첫 번째 공개 탭으로 전환
+  if (_lockedHidden) {
+    var activeBtn = document.querySelector('.tab-btn.active');
+    if (activeBtn && activeBtn.style.display === 'none') {
+      var firstVisible = document.querySelector('.tab-btn:not([style*="display: none"]):not([style*="display:none"])');
+      if (firstVisible) firstVisible.click();
+    }
+  }
+
+  // 상태 점 스타일 업데이트
+  var dot = document.querySelector('.status-dot');
+  if (dot) {
+    dot.style.opacity = _lockedHidden ? '0.45' : '';
+    dot.title = _lockedHidden ? '공개 탭만 표시 중 (클릭하여 전체 표시)' : '클릭하여 공개 탭만 표시';
+  }
+}
+
 // ── 비밀번호 모달 ─────────────────────────────────────────────────────────────
 function _createPassModal() {
   var overlay = document.createElement('div');
@@ -212,6 +244,8 @@ function _createPassModal() {
       localStorage.setItem(_UK, '1');
       _revealLockedTabs();
       _close();
+      var dot = document.querySelector('.status-dot');
+      if (dot) dot.title = '클릭하여 공개 탭만 표시';
     } else {
       err.textContent = '코드가 올바르지 않습니다.';
       inp.value = '';
@@ -296,13 +330,17 @@ function hideLoader(id) {
     });
   }
 
-  // 가동 중 초록 점 — 비밀번호 트리거 (이미 해제된 경우 무시)
+  // 가동 중 초록 점 — 잠금 해제 or 공개/전체 탭 토글
   var statusDot = document.querySelector('.status-dot');
   if (statusDot) {
     statusDot.style.cursor = 'pointer';
+    statusDot.title = _isUnlocked() ? '클릭하여 공개 탭만 표시' : '접근 코드 입력';
     statusDot.addEventListener('click', function() {
-      if (_isUnlocked()) return; // 이미 해제됨
-      _createPassModal();
+      if (_isUnlocked()) {
+        _toggleLockedVisibility();
+      } else {
+        _createPassModal();
+      }
     });
   }
 
