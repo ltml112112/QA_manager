@@ -760,30 +760,13 @@ textarea.form-input {
   align-items: flex-start;
 }
 
-/* D+N 블록 */
-.dc-dn-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 38px;
-  flex-shrink: 0;
-  padding-top: 1px;
-  gap: 2px;
-}
-.dc-dn {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1;
-  white-space: nowrap;
-}
-.dc-dn.dn-normal { color: var(--text-muted); }
-.dc-dn.dn-alert  { color: #ef4444; }
-.dc-dn.dn-done   { color: #10b981; }
-.dc-urg {
-  font-size: 11px;
-  color: #ef4444;
-  font-weight: 700;
-}
+/* D+N 블록 — 제거됨 (인라인 방식으로 변경) */
+
+/* 날짜 메타 인라인 D-day */
+.dc-meta .dm-dn { font-weight: 800; margin-left: 1px; }
+.dc-meta .dm-dn.dm-transfer  { color: #ef4444; }
+.dc-meta .dm-dn.dm-evalstart { color: #4a9eff; }
+.dc-meta .dm-dn.dm-target    { color: #10b981; }
 
 /* 정보 블록 */
 .dc-info { flex: 1; min-width: 0; }
@@ -2141,40 +2124,9 @@ function buildDetailCard(item, asOf) {
   wrap.className = 'detail-card' + (item.completed ? ' is-done' : '') + (item.urgent && !item.completed ? ' is-urgent' : '');
   wrap.dataset.id = item.id;
 
-  // ── 메인 행: D+N 블록(정제생산만) + 정보 블록 ──
+  // ── 메인 행 ──
   var main = document.createElement('div');
   main.className = 'dc-main';
-
-  // 합성생산은 D+N 불필요 (당일 이관 추적만)
-  if (item.dept !== '합성생산') {
-    var dnWrap = document.createElement('div');
-    dnWrap.className = 'dc-dn-wrap';
-
-    var dnEl = document.createElement('div');
-    if (item.completed) {
-      dnEl.className = 'dc-dn dn-done';
-      dnEl.textContent = '완료';
-    } else {
-      var dn = calcDN(item.transferDate, asOf);
-      var dnLabel = dn === null ? '-' : (dn === 0 ? 'D+0' : dn > 0 ? 'D+' + dn : 'D' + dn);
-      var dnCls   = item.urgent ? 'dn-alert' : 'dn-normal';
-      dnEl.className = 'dc-dn ' + dnCls;
-      dnEl.textContent = dnLabel;
-      if (asOf && asOf !== todayStr) {
-        var asOfD = new Date(asOf + 'T00:00:00');
-        dnEl.title = (asOfD.getMonth()+1) + '/' + asOfD.getDate() + ' 기준';
-      }
-    }
-    dnWrap.appendChild(dnEl);
-
-    if (item.urgent && !item.completed) {
-      var urgEl = document.createElement('div');
-      urgEl.className = 'dc-urg';
-      urgEl.textContent = '⚡';
-      dnWrap.appendChild(urgEl);
-    }
-    main.appendChild(dnWrap);
-  }
 
   // 정보 블록
   var info = document.createElement('div');
@@ -2198,12 +2150,29 @@ function buildDetailCard(item, asOf) {
   }
   info.appendChild(nameRow);
 
-  // 날짜 메타
+  // 날짜 메타 (정제/소자이관 미완료는 날짜 옆에 D+N 인라인 표시)
   var meta = document.createElement('div');
   meta.className = 'dc-meta';
-  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b></span>';
-  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart)  + '</b></span>';
-  if (item.evalTarget) mh += '<span>요청일 <b>'   + toMD(item.evalTarget) + '</b></span>';
+  var ref = asOf || getTodayStr();
+  var showDN = item.dept !== '합성생산' && !item.completed;
+
+  function inlineDN(dateStr, cls) {
+    if (!showDN || !dateStr) return '';
+    var dn = calcDN(dateStr, ref);
+    if (dn === null) return '';
+    var lbl = dn === 0 ? 'D+0' : (dn > 0 ? 'D+' + dn : 'D' + dn);
+    return ' <span class="dm-dn ' + cls + '">(' + lbl + ')</span>';
+  }
+  function inlineDTarget(dateStr) {
+    if (!showDN || !dateStr) return '';
+    var diff = Math.round((new Date(dateStr + 'T00:00:00') - new Date(ref + 'T00:00:00')) / 86400000);
+    var lbl = diff === 0 ? 'D-DAY' : (diff > 0 ? 'D-' + diff : 'D+' + Math.abs(diff));
+    return ' <span class="dm-dn dm-target">(' + lbl + ')</span>';
+  }
+
+  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b>' + inlineDN(item.transferDate, 'dm-transfer') + '</span>';
+  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart) + '</b>' + inlineDN(item.evalStart, 'dm-evalstart') + '</span>';
+  if (item.evalTarget) mh += '<span>요청일 <b>'  + toMD(item.evalTarget) + '</b>' + inlineDTarget(item.evalTarget) + '</span>';
   if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
   meta.innerHTML = mh;
   info.appendChild(meta);
