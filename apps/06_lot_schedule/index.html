@@ -2868,7 +2868,7 @@ function resetMailPopup() {
 
 /* ── 팝업 열기 / 닫기 ────────────────────────────────────────────────── */
 function openMailPopup()  { document.getElementById('mailPopupOverlay').classList.add('open'); }
-function closeMailPopup() { document.getElementById('mailPopupOverlay').classList.remove('open'); }
+function closeMailPopup() { document.getElementById('mailPopupOverlay').classList.remove('open'); resetMailPopup(); }
 
 document.getElementById('btnOpenMailPopup').addEventListener('click', openMailPopup);
 document.getElementById('btnMailPopupClose').addEventListener('click', closeMailPopup);
@@ -2981,7 +2981,6 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
   renderCalendar();
 
   closeMailPopup();
-  resetMailPopup();
   alert(toAdd.length + '개 항목이 등록되었습니다.');
 });
 
