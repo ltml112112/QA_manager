@@ -779,11 +779,47 @@ textarea.form-input {
 .dc-dn.dn-normal { color: var(--text-muted); }
 .dc-dn.dn-alert  { color: #ef4444; }
 .dc-dn.dn-done   { color: #10b981; }
+.dc-dn-lbl {
+  font-size: 9px;
+  color: var(--text-faint);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
 .dc-urg {
   font-size: 11px;
   color: #ef4444;
   font-weight: 700;
 }
+
+/* 경과/D-day 뱃지 행 */
+.dc-days {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+}
+.dc-day-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 7px 3px;
+  border-radius: 5px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.dc-day-chip .dch-lbl {
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+.dc-day-chip .dch-val {
+  font-size: 11px;
+  font-weight: 800;
+}
+.dch-normal { background: var(--surface-2);               color: var(--text-muted); border: 1px solid var(--border); }
+.dch-warn   { background: rgba(245,158,11,0.12);          color: #d97706;           border: 1px solid rgba(245,158,11,0.35); }
+.dch-alert  { background: rgba(239,68,68,0.12);           color: #ef4444;           border: 1px solid rgba(239,68,68,0.30); }
+.dch-ok     { background: rgba(16,185,129,0.12);          color: #10b981;           border: 1px solid rgba(16,185,129,0.30); }
 
 /* 정보 블록 */
 .dc-info { flex: 1; min-width: 0; }
@@ -2167,6 +2203,11 @@ function buildDetailCard(item, asOf) {
     }
     dnWrap.appendChild(dnEl);
 
+    var dnLblEl = document.createElement('div');
+    dnLblEl.className = 'dc-dn-lbl';
+    dnLblEl.textContent = '이관';
+    dnWrap.appendChild(dnLblEl);
+
     if (item.urgent && !item.completed) {
       var urgEl = document.createElement('div');
       urgEl.className = 'dc-urg';
@@ -2207,6 +2248,34 @@ function buildDetailCard(item, asOf) {
   if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
   meta.innerHTML = mh;
   info.appendChild(meta);
+
+  // 평가시작 D+N / 요청일 D-N 뱃지 (정제생산/소자이관, 미완료)
+  if (item.dept !== '합성생산' && !item.completed) {
+    var ref = asOf || getTodayStr();
+    var hasChip = false;
+    var daysRow = document.createElement('div');
+    daysRow.className = 'dc-days';
+
+    if (item.evalStart) {
+      var es = calcDN(item.evalStart, ref);
+      var esLabel = es === null ? '-' : (es === 0 ? 'D+0' : es > 0 ? 'D+' + es : 'D' + es);
+      var esCls = (es !== null && es >= 7) ? 'dch-alert' : 'dch-normal';
+      daysRow.innerHTML += '<div class="dc-day-chip ' + esCls + '"><span class="dch-lbl">평가시작</span><span class="dch-val">' + esLabel + '</span></div>';
+      hasChip = true;
+    }
+
+    if (item.evalTarget) {
+      var et = new Date(item.evalTarget + 'T00:00:00');
+      var rd = new Date(ref + 'T00:00:00');
+      var diff = Math.round((et - rd) / 86400000); // 양수=남음, 음수=지남
+      var etLabel = diff === 0 ? 'D-DAY' : (diff > 0 ? 'D-' + diff : 'D+' + Math.abs(diff));
+      var etCls = diff < 0 ? 'dch-alert' : diff <= 3 ? 'dch-warn' : 'dch-ok';
+      daysRow.innerHTML += '<div class="dc-day-chip ' + etCls + '"><span class="dch-lbl">요청마감</span><span class="dch-val">' + etLabel + '</span></div>';
+      hasChip = true;
+    }
+
+    if (hasChip) info.appendChild(daysRow);
+  }
 
   // 요청사항
   if (item.request) {
