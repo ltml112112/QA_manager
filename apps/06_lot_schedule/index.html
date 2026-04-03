@@ -268,6 +268,12 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  transition: outline 0.1s;
+}
+.cal-body.cal-drag-over {
+  outline: 3px dashed var(--accent);
+  outline-offset: -4px;
+  background: rgba(190,0,57,.04);
 }
 
 /* 요일 헤더 */
@@ -2870,7 +2876,7 @@ document.getElementById('mailPopupOverlay').addEventListener('click', function (
   if (e.target === this) closeMailPopup();
 });
 
-/* ── 드롭존 이벤트 ───────────────────────────────────────────────────── */
+/* ── 드롭존 이벤트 (팝업 내부 드롭존) ───────────────────────────────── */
 var dz = document.getElementById('mailDropzone');
 dz.addEventListener('dragover',  function (e) { e.preventDefault(); dz.classList.add('drag-over'); });
 dz.addEventListener('dragleave', function ()  { dz.classList.remove('drag-over'); });
@@ -2881,6 +2887,32 @@ dz.addEventListener('drop', function (e) {
     e.dataTransfer.getData('text/html'),
     e.dataTransfer.getData('text/plain')
   );
+});
+
+/* ── 달력 영역 드래그 드롭 → 메일 팝업 자동 오픈 ─────────────────────── */
+var calBody = document.querySelector('.cal-body');
+var _calDragCounter = 0; // dragleave 오발 방지용 카운터
+calBody.addEventListener('dragenter', function (e) {
+  if (!e.dataTransfer.types.includes('text/html') && !e.dataTransfer.types.includes('text/plain')) return;
+  _calDragCounter++;
+  calBody.classList.add('cal-drag-over');
+  e.preventDefault();
+});
+calBody.addEventListener('dragover', function (e) { e.preventDefault(); });
+calBody.addEventListener('dragleave', function () {
+  _calDragCounter--;
+  if (_calDragCounter <= 0) { _calDragCounter = 0; calBody.classList.remove('cal-drag-over'); }
+});
+calBody.addEventListener('drop', function (e) {
+  e.preventDefault();
+  _calDragCounter = 0;
+  calBody.classList.remove('cal-drag-over');
+  var html  = e.dataTransfer.getData('text/html');
+  var plain = e.dataTransfer.getData('text/plain');
+  if (!html && !plain) return;
+  openMailPopup();
+  // 팝업 DOM이 열린 직후 처리
+  setTimeout(function () { processMailData(html, plain); }, 50);
 });
 
 /* ── Ctrl+V (팝업 열려 있을 때 전역 붙여넣기) ────────────────────────── */
