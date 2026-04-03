@@ -762,12 +762,11 @@ textarea.form-input {
 
 /* D+N 블록 — 제거됨 (인라인 방식으로 변경) */
 
-/* 날짜 메타 인라인 D-day 색상 */
-.dc-meta .dm-dn { font-weight: 700; margin-left: 1px; }
-.dc-meta .dm-dn.dm-normal { color: var(--text-muted); }
-.dc-meta .dm-dn.dm-alert  { color: #ef4444; }
-.dc-meta .dm-dn.dm-warn   { color: #d97706; }
-.dc-meta .dm-dn.dm-ok     { color: #10b981; }
+/* 날짜 메타 인라인 D-day */
+.dc-meta .dm-dn { font-weight: 800; margin-left: 1px; }
+.dc-meta .dm-dn.dm-transfer  { color: #ef4444; }
+.dc-meta .dm-dn.dm-evalstart { color: #4a9eff; }
+.dc-meta .dm-dn.dm-target    { color: #10b981; }
 
 /* 정보 블록 */
 .dc-info { flex: 1; min-width: 0; }
@@ -2157,27 +2156,23 @@ function buildDetailCard(item, asOf) {
   var ref = asOf || getTodayStr();
   var showDN = item.dept !== '합성생산' && !item.completed;
 
-  function inlineDN(dateStr, mode) {
-    // mode: 'transfer' | 'evalStart' | 'evalTarget'
+  function inlineDN(dateStr, cls) {
     if (!showDN || !dateStr) return '';
-    if (mode === 'evalTarget') {
-      var et = new Date(dateStr + 'T00:00:00');
-      var rd = new Date(ref + 'T00:00:00');
-      var diff = Math.round((et - rd) / 86400000);
-      var lbl = diff === 0 ? 'D-DAY' : (diff > 0 ? 'D-' + diff : 'D+' + Math.abs(diff));
-      var cls = diff < 0 ? 'dm-alert' : diff <= 3 ? 'dm-warn' : 'dm-ok';
-      return ' <span class="dm-dn ' + cls + '">(' + lbl + ')</span>';
-    }
     var dn = calcDN(dateStr, ref);
     if (dn === null) return '';
     var lbl = dn === 0 ? 'D+0' : (dn > 0 ? 'D+' + dn : 'D' + dn);
-    var cls = (mode === 'transfer' && item.urgent) || dn >= 7 ? 'dm-alert' : 'dm-normal';
     return ' <span class="dm-dn ' + cls + '">(' + lbl + ')</span>';
   }
+  function inlineDTarget(dateStr) {
+    if (!showDN || !dateStr) return '';
+    var diff = Math.round((new Date(dateStr + 'T00:00:00') - new Date(ref + 'T00:00:00')) / 86400000);
+    var lbl = diff === 0 ? 'D-DAY' : (diff > 0 ? 'D-' + diff : 'D+' + Math.abs(diff));
+    return ' <span class="dm-dn dm-target">(' + lbl + ')</span>';
+  }
 
-  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b>' + inlineDN(item.transferDate, 'transfer') + '</span>';
-  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart) + '</b>' + inlineDN(item.evalStart, 'evalStart') + '</span>';
-  if (item.evalTarget) mh += '<span>요청일 <b>'  + toMD(item.evalTarget) + '</b>' + inlineDN(item.evalTarget, 'evalTarget') + '</span>';
+  var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b>' + inlineDN(item.transferDate, 'dm-transfer') + '</span>';
+  if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart) + '</b>' + inlineDN(item.evalStart, 'dm-evalstart') + '</span>';
+  if (item.evalTarget) mh += '<span>요청일 <b>'  + toMD(item.evalTarget) + '</b>' + inlineDTarget(item.evalTarget) + '</span>';
   if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
   meta.innerHTML = mh;
   info.appendChild(meta);
