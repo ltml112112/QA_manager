@@ -1878,6 +1878,7 @@ document.getElementById('btnCancelEdit').addEventListener('click', function () {
 /* ── 모달 열기/닫기 ──────────────────────────────────────────────────── */
 var modalCurrentDate   = null;
 var modalCurrentFilter = null;
+var modalCurrentSearch = null;
 
 function openModal(dateStr) {
   modalCurrentDate   = dateStr;
@@ -1942,6 +1943,7 @@ function closeModal() {
   document.getElementById('modalSearchInput').value = '';
   modalCurrentDate   = null;
   modalCurrentFilter = null;
+  modalCurrentSearch = null;
 }
 
 /* ── 필터 모달 (요약 스트립 칩 클릭) ────────────────────────────────── */
@@ -1993,6 +1995,7 @@ function openSearchModal() {
   var input   = document.getElementById('modalSearchInput');
   modalCurrentDate   = null;
   modalCurrentFilter = null;
+  modalCurrentSearch = null;
   box.classList.add('search-mode');
   document.getElementById('modalTitle').textContent = '🔍 항목 조회';
   bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
@@ -2008,9 +2011,12 @@ function runModalSearch() {
   bodyEl.classList.remove('is-2col');
 
   if (!q) {
+    modalCurrentSearch = null;
     bodyEl.innerHTML = '<div class="modal-empty">검색어를 입력하고 검색 버튼을 누르세요.</div>';
     return;
   }
+
+  modalCurrentSearch = q;
 
   var items = loadItems();
   var filtered = items.filter(function (it) {
@@ -2173,7 +2179,6 @@ function buildDetailCard(item, asOf) {
   var mh = '<span>이관 <b>' + toMD(item.transferDate) + '</b>' + inlineDN(item.transferDate, 'dm-transfer') + '</span>';
   if (item.evalStart)  mh += '<span>평가시작 <b>' + toMD(item.evalStart) + '</b>' + inlineDN(item.evalStart, 'dm-evalstart') + '</span>';
   if (item.evalTarget) mh += '<span>요청일 <b>'  + toMD(item.evalTarget) + '</b>' + inlineDTarget(item.evalTarget) + '</span>';
-  if (item.completed && item.completedAt) mh += '<span>완료일 <b>' + toMD(item.completedAt) + '</b></span>';
   meta.innerHTML = mh;
   info.appendChild(meta);
 
@@ -2358,8 +2363,9 @@ function deleteItem(id) {
 
 /* ── 완료 / 완료 취소 처리 ───────────────────────────────────────────── */
 function refreshModal() {
-  if (modalCurrentDate)   openModal(modalCurrentDate);
+  if (modalCurrentDate)        openModal(modalCurrentDate);
   else if (modalCurrentFilter) openFilterModal(modalCurrentFilter);
+  else if (modalCurrentSearch) runModalSearch();
 }
 
 function markComplete(id) {
