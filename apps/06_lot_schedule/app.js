@@ -1005,32 +1005,31 @@ function buildDetailCard(item, asOf) {
     rbHeader.appendChild(rbActions);
     badge.appendChild(rbHeader);
 
-    // ── LT 그리드: 레벨명 행 / % 행 ──
+    // ── LT 표: 레벨별 열(column) ──
     if (rbAvail.length > 0) {
-      var lvRow  = document.createElement('div');
-      lvRow.className = 'dc-rb-row';
-      var pctRow = document.createElement('div');
-      pctRow.className = 'dc-rb-row';
+      var grid = document.createElement('div');
+      grid.className = 'dc-rb-grid';
 
       rbAvail.forEach(function(l) {
         var isSel = l === rbLtSel;
         var pct   = rbLtLevels[l].pct;
 
+        var col = document.createElement('div');
+        col.className = 'dc-rb-col' + (isSel ? ' is-sel' : '');
+
         var lvSpan = document.createElement('span');
         lvSpan.textContent = 'LT' + l + (isSel ? '★' : '');
         lvSpan.className = isSel ? 'dc-rb-lv-sel' : 'dc-rb-lv-dim';
-        lvRow.appendChild(lvSpan);
+        col.appendChild(lvSpan);
 
         var pctSpan = document.createElement('span');
         pctSpan.textContent = pct != null ? pct + '%' : '–';
         pctSpan.className = isSel ? 'dc-rb-pct-sel' : 'dc-rb-pct-dim';
-        pctRow.appendChild(pctSpan);
+        col.appendChild(pctSpan);
+
+        grid.appendChild(col);
       });
 
-      var grid = document.createElement('div');
-      grid.className = 'dc-rb-grid';
-      grid.appendChild(lvRow);
-      grid.appendChild(pctRow);
       badge.appendChild(grid);
     }
 

@@ -1274,42 +1274,56 @@ textarea.form-input {
 }
 .dc-result-badge .dc-rb-del:hover { color: #ef4444; }
 
-/* LT 그리드 */
+/* LT 표 — 열(column) 단위 */
 .dc-result-badge .dc-rb-grid {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
 }
-.dc-result-badge .dc-rb-row {
+/* 각 LT 열 */
+.dc-result-badge .dc-rb-col {
   display: flex;
-  gap: 12px;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 10px;
+  min-width: 46px;
+}
+/* 열 사이 구분선 */
+.dc-result-badge .dc-rb-col + .dc-rb-col {
+  border-left: 1px solid rgba(147,51,234,.25);
+}
+/* 선택 열 배경 강조 */
+.dc-result-badge .dc-rb-col.is-sel {
+  background: rgba(147,51,234,.12);
+  border-radius: 4px;
 }
 
-/* 선택 LT 레벨명 ★ — 밝은 주황, 크게 */
+/* 선택 LT 레벨명 ★ — 밝은 주황 */
 .dc-result-badge .dc-rb-lv-sel {
   color: #fb923c;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: .02em;
 }
-/* 비선택 LT 레벨명 — 흐린 보라 */
+/* 비선택 LT 레벨명 */
 .dc-result-badge .dc-rb-lv-dim {
-  color: rgba(167,139,250,.65);
-  font-size: 12.5px;
+  color: rgba(167,139,250,.7);
+  font-size: 12px;
   font-weight: 700;
 }
 
-/* 선택 % — 밝은 청록, 크게 */
+/* 선택 % — 밝은 청록 */
 .dc-result-badge .dc-rb-pct-sel {
   color: #2dd4bf;
   font-size: 14px;
   font-weight: 900;
 }
-/* 비선택 % — 흐린 보라 */
+/* 비선택 % */
 .dc-result-badge .dc-rb-pct-dim {
-  color: rgba(167,139,250,.5);
-  font-size: 12.5px;
+  color: rgba(167,139,250,.55);
+  font-size: 13px;
   font-weight: 600;
 }
 
