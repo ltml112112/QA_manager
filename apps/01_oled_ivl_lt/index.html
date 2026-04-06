@@ -1466,12 +1466,22 @@ init();
           }
         }
       });
-      // 선택 레벨: 양쪽 모두 ≥100hr인 첫 번째
+      // 선택 레벨: 현재 모드(curLevels)에서 양쪽 ≥100hr인 첫 번째
       var selectedLevel = null;
       for (var i = 0; i < curLevels.length; i++) {
         var l = curLevels[i];
         if (levelsData[l] && levelsData[l].refHr >= 100 && levelsData[l].sampleHr >= 100) {
           selectedLevel = l; break;
+        }
+      }
+      // Low 모드(95~90)에서 만족하는 레벨 없으면 → High 레벨(99~96)에서 탐색
+      if (selectedLevel === null && ltMode !== 'high') {
+        var highLevels = [99, 98, 97, 96];
+        for (var j = 0; j < highLevels.length; j++) {
+          var lh = highLevels[j];
+          if (levelsData[lh] && levelsData[lh].refHr >= 100 && levelsData[lh].sampleHr >= 100) {
+            selectedLevel = lh; break;
+          }
         }
       }
       if (Object.keys(levelsData).length > 0) {
