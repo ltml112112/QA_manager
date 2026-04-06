@@ -1386,9 +1386,6 @@ textarea.form-input {
 /* 가로 테이블 컨테이너 */
 .rd-table-wrap {
   overflow-x: auto;
-  border: 2px solid #fb923c;
-  border-radius: 6px;
-  overflow: hidden;
 }
 .rd-table {
   border-collapse: collapse;
@@ -1403,10 +1400,10 @@ textarea.form-input {
   text-align: center;
 }
 /* IVL 섹션 외곽 테두리만 주황 */
-.rd-table .rd-ivl-l { border-left:   2px solid #fb923c !important; }
-.rd-table .rd-ivl-r { border-right:  2px solid #fb923c !important; }
-.rd-table .rd-ivl-t { border-top:    2px solid #fb923c !important; }
-.rd-table .rd-ivl-b { border-bottom: 2px solid #fb923c !important; }
+.rd-table .rd-ivl-l { border-left:   3px solid #fb923c !important; }
+.rd-table .rd-ivl-r { border-right:  3px solid #fb923c !important; }
+.rd-table .rd-ivl-t { border-top:    3px solid #fb923c !important; }
+.rd-table .rd-ivl-b { border-bottom: 3px solid #fb923c !important; }
 .rd-table th {
   background: var(--surface-2);
   font-weight: 600;
@@ -1431,17 +1428,17 @@ textarea.form-input {
 .rd-th-lt-sel {
   color: #fb923c !important;
   background: rgba(251,146,60,.1) !important;
-  border-left:  2px solid #fb923c !important;
-  border-right: 2px solid #fb923c !important;
-  border-top:   2px solid #fb923c !important;
+  border-left:  3px solid #fb923c !important;
+  border-right: 3px solid #fb923c !important;
+  border-top:   3px solid #fb923c !important;
 }
 .rd-lt-sel-cell {
   background: rgba(251,146,60,.07);
-  border-left:  2px solid #fb923c !important;
-  border-right: 2px solid #fb923c !important;
+  border-left:  3px solid #fb923c !important;
+  border-right: 3px solid #fb923c !important;
 }
 .rd-lt-sel-bot {
-  border-bottom: 2px solid #fb923c !important;
+  border-bottom: 3px solid #fb923c !important;
 }
 /* 행 스타일 */
 .rd-row-ref td { background: var(--surface); }
