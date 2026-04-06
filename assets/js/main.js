@@ -330,11 +330,19 @@ function hideLoader(id) {
     });
   }
 
-  // 항상 잠금 해제 상태로 시작
-  if (!_isUnlocked()) {
-    localStorage.setItem(_UK, '1');
+  // 가동 중 초록 점 — 잠금 해제 (한 번 해제하면 새로고침해도 유지, 토글 없음)
+  var statusDot = document.querySelector('.status-dot');
+  if (statusDot) {
+    if (_isUnlocked()) {
+      _revealLockedTabs();
+    } else {
+      statusDot.style.cursor = 'pointer';
+      statusDot.title = '접근 코드 입력';
+      statusDot.addEventListener('click', function() {
+        _createPassModal();
+      });
+    }
   }
-  _revealLockedTabs();
 
   // 탭 키보드 내비게이션 — 위/아래 화살표로 탭 전환
   document.querySelector('.tab-nav').addEventListener('keydown', function(e) {
