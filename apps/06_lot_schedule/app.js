@@ -1259,35 +1259,45 @@ function openResultDetail(lotId, item, result) {
   // 헤더 행
   var thRow = '<tr><th class="rd-th-block">Block</th>';
   if (ivl.ref) {
-    thRow += '<th>Op.V<br>(V)</th><th>EL EFF<br>(cd/A)</th><th>EQE<br>(%)</th><th>CIEx</th><th>CIEy</th><th>λmax<br>(nm)</th>';
+    thRow += '<th class="rd-ivl-t rd-ivl-l">Op.V<br>(V)</th>';
+    thRow += '<th class="rd-ivl-t">EL EFF<br>(cd/A)</th>';
+    thRow += '<th class="rd-ivl-t">EQE<br>(%)</th>';
+    thRow += '<th class="rd-ivl-t">CIEx</th>';
+    thRow += '<th class="rd-ivl-t">CIEy</th>';
+    thRow += '<th class="rd-ivl-t rd-ivl-r">λmax<br>(nm)</th>';
   }
   availLevels.forEach(function(l) {
     var isSel = l === selectedLevel;
-    thRow += '<th' + (isSel ? ' class="rd-th-lt-sel"' : ' class="rd-th-lt"') + '>LT' + l + (isSel ? ' ★' : '') + '<br>(h)</th>';
+    thRow += '<th class="' + (isSel ? 'rd-th-lt-sel' : 'rd-th-lt') + '">LT' + l + (isSel ? ' ★' : '') + '<br>(h)</th>';
   });
   thRow += '</tr>';
 
   // REF 행
   var refRow = '<tr class="rd-row-ref"><td class="rd-th-block">REF</td>';
   if (ivl.ref) {
-    refRow += '<td>' + fv(ref.volt,2) + '</td><td>' + fv(ref.eff,2) + '</td><td>' + fv(ref.eqe,2) + '</td>';
-    refRow += '<td>' + fv(ref.cx,3) + '</td><td>' + fv(ref.cy,3) + '</td><td>' + fv(ref.mwl,0) + '</td>';
+    refRow += '<td class="rd-ivl-l">' + fv(ref.volt,2) + '</td>';
+    refRow += '<td>' + fv(ref.eff,2) + '</td>';
+    refRow += '<td>' + fv(ref.eqe,2) + '</td>';
+    refRow += '<td>' + fv(ref.cx,3)  + '</td>';
+    refRow += '<td>' + fv(ref.cy,3)  + '</td>';
+    refRow += '<td class="rd-ivl-r">' + fv(ref.mwl,0) + '</td>';
   }
   availLevels.forEach(function(l) {
     var v = levels[l].refHr;
-    refRow += '<td>' + (v != null ? parseFloat(v).toFixed(1) : '-') + '</td>';
+    var isSel = l === selectedLevel;
+    refRow += '<td' + (isSel ? ' class="rd-lt-sel-cell"' : '') + '>' + (v != null ? parseFloat(v).toFixed(1) : '-') + '</td>';
   });
   refRow += '</tr>';
 
   // SAMPLE 행
   var smpRow = '<tr class="rd-row-smp"><td class="rd-th-block rd-sample">SAMPLE</td>';
   if (ivl.ref) {
-    smpRow += '<td class="rd-sample">' + fv(smp.volt,2) + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.eff,2)  + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.eqe,2)  + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.cx,3)   + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.cy,3)   + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.mwl,0)  + '</td>';
+    smpRow += '<td class="rd-sample rd-ivl-l">' + fv(smp.volt,2) + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.eff,2)  + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.eqe,2)  + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.cx,3)   + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.cy,3)   + '</td>';
+    smpRow += '<td class="rd-sample rd-ivl-r">'  + fv(smp.mwl,0)  + '</td>';
   }
   availLevels.forEach(function(l) {
     var v = levels[l].sampleHr;
@@ -1299,22 +1309,19 @@ function openResultDetail(lotId, item, result) {
   // Result 행
   var resRow = '<tr class="rd-row-res"><td class="rd-th-block">Result</td>';
   if (ivl.ref) {
-    // V: REF/SAMPLE (낮을수록 좋음)
     var vP = (ref.volt && smp.volt) ? ref.volt / smp.volt * 100 : null;
-    resRow += '<td>' + pctHtml(vP) + '</td>';
-    // EFF, EQE, CIEx, CIEy: SAMPLE/REF
+    resRow += '<td class="rd-ivl-l rd-ivl-b">' + pctHtml(vP) + '</td>';
     [[smp.eff,ref.eff],[smp.eqe,ref.eqe],[smp.cx,ref.cx],[smp.cy,ref.cy]].forEach(function(pair) {
       var p = (pair[0] != null && pair[1] != null && pair[1] !== 0) ? pair[0] / pair[1] * 100 : null;
-      resRow += '<td>' + pctHtml(p) + '</td>';
+      resRow += '<td class="rd-ivl-b">' + pctHtml(p) + '</td>';
     });
-    // λmax: 차이 (nm)
     var mwlDiff = (ref.mwl != null && smp.mwl != null) ? (parseInt(smp.mwl) - parseInt(ref.mwl)) : null;
-    resRow += '<td>' + (mwlDiff != null ? (mwlDiff > 0 ? '+' : '') + mwlDiff + 'nm' : '-') + '</td>';
+    resRow += '<td class="rd-ivl-r rd-ivl-b">' + (mwlDiff != null ? (mwlDiff > 0 ? '+' : '') + mwlDiff + 'nm' : '-') + '</td>';
   }
   availLevels.forEach(function(l) {
     var p = levels[l].pct;
     var isSel = l === selectedLevel;
-    resRow += '<td' + (isSel ? ' class="rd-lt-sel-cell"' : '') + '>' + (p != null ? pctHtml(p) : '-') + '</td>';
+    resRow += '<td class="' + (isSel ? 'rd-lt-sel-cell rd-lt-sel-bot' : '') + '">' + (p != null ? pctHtml(p) : '-') + '</td>';
   });
   resRow += '</tr>';
 
