@@ -22,11 +22,15 @@ var firebaseConfig = {
   appId:             "1:1037146076792:web:b8ddcdb31d527d2d545f8d"
 };
 firebase.initializeApp(firebaseConfig);
-var _db    = firebase.database();
-var DB_REF = _db.ref('lot_schedule');
+var _db         = firebase.database();
+var DB_REF      = _db.ref('lot_schedule');
+var RESULT_REF  = _db.ref('oled_results');  // {lotId: {savedAt, ivl, lt}}
 
 /* ── 상수 ────────────────────────────────────────────────────────────── */
 var STORAGE_KEY  = 'qa_lot_schedule_v1';
+
+/* ── OLED 결과 캐시 ─────────────────────────────────────────────────── */
+window._cachedResults = {}; // {lotId: {savedAt, ivl, lt}}
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var today    = new Date();
@@ -91,6 +95,31 @@ function setupRealtimeSync() {
       renderCalendar();
     });
   });
+}
+
+/* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
+function setupResultsSync() {
+  RESULT_REF.on('value', function(snap) {
+    window._cachedResults = snap.val() || {};
+  });
+}
+
+function loadResult(lotId) {
+  return window._cachedResults[lotId] || null;
+}
+
+function saveResult(lotId, resultData) {
+  var today = getTodayStr();
+  var payload = { savedAt: today, ivl: resultData.ivl || null, lt: resultData.lt || null };
+  window._cachedResults[lotId] = payload;
+  RESULT_REF.child(lotId).set(payload);
+}
+
+function deleteResult(lotId) {
+  delete window._cachedResults[lotId];
+  RESULT_REF.child(lotId).remove();
+  refreshModal();
+  renderCalendar();
 }
 
 /* ── D+N 계산 ────────────────────────────────────────────────────────── */
@@ -875,6 +904,15 @@ function buildDetailCard(item, asOf) {
     }
   }
 
+  // 소자평가 결과 입력 버튼 (정제생산/소자이관만)
+  if (isRefine) {
+    var btnResult = document.createElement('button');
+    btnResult.className = 'btn-result-input';
+    btnResult.textContent = '📊 결과 입력';
+    btnResult.addEventListener('click', function () { openResultPopup(item.id, item); });
+    actions.appendChild(btnResult);
+  }
+
   var btnEdit = document.createElement('button');
   btnEdit.className = 'btn btn-secondary btn-sm';
   btnEdit.textContent = '✎ 수정';
@@ -888,6 +926,44 @@ function buildDetailCard(item, asOf) {
   actions.appendChild(btnDel);
 
   wrap.appendChild(actions);
+
+  // 결과 요약 뱃지 (저장된 결과 있을 때)
+  var result = loadResult(item.id);
+  if (result) {
+    var badge = document.createElement('div');
+    badge.className = 'dc-result-badge';
+
+    var parts = ['📊'];
+    if (result.ivl) {
+      var s = result.ivl.sample, r = result.ivl.ref;
+      if (s && r) {
+        if (s.volt != null) parts.push('V ' + s.volt.toFixed(2));
+        if (s.eff  != null) parts.push('| EFF ' + s.eff.toFixed(2));
+        if (s.eqe  != null) parts.push('| EQE ' + s.eqe.toFixed(2) + '%');
+      }
+    }
+    if (result.lt) {
+      parts.push('| LT' + result.lt.level + ' ' + result.lt.pct + '%');
+    }
+    parts.push('(' + (result.savedAt || '') + ')');
+
+    var txt = document.createElement('span');
+    txt.textContent = parts.join(' ');
+    badge.appendChild(txt);
+
+    var delBtn = document.createElement('button');
+    delBtn.className = 'dc-rb-del';
+    delBtn.title = '결과 삭제';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (confirm('저장된 결과를 삭제하시겠습니까?')) deleteResult(item.id);
+    });
+    badge.appendChild(delBtn);
+
+    wrap.appendChild(badge);
+  }
+
   return wrap;
 }
 
@@ -1027,6 +1103,47 @@ function refreshModal() {
   else if (modalCurrentSearch) runModalSearch();
 }
 
+/* ── OLED 결과 입력 팝업 ─────────────────────────────────────────────── */
+var _resultPopupItemId = null;
+
+function openResultPopup(itemId, item) {
+  _resultPopupItemId = itemId;
+
+  // Lot 라벨 표시
+  var lotLabel = [item.material, item.lot].filter(Boolean).join(' / ');
+  document.getElementById('resultPopupLotLabel').textContent = lotLabel || itemId;
+
+  // iframe src 설정 (embed 모드)
+  var iframe = document.getElementById('resultIframe');
+  iframe.src = '../01_oled_ivl_lt/index.html?embed=1';
+
+  document.getElementById('resultPopupOverlay').classList.add('open');
+}
+
+function closeResultPopup() {
+  document.getElementById('resultPopupOverlay').classList.remove('open');
+  // iframe 초기화 (다음 열 때 새로 로드)
+  var iframe = document.getElementById('resultIframe');
+  iframe.src = '';
+  _resultPopupItemId = null;
+}
+
+document.getElementById('btnResultPopupClose').addEventListener('click', closeResultPopup);
+document.getElementById('resultPopupOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeResultPopup();
+});
+
+// 01번 앱(iframe)에서 분석 결과를 postMessage로 전달받음
+window.addEventListener('message', function(e) {
+  if (!e.data || e.data.type !== 'oledResult') return;
+  if (!_resultPopupItemId) return;
+
+  saveResult(_resultPopupItemId, { ivl: e.data.ivl, lt: e.data.lt });
+  closeResultPopup();
+  renderCalendar();
+  refreshModal();
+});
+
 function markComplete(id) {
   var items = loadItems();
   var item  = items.find(function (it) { return it.id === id; });
@@ -1130,6 +1247,7 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
 setupRealtimeSync();
+setupResultsSync();
 
 /* ════════════════════════════════════════════════════════════════════════
    메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서

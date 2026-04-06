@@ -216,6 +216,23 @@
   </div>
 </div>
 
+<!-- ━━━━━━━━━━━━━━━━  OLED 결과 입력 팝업  ━━━━━━━━━━━━━━━━ -->
+<div class="result-popup-overlay" id="resultPopupOverlay">
+  <div class="result-popup">
+    <div class="result-popup-header">
+      <div class="result-popup-title-row">
+        <span class="result-popup-title">📊 OLED 소자평가 결과 입력</span>
+        <span class="result-popup-lot" id="resultPopupLotLabel"></span>
+      </div>
+      <div class="result-popup-hint">CSV 파일 업로드 → ANALYZE → <b style="color:#10b981">이 Lot에 결과 저장</b></div>
+      <button type="button" class="result-popup-close" id="btnResultPopupClose">✕</button>
+    </div>
+    <div class="result-popup-body">
+      <iframe id="resultIframe" class="result-iframe" src="" allow="clipboard-read; clipboard-write"></iframe>
+    </div>
+  </div>
+</div>
+
 <script src="./app.js"></script>
 </body>
 </html>

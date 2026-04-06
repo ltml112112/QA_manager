@@ -1119,3 +1119,134 @@ textarea.form-input {
   color: var(--text-muted);
 }
 
+/* ── OLED 결과 입력 팝업 ─────────────────────────────────────────────── */
+.result-popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 400;
+  align-items: center;
+  justify-content: center;
+}
+.result-popup-overlay.open { display: flex; }
+
+.result-popup {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(1160px, 96vw);
+  height: min(88vh, 860px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 72px rgba(0,0,0,.5);
+  overflow: hidden;
+}
+
+.result-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.result-popup-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.result-popup-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.result-popup-lot {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 600;
+  background: rgba(16,185,129,.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.result-popup-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.result-popup-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.result-popup-close:hover { background: var(--surface-2); }
+
+.result-popup-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+.result-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── detail-card 내 결과 요약 뱃지 ──────────────────────────────────── */
+.dc-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px 8px;
+  background: rgba(16,185,129,.12);
+  border: 1px solid rgba(16,185,129,.3);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #10b981;
+  font-weight: 600;
+  cursor: default;
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.dc-result-badge .dc-rb-del {
+  margin-left: 4px;
+  background: none;
+  border: none;
+  color: rgba(16,185,129,.6);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  border-radius: 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.dc-result-badge .dc-rb-del:hover { color: #ef4444; }
+.btn-result-input {
+  font-size: 11.5px;
+  padding: 3px 10px;
+  background: rgba(16,185,129,.1);
+  border: 1px solid rgba(16,185,129,.35);
+  color: #10b981;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn-result-input:hover {
+  background: rgba(16,185,129,.2);
+  border-color: #10b981;
+}
+
