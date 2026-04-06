@@ -1125,7 +1125,7 @@ textarea.form-input {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.65);
-  z-index: 400;
+  z-index: 600;  /* 날짜 모달(500) 위에 표시 */
   align-items: center;
   justify-content: center;
 }
@@ -1232,6 +1232,91 @@ textarea.form-input {
   transition: color .15s;
 }
 .dc-result-badge .dc-rb-del:hover { color: #ef4444; }
+/* ── 결과 상세보기 모달 ──────────────────────────────────────────────── */
+.result-detail-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 700;
+  align-items: center;
+  justify-content: center;
+}
+.result-detail-overlay.open { display: flex; }
+.result-detail-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: min(540px, 94vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,.45);
+  display: flex;
+  flex-direction: column;
+}
+.result-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px 11px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.result-detail-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.result-detail-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 16px; padding: 2px 6px;
+  border-radius: 4px; transition: background .15s;
+}
+.result-detail-close:hover { background: var(--surface-2); }
+.result-detail-body {
+  padding: 14px 16px;
+  flex: 1;
+}
+.rd-block-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.rd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.rd-table th, .rd-table td {
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  text-align: center;
+}
+.rd-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+.rd-table td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.rd-table .rd-sample { color: var(--accent); font-weight: 700; }
+.rd-table .rd-pct-good  { color: #10b981; font-weight: 700; }
+.rd-table .rd-pct-warn  { color: #f59e0b; font-weight: 700; }
+.rd-table .rd-pct-bad   { color: #ef4444; font-weight: 700; }
+.rd-lt-section { margin-top: 12px; }
+.result-detail-footer {
+  display: flex;
+  gap: 8px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
 .btn-result-input {
   font-size: 11.5px;
   padding: 3px 10px;

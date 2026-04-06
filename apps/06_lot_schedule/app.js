@@ -904,14 +904,12 @@ function buildDetailCard(item, asOf) {
     }
   }
 
-  // 소자평가 결과 입력 버튼 (정제생산/소자이관만)
-  if (isRefine) {
-    var btnResult = document.createElement('button');
-    btnResult.className = 'btn-result-input';
-    btnResult.textContent = '📊 결과 입력';
-    btnResult.addEventListener('click', function () { openResultPopup(item.id, item); });
-    actions.appendChild(btnResult);
-  }
+  // 소자평가 결과 입력 버튼 (전 아이템)
+  var btnResult = document.createElement('button');
+  btnResult.className = 'btn-result-input';
+  btnResult.textContent = '📊 결과 입력';
+  btnResult.addEventListener('click', function () { openResultPopup(item.id, item); });
+  actions.appendChild(btnResult);
 
   var btnEdit = document.createElement('button');
   btnEdit.className = 'btn btn-secondary btn-sm';
@@ -932,15 +930,17 @@ function buildDetailCard(item, asOf) {
   if (result) {
     var badge = document.createElement('div');
     badge.className = 'dc-result-badge';
+    badge.style.cursor = 'pointer';
+    badge.title = '클릭하여 전체 결과 보기';
 
     var parts = ['📊'];
-    if (result.ivl) {
-      var s = result.ivl.sample, r = result.ivl.ref;
-      if (s && r) {
-        if (s.volt != null) parts.push('V ' + s.volt.toFixed(2));
-        if (s.eff  != null) parts.push('| EFF ' + s.eff.toFixed(2));
-        if (s.eqe  != null) parts.push('| EQE ' + s.eqe.toFixed(2) + '%');
-      }
+    if (result.ivl && result.ivl.sample) {
+      var s = result.ivl.sample;
+      if (s.volt != null) parts.push('V:' + s.volt.toFixed(2));
+      if (s.eff  != null) parts.push('EFF:' + s.eff.toFixed(2));
+      if (s.eqe  != null) parts.push('EQE:' + s.eqe.toFixed(2) + '%');
+      if (s.cx   != null) parts.push('CIE(' + s.cx.toFixed(3) + ',' + (s.cy != null ? s.cy.toFixed(3) : '-') + ')');
+      if (s.mwl  != null) parts.push(s.mwl + 'nm');
     }
     if (result.lt) {
       parts.push('| LT' + result.lt.level + ' ' + result.lt.pct + '%');
@@ -950,6 +950,17 @@ function buildDetailCard(item, asOf) {
     var txt = document.createElement('span');
     txt.textContent = parts.join(' ');
     badge.appendChild(txt);
+
+    // 상세보기 링크
+    var detailLink = document.createElement('span');
+    detailLink.textContent = ' 상세▾';
+    detailLink.style.cssText = 'font-size:10.5px;opacity:.7;margin-left:2px';
+    badge.appendChild(detailLink);
+
+    badge.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openResultDetail(item.id, item, result);
+    });
 
     var delBtn = document.createElement('button');
     delBtn.className = 'dc-rb-del';
@@ -1127,6 +1138,96 @@ function closeResultPopup() {
   iframe.src = '';
   _resultPopupItemId = null;
 }
+
+/* ── 결과 상세보기 모달 ─────────────────────────────────────────────── */
+function openResultDetail(lotId, item, result) {
+  var overlay = document.getElementById('resultDetailOverlay');
+  var body    = document.getElementById('resultDetailBody');
+  var footer  = document.getElementById('resultDetailFooter');
+
+  // 헤더 타이틀
+  document.getElementById('resultDetailTitle').textContent =
+    '📊 ' + [item.material, item.lot].filter(Boolean).join(' / ') + ' — 소자평가 결과';
+
+  // 저장일
+  document.getElementById('resultDetailDate').textContent =
+    result.savedAt ? '저장일: ' + result.savedAt : '';
+
+  // IVL 테이블
+  var html = '';
+  if (result.ivl) {
+    var r = result.ivl.ref || {}, s = result.ivl.sample || {};
+    var blockLbl = result.ivl.blockLabel || '';
+    function fv(v, d) { return (v != null && !isNaN(v)) ? parseFloat(v).toFixed(d) : '-'; }
+    function pct(sVal, rVal) {
+      if (sVal == null || rVal == null || isNaN(sVal) || isNaN(rVal) || rVal == 0) return '-';
+      var p = sVal / rVal * 100;
+      var cls = Math.abs(p - 100) <= 5 ? 'rd-pct-good' : (p > 105 ? 'rd-pct-warn' : 'rd-pct-bad');
+      return '<span class="' + cls + '">' + p.toFixed(1) + '%</span>';
+    }
+    html += '<div class="rd-block-label">IVL 블록: ' + blockLbl + '</div>';
+    html += '<table class="rd-table">';
+    html += '<tr><th>항목</th><th>REF</th><th class="rd-sample">SAMPLE</th><th>비율</th></tr>';
+    html += '<tr><td>Op.V (V)</td><td>' + fv(r.volt,2) + '</td><td class="rd-sample">' + fv(s.volt,2) + '</td><td>' + pct(r.volt, s.volt) + '</td></tr>';
+    html += '<tr><td>EL EFF (cd/A)</td><td>' + fv(r.eff,2) + '</td><td class="rd-sample">' + fv(s.eff,2) + '</td><td>' + pct(s.eff, r.eff) + '</td></tr>';
+    html += '<tr><td>EQE (%)</td><td>' + fv(r.eqe,2) + '</td><td class="rd-sample">' + fv(s.eqe,2) + '</td><td>' + pct(s.eqe, r.eqe) + '</td></tr>';
+    html += '<tr><td>CIEx</td><td>' + fv(r.cx,3) + '</td><td class="rd-sample">' + fv(s.cx,3) + '</td><td>' + pct(s.cx, r.cx) + '</td></tr>';
+    html += '<tr><td>CIEy</td><td>' + fv(r.cy,3) + '</td><td class="rd-sample">' + fv(s.cy,3) + '</td><td>' + pct(s.cy, r.cy) + '</td></tr>';
+    html += '<tr><td>λmax (nm)</td><td>' + fv(r.mwl,0) + '</td><td class="rd-sample">' + fv(s.mwl,0) + '</td><td>' + (r.mwl != null && s.mwl != null ? (parseInt(s.mwl) - parseInt(r.mwl)) + 'nm' : '-') + '</td></tr>';
+    html += '</table>';
+  }
+  if (result.lt) {
+    var lt = result.lt;
+    html += '<div class="rd-lt-section">';
+    html += '<table class="rd-table">';
+    html += '<tr><th>LT 항목</th><th>REF</th><th class="rd-sample">SAMPLE</th><th>비율</th></tr>';
+    var ltPctCls = lt.pct >= 95 ? 'rd-pct-good' : (lt.pct >= 90 ? 'rd-pct-warn' : 'rd-pct-bad');
+    html += '<tr><td>LT' + lt.level + ' (h)</td><td>' + (lt.refHr != null ? lt.refHr.toFixed(1) : '-') + '</td><td class="rd-sample">' + (lt.sampleHr != null ? lt.sampleHr.toFixed(1) : '-') + '</td><td><span class="' + ltPctCls + '">' + lt.pct + '%</span></td></tr>';
+    html += '</table>';
+    html += '</div>';
+  }
+  body.innerHTML = html;
+
+  // 푸터 버튼
+  footer.innerHTML = '';
+  var btnReInput = document.createElement('button');
+  btnReInput.className = 'btn btn-secondary btn-sm';
+  btnReInput.textContent = '📊 결과 재입력';
+  btnReInput.addEventListener('click', function() {
+    closeResultDetail();
+    openResultPopup(lotId, item);
+  });
+  footer.appendChild(btnReInput);
+
+  var btnDel2 = document.createElement('button');
+  btnDel2.className = 'btn btn-secondary btn-sm btn-del';
+  btnDel2.textContent = '✕ 결과 삭제';
+  btnDel2.addEventListener('click', function() {
+    if (confirm('저장된 결과를 삭제하시겠습니까?')) {
+      closeResultDetail();
+      deleteResult(lotId);
+    }
+  });
+  footer.appendChild(btnDel2);
+
+  var btnClose2 = document.createElement('button');
+  btnClose2.className = 'btn btn-primary btn-sm';
+  btnClose2.textContent = '닫기';
+  btnClose2.style.marginLeft = 'auto';
+  btnClose2.addEventListener('click', closeResultDetail);
+  footer.appendChild(btnClose2);
+
+  overlay.classList.add('open');
+}
+
+function closeResultDetail() {
+  document.getElementById('resultDetailOverlay').classList.remove('open');
+}
+
+document.getElementById('btnResultDetailClose').addEventListener('click', closeResultDetail);
+document.getElementById('resultDetailOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeResultDetail();
+});
 
 document.getElementById('btnResultPopupClose').addEventListener('click', closeResultPopup);
 document.getElementById('resultPopupOverlay').addEventListener('click', function(e) {
