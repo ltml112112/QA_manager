@@ -314,13 +314,40 @@ function renderCalendar() {
       + (dateStr === curTodayStr ? ' is-today' : '');
     cell.dataset.date = dateStr;
 
-    // 날짜 숫자
+    // 날짜 숫자 + 부서별 카운트
+    var dayItems0 = byDate[dateStr] || [];
+    var synthCnt  = dayItems0.filter(function(it) { return it.dept === '합성생산'; }).length;
+    var refineCnt = dayItems0.filter(function(it) { return it.dept !== '합성생산'; }).length;
+
+    var dateRow = document.createElement('div');
+    dateRow.className = 'cell-date-row';
+
     var dn = document.createElement('div');
     dn.className = 'cell-daynum'
       + (dow === 0 ? ' sun' : '')
       + (dow === 6 ? ' sat' : '');
     dn.textContent = dayNum;
-    cell.appendChild(dn);
+    dateRow.appendChild(dn);
+
+    if (synthCnt > 0 || refineCnt > 0) {
+      var counts = document.createElement('div');
+      counts.className = 'cell-dept-counts';
+      if (synthCnt > 0) {
+        var sc = document.createElement('span');
+        sc.className = 'dept-cnt synth-cnt';
+        sc.textContent = synthCnt;
+        counts.appendChild(sc);
+      }
+      if (refineCnt > 0) {
+        var rc = document.createElement('span');
+        rc.className = 'dept-cnt refine-cnt';
+        rc.textContent = refineCnt;
+        counts.appendChild(rc);
+      }
+      dateRow.appendChild(counts);
+    }
+
+    cell.appendChild(dateRow);
 
     // ── 카드 배치 ──
     var dayItems = byDate[dateStr] || [];

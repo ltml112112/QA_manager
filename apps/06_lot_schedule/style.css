@@ -317,6 +317,28 @@ html, body {
   border: 2px solid var(--accent);
 }
 
+/* 날짜 행 (숫자 + 부서 카운트) */
+.cell-date-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.cell-dept-counts {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.dept-cnt {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 8px;
+}
+.synth-cnt  { color: #ef4444; background: rgba(239,68,68,.12); }
+.refine-cnt { color: #9333ea; background: rgba(147,51,234,.12); }
+
 /* 날짜 숫자 */
 .cell-daynum {
   font-size: 11px;
