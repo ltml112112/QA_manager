@@ -1258,16 +1258,26 @@ textarea.form-input {
   transition: color .15s;
 }
 .dc-result-badge .dc-rb-del:hover { color: #ef4444; }
-/* 선택 LT 레벨 — 골드 강조 */
+/* 선택 LT 레벨 레이블 — 골드 */
 .dc-result-badge .dc-rb-lt-sel {
   color: #f59e0b;
   font-weight: 900;
   letter-spacing: .01em;
 }
-/* 비선택 LT 레벨 — 흐릿한 보라 */
+/* 비선택 LT 레벨 레이블 — 흐릿한 보라 */
 .dc-result-badge .dc-rb-lt-dim {
   color: rgba(147,51,234,.5);
   font-weight: 600;
+}
+/* 선택 LT % — 연두/민트 */
+.dc-result-badge .dc-rb-pct-sel {
+  color: #10b981;
+  font-weight: 800;
+}
+/* 비선택 LT % — 더 흐릿 */
+.dc-result-badge .dc-rb-pct-dim {
+  color: rgba(147,51,234,.38);
+  font-weight: 500;
 }
 /* 저장일 */
 .dc-result-badge .dc-rb-date {

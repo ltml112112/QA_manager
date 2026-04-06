@@ -982,15 +982,13 @@ function buildDetailCard(item, asOf) {
     if (rbAvail.length > 0) {
       rbAvail.forEach(function(l) {
         var isSel = l === rbLtSel;
-        var smpH  = rbLtLevels[l].sampleHr;
         var pct   = rbLtLevels[l].pct;
-        var hStr  = smpH != null ? parseFloat(smpH).toFixed(0) + 'h' : '–';
-        var pStr  = pct  != null ? ' (' + pct + '%)' : '';
         var tag   = 'LT' + l + (isSel ? '★' : '');
+        var pStr  = pct != null ? '<span class="dc-rb-pct' + (isSel ? '-sel' : '-dim') + '">' + pct + '%</span>' : '';
         if (isSel) {
-          rbHtml += ' <span class="dc-rb-lt-sel">' + tag + ' ' + hStr + pStr + '</span>';
+          rbHtml += ' <span class="dc-rb-lt-sel">' + tag + '</span>' + (pStr ? ' ' + pStr : '');
         } else {
-          rbHtml += ' <span class="dc-rb-lt-dim">' + tag + ' ' + hStr + '</span>';
+          rbHtml += ' <span class="dc-rb-lt-dim">' + tag + '</span>' + (pStr ? ' ' + pStr : '');
         }
       });
     } else {
