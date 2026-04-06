@@ -904,12 +904,14 @@ function buildDetailCard(item, asOf) {
     }
   }
 
-  // 소자평가 결과 입력 버튼 (전 아이템)
-  var btnResult = document.createElement('button');
-  btnResult.className = 'btn-result-input';
-  btnResult.textContent = '📊 결과 입력';
-  btnResult.addEventListener('click', function () { openResultPopup(item.id, item); });
-  actions.appendChild(btnResult);
+  // 소자평가 결과 입력 버튼 (정제생산/소자이관만)
+  if (isRefine) {
+    var btnResult = document.createElement('button');
+    btnResult.className = 'btn-result-input';
+    btnResult.textContent = '📊 결과 입력';
+    btnResult.addEventListener('click', function () { openResultPopup(item.id, item); });
+    actions.appendChild(btnResult);
+  }
 
   var btnEdit = document.createElement('button');
   btnEdit.className = 'btn btn-secondary btn-sm';
