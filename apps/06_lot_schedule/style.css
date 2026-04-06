@@ -1248,7 +1248,7 @@ textarea.form-input {
 }
 .dc-result-badge .dc-rb-icon {
   font-size: 10.5px;
-  color: rgba(147,51,234,.55);
+  color: var(--text-muted);
   font-weight: 600;
   letter-spacing: .01em;
 }
@@ -1259,13 +1259,13 @@ textarea.form-input {
 }
 .dc-result-badge .dc-rb-detail-link {
   font-size: 10.5px;
-  color: rgba(147,51,234,.6);
+  color: var(--text-muted);
   font-weight: 600;
 }
 .dc-result-badge .dc-rb-del {
   background: none;
   border: none;
-  color: rgba(147,51,234,.4);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 11px;
   padding: 0 2px;
@@ -1292,7 +1292,7 @@ textarea.form-input {
 }
 /* 열 사이 구분선 */
 .dc-result-badge .dc-rb-col + .dc-rb-col {
-  border-left: 1px solid rgba(147,51,234,.25);
+  border-left: 1px solid var(--border);
 }
 /* 선택 열 배경 강조 */
 .dc-result-badge .dc-rb-col.is-sel {
@@ -1307,22 +1307,22 @@ textarea.form-input {
   font-weight: 900;
   letter-spacing: .02em;
 }
-/* 비선택 LT 레벨명 */
+/* 비선택 LT 레벨명 — 기본 텍스트색(검정) */
 .dc-result-badge .dc-rb-lv-dim {
-  color: rgba(167,139,250,.7);
+  color: var(--text);
   font-size: 12px;
   font-weight: 700;
 }
 
-/* 선택 % — 밝은 청록 */
+/* 선택 % — 주황 (레벨명과 동일) */
 .dc-result-badge .dc-rb-pct-sel {
-  color: #2dd4bf;
+  color: #fb923c;
   font-size: 14px;
   font-weight: 900;
 }
-/* 비선택 % */
+/* 비선택 % — 기본 텍스트색(검정) */
 .dc-result-badge .dc-rb-pct-dim {
-  color: rgba(167,139,250,.55);
+  color: var(--text);
   font-size: 13px;
   font-weight: 600;
 }
@@ -1330,7 +1330,7 @@ textarea.form-input {
 /* 저장일 */
 .dc-result-badge .dc-rb-date {
   font-size: 10px;
-  color: rgba(147,51,234,.4);
+  color: var(--text-muted);
   font-weight: 500;
 }
 /* ── 결과 상세보기 모달 ──────────────────────────────────────────────── */
