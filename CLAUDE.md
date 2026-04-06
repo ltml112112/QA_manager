@@ -414,6 +414,31 @@ SAMPLE_IVL1: #ef4444  (빨간색)
 SAMPLE_IVL2: #f59e0b  (주황색)
 ```
 
+### Embed 모드 — 06번 앱에서 iframe으로 호출될 때
+
+`06_lot_schedule`의 📊 결과 입력 팝업이 이 앱을 `?embed=1` 파라미터로 iframe 로드함.
+
+```javascript
+// 06번 앱이 iframe src를 이렇게 설정
+iframe.src = './apps/01_oled_ivl_lt/index.html?embed=1';
+```
+
+embed 모드 진입 시 동작 차이:
+| 항목 | 일반 모드 | embed 모드 |
+|------|----------|-----------|
+| `💾 분析결과 임시저장` 버튼 | 표시 | **숨김** |
+| `📥 이 Lot에 결과 저장` 버튼 | 숨김 | **표시** (`embedSaveCard`) |
+
+`이 Lot에 결과 저장` 클릭 시 `postMessage`로 분析 결과 전달:
+```javascript
+window.parent.postMessage({ type: 'oledResult', ivl: {...}, lt: {...} }, '*');
+```
+
+06번 앱의 `window.addEventListener('message', ...)` 핸들러가 수신 → `saveResult()` → Firebase 저장.
+
+**embed 모드 진입 코드 위치**: `apps/01_oled_ivl_lt/index.html` 하단 IIFE  
+(`new URLSearchParams(location.search).get('embed') === '1'` 조건부 실행)
+
 ---
 
 ## 2. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
@@ -705,6 +730,91 @@ var DB_REF = db.ref('oled_sessions');   // 01번 앱
 var DB_REF = db.ref('hplc_reports');    // 03번 앱
 ```
 
+### OLED 소자평가 결과 입력 시스템
+
+정제생산/소자이관 Lot에 한해 OLED 분석기(01번 앱)를 embed하여 결과를 저장·표시하는 시스템.
+
+#### 결과 저장 구조
+
+```javascript
+// Firebase: lot_schedule_results/{lotId}
+{
+  savedAt: 'YYYY-MM-DD',
+  ivl: {
+    blockLabel: 'REF1-SAMPLE1',      // 선택된 블록 레이블
+    ref:    { volt, eff, eqe, cx, cy, mwl },
+    sample: { volt, eff, eqe, cx, cy, mwl },
+  },
+  lt: {
+    selectedLevel: 95,               // 대표 LT 레벨 (자동 선택)
+    levels: {                        // 측정된 모든 레벨
+      95: { refHr, sampleHr, pct },
+      94: { refHr, sampleHr, pct },
+      // ...
+    }
+  }
+}
+```
+
+> 저장 경로: `firebase.database().ref('lot_schedule_results')` (별도 경로, lot_schedule와 분리)  
+> 구 포맷(level/refHr/sampleHr/pct 단일값)도 backward compat으로 지원
+
+#### 팝업 흐름
+
+```
+📊 결과 입력 버튼 클릭 (buildDetailCard 내)
+  → openResultPopup(lotId, item)
+  → resultPopupOverlay 열림
+  → iframe src = './apps/01_oled_ivl_lt/index.html?embed=1'
+  → 사용자: CSV 업로드 → ANALYZE → 이 Lot에 결과 저장
+  → postMessage({ type:'oledResult', ivl, lt })
+  → 06번 앱 message 핸들러: saveResult(lotId, data)
+  → closeResultPopup() → renderCalendar() → refreshModal()
+```
+
+#### 결과 배지 (dc-result-badge)
+
+결과가 저장된 Lot의 `buildDetailCard()` 하단에 표시되는 주황색 배지.
+
+**레이아웃**: 열(column) 단위 표 형태
+```
+📊 소자평가 결과                    상세▾  ✕
+┌──────────┬──────────┬──────────┐
+│  LT95★  │   LT94   │   LT90   │  ← 레벨명 행 (선택:검정굵게 / 나머지:주황)
+│  100%   │   88%    │   92%    │  ← % 행    (선택:검정굵게 / 나머지:주황)
+└──────────┴──────────┴──────────┘
+2025-03-15
+```
+
+- 선택 레벨(★): `dc-rb-lv-sel` / `dc-rb-pct-sel` — `var(--text)` 검정 굵게
+- 비선택 레벨: `dc-rb-lv-dim` / `dc-rb-pct-dim` — `#fb923c` 주황
+- 클릭 시 `openResultDetail()` 호출
+
+#### 결과 상세보기 모달 (openResultDetail)
+
+테이블 구조: Block(고정) | IVL 6컬럼 | LT 레벨 N컬럼
+
+**주황 테두리 규칙**:
+| 영역 | 테두리 |
+|------|--------|
+| IVL 섹션 외곽 (좌·우·상·하) | 3px 주황 (`rd-ivl-l/r/t/b`) |
+| 선택 LT★ 열 전체 | 3px 주황 박스 (`rd-th-lt-sel`, `rd-lt-sel-cell`, `rd-lt-sel-bot`) |
+| 나머지 셀 | `var(--border)` 기본색 |
+
+#### 관련 함수
+
+| 함수 | 역할 |
+|------|------|
+| `loadResult(lotId)` | Firebase에서 결과 로드 |
+| `saveResult(lotId, data)` | Firebase에 결과 저장 |
+| `deleteResult(lotId)` | Firebase에서 결과 삭제 |
+| `openResultPopup(lotId, item)` | 결과 입력 팝업 열기 (iframe embed) |
+| `closeResultPopup()` | 결과 입력 팝업 닫기 + iframe src 초기화 |
+| `openResultDetail(lotId, item, result)` | 결과 상세보기 모달 렌더링 |
+| `closeResultDetail()` | 결과 상세보기 모달 닫기 |
+
+---
+
 ### 아이템 데이터 스키마
 
 ```javascript
@@ -789,6 +899,12 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | 함수 | 역할 |
 |------|------|
 | `loadItems()` / `saveItems(items)` | Firebase 캐시 반환 / Firebase 저장 (전체 덮어쓰기) |
+| `loadResult(lotId)` / `saveResult(lotId, data)` | OLED 결과 로드 / Firebase 저장 (`lot_schedule_results/`) |
+| `deleteResult(lotId)` | OLED 결과 삭제 |
+| `openResultPopup(lotId, item)` | OLED 결과 입력 팝업 (iframe `?embed=1`) |
+| `closeResultPopup()` | 결과 입력 팝업 닫기 + iframe src 초기화 |
+| `openResultDetail(lotId, item, result)` | 결과 상세보기 모달 렌더링 |
+| `closeResultDetail()` | 결과 상세보기 모달 닫기 |
 | `setupRealtimeSync()` | Firebase 실시간 리스너 시작 — localStorage 마이그레이션 포함 |
 | `genId()` | 고유 ID 생성 |
 | `calcDN(transferDate, asOf)` | 이관일 기준 D+N 계산 |
@@ -844,6 +960,15 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | `.batch-active` | 배치 체크 상태 (주황 외곽선) |
 | `.batch-pos-first` / `.batch-pos-last` | 배치 그룹 첫/마지막 행 (외곽선 제어) |
 | `.mp-edit-btn.active` | 미리보기 수정 모드 버튼 상태 |
+| `.result-popup-overlay` / `.result-popup` | OLED 결과 입력 팝업 (iframe 포함) |
+| `.result-detail-overlay` / `.result-detail-modal` | OLED 결과 상세보기 모달 |
+| `.dc-result-badge` | 결과 저장된 Lot의 요약 배지 (표 형태) |
+| `.dc-rb-col` / `.dc-rb-col.is-sel` | 배지 LT 열 / 선택 열 배경 강조 |
+| `.dc-rb-lv-sel` / `.dc-rb-lv-dim` | 배지 레벨명 (선택:검정 / 비선택:주황) |
+| `.dc-rb-pct-sel` / `.dc-rb-pct-dim` | 배지 % (선택:검정 / 비선택:주황) |
+| `.rd-table` / `.rd-table-wrap` | 결과 상세 테이블 / 스크롤 래퍼 |
+| `.rd-th-lt-sel` / `.rd-lt-sel-cell` / `.rd-lt-sel-bot` | 선택 LT★ 열 주황 박스 테두리 |
+| `.rd-ivl-l/r/t/b` | IVL 섹션 외곽 주황 테두리 (각 방향) |
 
 ---
 
