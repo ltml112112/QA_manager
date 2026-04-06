@@ -65,8 +65,10 @@ const apps = [
 var _UK = 'qa_p_ulk';
 var _UC = [57, 52, 48, 52, 49, 52]; // '9','4','0','4','1','4'
 
+var _sessionUnlocked = false;
+
 function _isUnlocked() {
-  return localStorage.getItem(_UK) === '1';
+  return _sessionUnlocked;
 }
 
 function _checkPass(input) {
@@ -241,11 +243,9 @@ function _createPassModal() {
 
   function _attempt() {
     if (_checkPass(inp.value.trim())) {
-      localStorage.setItem(_UK, '1');
+      _sessionUnlocked = true;
       _revealLockedTabs();
       _close();
-      var dot = document.querySelector('.status-dot');
-      if (dot) dot.title = '클릭하여 공개 탭만 표시';
     } else {
       err.textContent = '코드가 올바르지 않습니다.';
       inp.value = '';
@@ -330,18 +330,18 @@ function hideLoader(id) {
     });
   }
 
-  // 가동 중 초록 점 — 잠금 해제 or 공개/전체 탭 토글
+  // 가동 중 초록 점 — 잠금 해제 (한 번 해제하면 새로고침해도 유지, 토글 없음)
   var statusDot = document.querySelector('.status-dot');
   if (statusDot) {
-    statusDot.style.cursor = 'pointer';
-    statusDot.title = _isUnlocked() ? '클릭하여 공개 탭만 표시' : '접근 코드 입력';
-    statusDot.addEventListener('click', function() {
-      if (_isUnlocked()) {
-        _toggleLockedVisibility();
-      } else {
+    if (_isUnlocked()) {
+      _revealLockedTabs();
+    } else {
+      statusDot.style.cursor = 'pointer';
+      statusDot.title = '접근 코드 입력';
+      statusDot.addEventListener('click', function() {
         _createPassModal();
-      }
-    });
+      });
+    }
   }
 
   // 탭 키보드 내비게이션 — 위/아래 화살표로 탭 전환
