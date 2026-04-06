@@ -1165,9 +1165,9 @@ textarea.form-input {
 }
 .result-popup-lot {
   font-size: 12px;
-  color: #10b981;
-  font-weight: 600;
-  background: rgba(16,185,129,.12);
+  color: #9333ea;
+  font-weight: 700;
+  background: rgba(147,51,234,.1);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -1208,22 +1208,26 @@ textarea.form-input {
   align-items: center;
   gap: 5px;
   margin-top: 5px;
-  padding: 3px 8px;
-  background: rgba(16,185,129,.12);
-  border: 1px solid rgba(16,185,129,.3);
+  padding: 4px 9px;
+  background: rgba(147,51,234,.1);
+  border: 1px solid rgba(147,51,234,.35);
   border-radius: 4px;
-  font-size: 11px;
-  color: #10b981;
-  font-weight: 600;
-  cursor: default;
+  font-size: 11.5px;
+  color: #9333ea;
+  font-weight: 700;
+  cursor: pointer;
   flex-wrap: wrap;
   row-gap: 2px;
+  transition: background .15s;
+}
+.dc-result-badge:hover {
+  background: rgba(147,51,234,.18);
 }
 .dc-result-badge .dc-rb-del {
   margin-left: 4px;
   background: none;
   border: none;
-  color: rgba(16,185,129,.6);
+  color: rgba(147,51,234,.5);
   cursor: pointer;
   font-size: 11px;
   padding: 0 2px;
