@@ -330,19 +330,11 @@ function hideLoader(id) {
     });
   }
 
-  // 가동 중 초록 점 — 잠금 해제 or 공개/전체 탭 토글
-  var statusDot = document.querySelector('.status-dot');
-  if (statusDot) {
-    statusDot.style.cursor = 'pointer';
-    statusDot.title = _isUnlocked() ? '클릭하여 공개 탭만 표시' : '접근 코드 입력';
-    statusDot.addEventListener('click', function() {
-      if (_isUnlocked()) {
-        _toggleLockedVisibility();
-      } else {
-        _createPassModal();
-      }
-    });
+  // 항상 잠금 해제 상태로 시작
+  if (!_isUnlocked()) {
+    localStorage.setItem(_UK, '1');
   }
+  _revealLockedTabs();
 
   // 탭 키보드 내비게이션 — 위/아래 화살표로 탭 전환
   document.querySelector('.tab-nav').addEventListener('keydown', function(e) {
