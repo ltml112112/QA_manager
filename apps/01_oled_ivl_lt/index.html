@@ -469,6 +469,10 @@ X축: 파장(380~780nm), Y축: 강도(a.u.)
     <div class="card" style="padding:.6rem 1rem">
         <button class="btn btn-primary btn-block" id="saveBtn" style="background:#1f6feb;font-size:.85rem" onclick="showSaveModal()">&#128190; 분석결과 임시저장</button>
     </div>
+    <!-- Embed mode: 소자평가 일정에서 팝업으로 열릴 때만 표시 -->
+    <div class="card" id="embedSaveCard" style="display:none;padding:.6rem 1rem">
+        <button class="btn btn-primary btn-block" id="embedSaveBtn" style="background:#10b981;font-size:.9rem;font-weight:700">&#128229; 이 Lot에 결과 저장</button>
+    </div>
     <!-- IVL -->
     <div class="card">
         <h2 class="card-title">IVL ANALYSIS</h2>
@@ -1413,6 +1417,96 @@ document.addEventListener('keydown',e=>{
 });
 
 init();
+
+/* ── Embed Mode: 소자평가 일정 관리에서 팝업으로 열릴 때 ── */
+(function(){
+  var EMBED_MODE = new URLSearchParams(location.search).get('embed') === '1';
+  if (!EMBED_MODE) return;
+
+  var card = document.getElementById('embedSaveCard');
+  var btn  = document.getElementById('embedSaveBtn');
+  if (card) card.style.display = '';
+
+  if (btn) btn.addEventListener('click', function() {
+    if (!lastIvl || Object.keys(lastIvl).length === 0) {
+      alert('분석 결과가 없습니다. 먼저 ANALYZE를 실행하세요.');
+      return;
+    }
+
+    // IVL — 선택된 블록에서 추출
+    var ivlResult = null;
+    var ivlB = sumSel.ivl >= 0 ? BLOCKS_MAIN[sumSel.ivl] : null;
+    if (ivlB) {
+      var d1 = lastIvl[ivlB.r1], d2 = lastIvl[ivlB.r2];
+      if (d1 && d2) {
+        ivlResult = {
+          blockLabel: ivlB.lb,
+          ref:    { volt: d1.volt, eff: d1.eff, eqe: d1.eqe, cx: d1.cx, cy: d1.cy, mwl: d1.mwl || null },
+          sample: { volt: d2.volt, eff: d2.eff, eqe: d2.eqe, cx: d2.cx, cy: d2.cy, mwl: d2.mwl || null },
+        };
+      }
+    }
+
+    // LT — 측정된 전체 레벨 저장 + 선택 레벨(양쪽 ≥100hr 첫 번째) 기록
+    var ltResult = null;
+    // sumSel.lt === -1 이면 (Low 모드에서 LT95~90 조건 미충족) IVL 블록 또는 0번으로 대체
+    var ltBlockIdx = sumSel.lt >= 0 ? sumSel.lt : (sumSel.ivl >= 0 ? sumSel.ivl : 0);
+    var ltB = BLOCKS_MAIN[ltBlockIdx];
+    if (ltB) {
+      var curLevels = ltMode === 'high' ? LT_LEVELS_HIGH : LT_LEVELS;
+      var allLevels = [99,98,97,96,95,94,93,92,91,90];
+      var lv1 = lastLtLv[ltB.lt1], lv2 = lastLtLv[ltB.lt2];
+      var levelsData = {};
+      // 측정값 있는 레벨 전부 수집
+      allLevels.forEach(function(l) {
+        var v1 = lv1 && lv1[l] ? lv1[l].hr : null;
+        var v2 = lv2 && lv2[l] ? lv2[l].hr : null;
+        if (v1 != null || v2 != null) {
+          levelsData[l] = { refHr: v1, sampleHr: v2 };
+          if (v1 != null && v2 != null && v1 > 0) {
+            levelsData[l].pct = Math.round(v2 / v1 * 1000) / 10;
+          }
+        }
+      });
+      // 선택 레벨: 현재 모드(curLevels)에서 양쪽 ≥100hr인 첫 번째
+      var selectedLevel = null;
+      for (var i = 0; i < curLevels.length; i++) {
+        var l = curLevels[i];
+        if (levelsData[l] && levelsData[l].refHr >= 100 && levelsData[l].sampleHr >= 100) {
+          selectedLevel = l; break;
+        }
+      }
+      // Low 모드(95~90)에서 만족하는 레벨 없으면 → High 레벨(99~96)에서 탐색
+      if (selectedLevel === null && ltMode !== 'high') {
+        var highLevels = [99, 98, 97, 96];
+        for (var j = 0; j < highLevels.length; j++) {
+          var lh = highLevels[j];
+          if (levelsData[lh] && levelsData[lh].refHr >= 100 && levelsData[lh].sampleHr >= 100) {
+            selectedLevel = lh; break;
+          }
+        }
+      }
+      if (Object.keys(levelsData).length > 0) {
+        ltResult = { selectedLevel: selectedLevel, levels: levelsData };
+      }
+    }
+
+    if (!ivlResult && !ltResult) {
+      alert('저장할 수 있는 분석 결과가 없습니다.\nREF와 SAMPLE 파일을 모두 업로드 후 ANALYZE를 실행하세요.');
+      return;
+    }
+
+    window.parent.postMessage({ type: 'oledResult', ivl: ivlResult, lt: ltResult }, '*');
+
+    btn.textContent = '✓ 전송 완료!';
+    btn.style.background = '#238636';
+    setTimeout(function() {
+      btn.innerHTML = '&#128229; 이 Lot에 결과 저장';
+      btn.style.background = '#10b981';
+    }, 2000);
+  });
+})();
+
 })();
 
 </script>
