@@ -959,41 +959,39 @@ function buildDetailCard(item, asOf) {
   if (result) {
     var badge = document.createElement('div');
     badge.className = 'dc-result-badge';
-    badge.style.cursor = 'pointer';
     badge.title = '클릭하여 전체 결과 보기';
 
-    var parts = ['📊'];
-    if (result.ivl && result.ivl.sample) {
-      var s = result.ivl.sample;
-      if (s.volt != null) parts.push('V:' + s.volt.toFixed(2));
-      if (s.eff  != null) parts.push('EFF:' + s.eff.toFixed(2));
-      if (s.eqe  != null) parts.push('EQE:' + s.eqe.toFixed(2) + '%');
-      if (s.cx   != null) parts.push('CIE(' + s.cx.toFixed(3) + ',' + (s.cy != null ? s.cy.toFixed(3) : '-') + ')');
-      if (s.mwl  != null) parts.push(s.mwl + 'nm');
-    }
+    // LT 레벨 데이터 정규화 (구/신 포맷 모두 지원)
+    var rbLtLevels = {};
+    var rbLtSel = null;
     if (result.lt) {
-      // 구 포맷 (level/pct) 과 신 포맷 (selectedLevel/levels) 모두 지원
-      var ltLv  = result.lt.selectedLevel || result.lt.level;
-      var ltLvData = result.lt.levels ? result.lt.levels[ltLv] : result.lt;
-      var ltPct = ltLvData ? ltLvData.pct : result.lt.pct;
-      if (ltLv != null) parts.push('| LT' + ltLv + (ltPct != null ? ' ' + ltPct + '%' : ''));
+      if (result.lt.levels) {
+        rbLtLevels = result.lt.levels;
+        rbLtSel = result.lt.selectedLevel;
+      } else if (result.lt.level != null) {
+        rbLtLevels[result.lt.level] = { refHr: result.lt.refHr, sampleHr: result.lt.sampleHr, pct: result.lt.pct };
+        rbLtSel = result.lt.level;
+      }
     }
-    parts.push('(' + (result.savedAt || '') + ')');
+    var rbAllOrder = [99,98,97,96,95,94,93,92,91,90];
+    var rbAvail = rbAllOrder.filter(function(l) { return rbLtLevels[l]; });
 
-    var txt = document.createElement('span');
-    txt.textContent = parts.join(' ');
-    badge.appendChild(txt);
+    // ── 상단 헤더: 아이콘 + 액션 버튼 ──
+    var rbHeader = document.createElement('div');
+    rbHeader.className = 'dc-rb-header';
 
-    // 상세보기 링크
+    var rbIcon = document.createElement('span');
+    rbIcon.className = 'dc-rb-icon';
+    rbIcon.textContent = '📊 소자평가 결과';
+    rbHeader.appendChild(rbIcon);
+
+    var rbActions = document.createElement('span');
+    rbActions.className = 'dc-rb-actions';
+
     var detailLink = document.createElement('span');
-    detailLink.textContent = ' 상세▾';
-    detailLink.style.cssText = 'font-size:10.5px;opacity:.7;margin-left:2px';
-    badge.appendChild(detailLink);
-
-    badge.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openResultDetail(item.id, item, result);
-    });
+    detailLink.className = 'dc-rb-detail-link';
+    detailLink.textContent = '상세▾';
+    rbActions.appendChild(detailLink);
 
     var delBtn = document.createElement('button');
     delBtn.className = 'dc-rb-del';
@@ -1003,7 +1001,50 @@ function buildDetailCard(item, asOf) {
       e.stopPropagation();
       if (confirm('저장된 결과를 삭제하시겠습니까?')) deleteResult(item.id);
     });
-    badge.appendChild(delBtn);
+    rbActions.appendChild(delBtn);
+    rbHeader.appendChild(rbActions);
+    badge.appendChild(rbHeader);
+
+    // ── LT 표: 레벨별 열(column) ──
+    if (rbAvail.length > 0) {
+      var grid = document.createElement('div');
+      grid.className = 'dc-rb-grid';
+
+      rbAvail.forEach(function(l) {
+        var isSel = l === rbLtSel;
+        var pct   = rbLtLevels[l].pct;
+
+        var col = document.createElement('div');
+        col.className = 'dc-rb-col' + (isSel ? ' is-sel' : '');
+
+        var lvSpan = document.createElement('span');
+        lvSpan.textContent = 'LT' + l + (isSel ? '★' : '');
+        lvSpan.className = isSel ? 'dc-rb-lv-sel' : 'dc-rb-lv-dim';
+        col.appendChild(lvSpan);
+
+        var pctSpan = document.createElement('span');
+        pctSpan.textContent = pct != null ? pct + '%' : '–';
+        pctSpan.className = isSel ? 'dc-rb-pct-sel' : 'dc-rb-pct-dim';
+        col.appendChild(pctSpan);
+
+        grid.appendChild(col);
+      });
+
+      badge.appendChild(grid);
+    }
+
+    // ── 저장일 ──
+    if (result.savedAt) {
+      var dateEl = document.createElement('div');
+      dateEl.className = 'dc-rb-date';
+      dateEl.textContent = result.savedAt;
+      badge.appendChild(dateEl);
+    }
+
+    badge.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openResultDetail(item.id, item, result);
+    });
 
     wrap.appendChild(badge);
   }
@@ -1218,35 +1259,45 @@ function openResultDetail(lotId, item, result) {
   // 헤더 행
   var thRow = '<tr><th class="rd-th-block">Block</th>';
   if (ivl.ref) {
-    thRow += '<th>Op.V<br>(V)</th><th>EL EFF<br>(cd/A)</th><th>EQE<br>(%)</th><th>CIEx</th><th>CIEy</th><th>λmax<br>(nm)</th>';
+    thRow += '<th class="rd-ivl-t rd-ivl-l">Op.V<br>(V)</th>';
+    thRow += '<th class="rd-ivl-t">EL EFF<br>(cd/A)</th>';
+    thRow += '<th class="rd-ivl-t">EQE<br>(%)</th>';
+    thRow += '<th class="rd-ivl-t">CIEx</th>';
+    thRow += '<th class="rd-ivl-t">CIEy</th>';
+    thRow += '<th class="rd-ivl-t rd-ivl-r">λmax<br>(nm)</th>';
   }
   availLevels.forEach(function(l) {
     var isSel = l === selectedLevel;
-    thRow += '<th' + (isSel ? ' class="rd-th-lt-sel"' : ' class="rd-th-lt"') + '>LT' + l + (isSel ? ' ★' : '') + '<br>(h)</th>';
+    thRow += '<th class="' + (isSel ? 'rd-th-lt-sel' : 'rd-th-lt') + '">LT' + l + (isSel ? ' ★' : '') + '<br>(h)</th>';
   });
   thRow += '</tr>';
 
   // REF 행
   var refRow = '<tr class="rd-row-ref"><td class="rd-th-block">REF</td>';
   if (ivl.ref) {
-    refRow += '<td>' + fv(ref.volt,2) + '</td><td>' + fv(ref.eff,2) + '</td><td>' + fv(ref.eqe,2) + '</td>';
-    refRow += '<td>' + fv(ref.cx,3) + '</td><td>' + fv(ref.cy,3) + '</td><td>' + fv(ref.mwl,0) + '</td>';
+    refRow += '<td class="rd-ivl-l">' + fv(ref.volt,2) + '</td>';
+    refRow += '<td>' + fv(ref.eff,2) + '</td>';
+    refRow += '<td>' + fv(ref.eqe,2) + '</td>';
+    refRow += '<td>' + fv(ref.cx,3)  + '</td>';
+    refRow += '<td>' + fv(ref.cy,3)  + '</td>';
+    refRow += '<td class="rd-ivl-r">' + fv(ref.mwl,0) + '</td>';
   }
   availLevels.forEach(function(l) {
     var v = levels[l].refHr;
-    refRow += '<td>' + (v != null ? parseFloat(v).toFixed(1) : '-') + '</td>';
+    var isSel = l === selectedLevel;
+    refRow += '<td' + (isSel ? ' class="rd-lt-sel-cell"' : '') + '>' + (v != null ? parseFloat(v).toFixed(1) : '-') + '</td>';
   });
   refRow += '</tr>';
 
   // SAMPLE 행
   var smpRow = '<tr class="rd-row-smp"><td class="rd-th-block rd-sample">SAMPLE</td>';
   if (ivl.ref) {
-    smpRow += '<td class="rd-sample">' + fv(smp.volt,2) + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.eff,2)  + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.eqe,2)  + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.cx,3)   + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.cy,3)   + '</td>';
-    smpRow += '<td class="rd-sample">' + fv(smp.mwl,0)  + '</td>';
+    smpRow += '<td class="rd-sample rd-ivl-l">' + fv(smp.volt,2) + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.eff,2)  + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.eqe,2)  + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.cx,3)   + '</td>';
+    smpRow += '<td class="rd-sample">'           + fv(smp.cy,3)   + '</td>';
+    smpRow += '<td class="rd-sample rd-ivl-r">'  + fv(smp.mwl,0)  + '</td>';
   }
   availLevels.forEach(function(l) {
     var v = levels[l].sampleHr;
@@ -1258,22 +1309,19 @@ function openResultDetail(lotId, item, result) {
   // Result 행
   var resRow = '<tr class="rd-row-res"><td class="rd-th-block">Result</td>';
   if (ivl.ref) {
-    // V: REF/SAMPLE (낮을수록 좋음)
     var vP = (ref.volt && smp.volt) ? ref.volt / smp.volt * 100 : null;
-    resRow += '<td>' + pctHtml(vP) + '</td>';
-    // EFF, EQE, CIEx, CIEy: SAMPLE/REF
+    resRow += '<td class="rd-ivl-l rd-ivl-b">' + pctHtml(vP) + '</td>';
     [[smp.eff,ref.eff],[smp.eqe,ref.eqe],[smp.cx,ref.cx],[smp.cy,ref.cy]].forEach(function(pair) {
       var p = (pair[0] != null && pair[1] != null && pair[1] !== 0) ? pair[0] / pair[1] * 100 : null;
-      resRow += '<td>' + pctHtml(p) + '</td>';
+      resRow += '<td class="rd-ivl-b">' + pctHtml(p) + '</td>';
     });
-    // λmax: 차이 (nm)
     var mwlDiff = (ref.mwl != null && smp.mwl != null) ? (parseInt(smp.mwl) - parseInt(ref.mwl)) : null;
-    resRow += '<td>' + (mwlDiff != null ? (mwlDiff > 0 ? '+' : '') + mwlDiff + 'nm' : '-') + '</td>';
+    resRow += '<td class="rd-ivl-r rd-ivl-b">' + (mwlDiff != null ? (mwlDiff > 0 ? '+' : '') + mwlDiff + 'nm' : '-') + '</td>';
   }
   availLevels.forEach(function(l) {
     var p = levels[l].pct;
     var isSel = l === selectedLevel;
-    resRow += '<td' + (isSel ? ' class="rd-lt-sel-cell"' : '') + '>' + (p != null ? pctHtml(p) : '-') + '</td>';
+    resRow += '<td class="' + (isSel ? 'rd-lt-sel-cell rd-lt-sel-bot' : '') + '">' + (p != null ? pctHtml(p) : '-') + '</td>';
   });
   resRow += '</tr>';
 
