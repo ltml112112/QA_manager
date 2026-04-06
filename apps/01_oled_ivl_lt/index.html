@@ -1447,20 +1447,35 @@ init();
       }
     }
 
-    // LT — 양쪽 ≥100hr인 레벨 중 첫 번째
+    // LT — 측정된 전체 레벨 저장 + 선택 레벨(양쪽 ≥100hr 첫 번째) 기록
     var ltResult = null;
     var ltB = sumSel.lt >= 0 ? BLOCKS_MAIN[sumSel.lt] : null;
     if (ltB) {
       var curLevels = ltMode === 'high' ? LT_LEVELS_HIGH : LT_LEVELS;
+      var allLevels = [99,98,97,96,95,94,93,92,91,90];
       var lv1 = lastLtLv[ltB.lt1], lv2 = lastLtLv[ltB.lt2];
-      for (var i = 0; i < curLevels.length; i++) {
-        var l = curLevels[i];
+      var levelsData = {};
+      // 측정값 있는 레벨 전부 수집
+      allLevels.forEach(function(l) {
         var v1 = lv1 && lv1[l] ? lv1[l].hr : null;
         var v2 = lv2 && lv2[l] ? lv2[l].hr : null;
-        if (v1 != null && v2 != null && v1 >= 100 && v2 >= 100) {
-          ltResult = { level: l, refHr: v1, sampleHr: v2, pct: Math.round(v2 / v1 * 1000) / 10 };
-          break;
+        if (v1 != null || v2 != null) {
+          levelsData[l] = { refHr: v1, sampleHr: v2 };
+          if (v1 != null && v2 != null && v1 > 0) {
+            levelsData[l].pct = Math.round(v2 / v1 * 1000) / 10;
+          }
         }
+      });
+      // 선택 레벨: 양쪽 모두 ≥100hr인 첫 번째
+      var selectedLevel = null;
+      for (var i = 0; i < curLevels.length; i++) {
+        var l = curLevels[i];
+        if (levelsData[l] && levelsData[l].refHr >= 100 && levelsData[l].sampleHr >= 100) {
+          selectedLevel = l; break;
+        }
+      }
+      if (Object.keys(levelsData).length > 0) {
+        ltResult = { selectedLevel: selectedLevel, levels: levelsData };
       }
     }
 
