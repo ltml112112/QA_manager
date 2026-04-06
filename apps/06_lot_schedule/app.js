@@ -962,26 +962,44 @@ function buildDetailCard(item, asOf) {
     badge.style.cursor = 'pointer';
     badge.title = '클릭하여 전체 결과 보기';
 
-    var parts = ['📊'];
-    if (result.ivl && result.ivl.sample) {
-      var s = result.ivl.sample;
-      if (s.volt != null) parts.push('V:' + s.volt.toFixed(2));
-      if (s.eff  != null) parts.push('EFF:' + s.eff.toFixed(2));
-      if (s.eqe  != null) parts.push('EQE:' + s.eqe.toFixed(2) + '%');
-      if (s.cx   != null) parts.push('CIE(' + s.cx.toFixed(3) + ',' + (s.cy != null ? s.cy.toFixed(3) : '-') + ')');
-      if (s.mwl  != null) parts.push(s.mwl + 'nm');
-    }
+    // LT 레벨 데이터 정규화 (구/신 포맷 모두 지원)
+    var rbLtLevels = {};
+    var rbLtSel = null;
     if (result.lt) {
-      // 구 포맷 (level/pct) 과 신 포맷 (selectedLevel/levels) 모두 지원
-      var ltLv  = result.lt.selectedLevel || result.lt.level;
-      var ltLvData = result.lt.levels ? result.lt.levels[ltLv] : result.lt;
-      var ltPct = ltLvData ? ltLvData.pct : result.lt.pct;
-      if (ltLv != null) parts.push('| LT' + ltLv + (ltPct != null ? ' ' + ltPct + '%' : ''));
+      if (result.lt.levels) {
+        rbLtLevels = result.lt.levels;
+        rbLtSel = result.lt.selectedLevel;
+      } else if (result.lt.level != null) {
+        rbLtLevels[result.lt.level] = { refHr: result.lt.refHr, sampleHr: result.lt.sampleHr, pct: result.lt.pct };
+        rbLtSel = result.lt.level;
+      }
     }
-    parts.push('(' + (result.savedAt || '') + ')');
+    var rbAllOrder = [99,98,97,96,95,94,93,92,91,90];
+    var rbAvail = rbAllOrder.filter(function(l) { return rbLtLevels[l]; });
+
+    // LT 정보만 — 레벨별 시간(h) + 선택 레벨 ★ 강조
+    var rbHtml = '📊';
+    if (rbAvail.length > 0) {
+      rbAvail.forEach(function(l) {
+        var isSel = l === rbLtSel;
+        var smpH  = rbLtLevels[l].sampleHr;
+        var pct   = rbLtLevels[l].pct;
+        var hStr  = smpH != null ? parseFloat(smpH).toFixed(0) + 'h' : '–';
+        var pStr  = pct  != null ? ' (' + pct + '%)' : '';
+        var tag   = 'LT' + l + (isSel ? '★' : '');
+        if (isSel) {
+          rbHtml += ' <span class="dc-rb-lt-sel">' + tag + ' ' + hStr + pStr + '</span>';
+        } else {
+          rbHtml += ' <span class="dc-rb-lt-dim">' + tag + ' ' + hStr + '</span>';
+        }
+      });
+    } else {
+      rbHtml += ' LT정보 없음';
+    }
+    rbHtml += ' <span class="dc-rb-date">(' + (result.savedAt || '') + ')</span>';
 
     var txt = document.createElement('span');
-    txt.textContent = parts.join(' ');
+    txt.innerHTML = rbHtml;
     badge.appendChild(txt);
 
     // 상세보기 링크
