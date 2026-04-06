@@ -1449,7 +1449,9 @@ init();
 
     // LT — 측정된 전체 레벨 저장 + 선택 레벨(양쪽 ≥100hr 첫 번째) 기록
     var ltResult = null;
-    var ltB = sumSel.lt >= 0 ? BLOCKS_MAIN[sumSel.lt] : null;
+    // sumSel.lt === -1 이면 (Low 모드에서 LT95~90 조건 미충족) IVL 블록 또는 0번으로 대체
+    var ltBlockIdx = sumSel.lt >= 0 ? sumSel.lt : (sumSel.ivl >= 0 ? sumSel.ivl : 0);
+    var ltB = BLOCKS_MAIN[ltBlockIdx];
     if (ltB) {
       var curLevels = ltMode === 'high' ? LT_LEVELS_HIGH : LT_LEVELS;
       var allLevels = [99,98,97,96,95,94,93,92,91,90];
