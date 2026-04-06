@@ -7,6 +7,7 @@
 const apps = [
   {
     id:          'oled',
+    group:       '소자평가',
     label:       'OLED IVL & LT data 시각화',
     icon:        '📊',
     badge:       null,
@@ -15,6 +16,7 @@ const apps = [
   },
   {
     id:          'lotschedule',
+    group:       '소자평가',
     label:       '소자평가 Lot 일정 관리',
     icon:        '📅',
     badge:       null,
@@ -23,6 +25,7 @@ const apps = [
   },
   {
     id:          'hplc',
+    group:       '자동화',
     label:       'HPLC/DSC Report 자동화',
     icon:        '🧪',
     badge:       null,
@@ -32,6 +35,7 @@ const apps = [
   },
   {
     id:          'lgd',
+    group:       '자동화',
     label:       'LGD 사전심사자료 자동화',
     icon:        '📋',
     badge:       null,
@@ -42,6 +46,7 @@ const apps = [
   },
   {
     id:          'sdc',
+    group:       '자동화',
     label:       'SDC 사전심사자료 자동화',
     icon:        '📄',
     badge:       null,
@@ -51,6 +56,7 @@ const apps = [
   },
   {
     id:          'cpl',
+    group:       '품질 데이터',
     label:       'Lot 추적관리 & SQC',
     icon:        '🏭',
     badge:       null,
@@ -80,16 +86,34 @@ function _checkPass(input) {
  * apps 배열을 순회하여 탭 버튼과 iframe 래퍼를 DOM에 삽입합니다.
  * index.html의 .tab-nav 와 .frame-area 요소에 의존합니다.
  */
+// 그룹 내 모든 앱이 locked인지 확인
+function _isGroupAllLocked(groupName) {
+  return apps.filter(function(a) { return a.group === groupName; })
+             .every(function(a) { return !!a.locked; });
+}
+
 function renderApps() {
   var nav       = document.querySelector('.tab-nav');
   var frameArea = document.querySelector('.frame-area');
   var unlocked  = _isUnlocked();
   var firstVisible = true;
+  var lastGroup = null;
 
   apps.forEach(function(app) {
     var hidden   = app.locked && !unlocked;
     var isFirst  = firstVisible && !hidden;
     if (isFirst) firstVisible = false;
+
+    // ── 그룹 헤더 ──────────────────────────────────────────────────────────────
+    if (app.group && app.group !== lastGroup) {
+      lastGroup = app.group;
+      var grpHdr = document.createElement('div');
+      grpHdr.className = 'tab-group-header';
+      grpHdr.id = 'grphdr-' + app.group;
+      grpHdr.textContent = app.group;
+      if (_isGroupAllLocked(app.group) && !unlocked) grpHdr.style.display = 'none';
+      nav.appendChild(grpHdr);
+    }
 
     // ── 탭 버튼 ──────────────────────────────────────────────────────────────
     var btn = document.createElement('button');
@@ -154,6 +178,13 @@ function renderApps() {
 
 // ── 잠금 해제 후 탭 표시 ─────────────────────────────────────────────────────
 function _revealLockedTabs() {
+  // 숨겨진 그룹 헤더 표시
+  apps.forEach(function(app) {
+    if (!app.group) return;
+    var hdr = document.getElementById('grphdr-' + app.group);
+    if (hdr) hdr.style.display = '';
+  });
+
   apps.forEach(function(app) {
     if (!app.locked) return;
     var btn  = document.getElementById('tabbtn-' + app.id);
@@ -181,6 +212,17 @@ function _toggleLockedVisibility() {
     if (btn)  btn.style.display  = _lockedHidden ? 'none' : '';
     if (wrap && _lockedHidden) wrap.style.display = 'none';
     else if (wrap) wrap.style.display = '';
+  });
+
+  // 전체 locked 그룹 헤더 토글
+  var seenGroups = {};
+  apps.forEach(function(app) {
+    if (!app.group || seenGroups[app.group]) return;
+    seenGroups[app.group] = true;
+    if (_isGroupAllLocked(app.group)) {
+      var hdr = document.getElementById('grphdr-' + app.group);
+      if (hdr) hdr.style.display = _lockedHidden ? 'none' : '';
+    }
   });
 
   // 현재 활성 탭이 숨겨졌으면 첫 번째 공개 탭으로 전환

@@ -257,6 +257,23 @@ html, body {
 }
 .tab-nav::-webkit-scrollbar { display: none; }
 
+/* 탭 그룹 헤더 */
+.tab-group-header {
+  padding: 4px 4px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--portal-text-muted);
+  user-select: none;
+  opacity: 0.65;
+}
+/* 두 번째 이후 그룹 헤더: 구분선 + 여백 */
+.tab-btn ~ .tab-group-header {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--portal-border);
+}
+
 .tab-btn {
   display: flex;
   align-items: center;
