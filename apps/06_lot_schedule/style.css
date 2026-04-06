@@ -1300,29 +1300,29 @@ textarea.form-input {
   border-radius: 4px;
 }
 
-/* 선택 LT 레벨명 ★ — 밝은 주황 */
+/* 선택 LT 레벨명 ★ — 검정 (주황 배경에서 튀도록) */
 .dc-result-badge .dc-rb-lv-sel {
-  color: #fb923c;
+  color: var(--text);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: .02em;
 }
-/* 비선택 LT 레벨명 — 기본 텍스트색(검정) */
+/* 비선택 LT 레벨명 — 주황 */
 .dc-result-badge .dc-rb-lv-dim {
-  color: var(--text);
+  color: #fb923c;
   font-size: 12px;
   font-weight: 700;
 }
 
-/* 선택 % — 주황 (레벨명과 동일) */
+/* 선택 % — 검정 */
 .dc-result-badge .dc-rb-pct-sel {
-  color: #fb923c;
+  color: var(--text);
   font-size: 14px;
   font-weight: 900;
 }
-/* 비선택 % — 기본 텍스트색(검정) */
+/* 비선택 % — 주황 */
 .dc-result-badge .dc-rb-pct-dim {
-  color: var(--text);
+  color: #fb923c;
   font-size: 13px;
   font-weight: 600;
 }
