@@ -959,7 +959,6 @@ function buildDetailCard(item, asOf) {
   if (result) {
     var badge = document.createElement('div');
     badge.className = 'dc-result-badge';
-    badge.style.cursor = 'pointer';
     badge.title = '클릭하여 전체 결과 보기';
 
     // LT 레벨 데이터 정규화 (구/신 포맷 모두 지원)
@@ -977,39 +976,22 @@ function buildDetailCard(item, asOf) {
     var rbAllOrder = [99,98,97,96,95,94,93,92,91,90];
     var rbAvail = rbAllOrder.filter(function(l) { return rbLtLevels[l]; });
 
-    // LT 정보만 — 레벨별 시간(h) + 선택 레벨 ★ 강조
-    var rbHtml = '📊';
-    if (rbAvail.length > 0) {
-      rbAvail.forEach(function(l) {
-        var isSel = l === rbLtSel;
-        var pct   = rbLtLevels[l].pct;
-        var tag   = 'LT' + l + (isSel ? '★' : '');
-        var pStr  = pct != null ? '<span class="dc-rb-pct' + (isSel ? '-sel' : '-dim') + '">' + pct + '%</span>' : '';
-        if (isSel) {
-          rbHtml += ' <span class="dc-rb-lt-sel">' + tag + '</span>' + (pStr ? ' ' + pStr : '');
-        } else {
-          rbHtml += ' <span class="dc-rb-lt-dim">' + tag + '</span>' + (pStr ? ' ' + pStr : '');
-        }
-      });
-    } else {
-      rbHtml += ' LT정보 없음';
-    }
-    rbHtml += ' <span class="dc-rb-date">(' + (result.savedAt || '') + ')</span>';
+    // ── 상단 헤더: 아이콘 + 액션 버튼 ──
+    var rbHeader = document.createElement('div');
+    rbHeader.className = 'dc-rb-header';
 
-    var txt = document.createElement('span');
-    txt.innerHTML = rbHtml;
-    badge.appendChild(txt);
+    var rbIcon = document.createElement('span');
+    rbIcon.className = 'dc-rb-icon';
+    rbIcon.textContent = '📊 소자평가 결과';
+    rbHeader.appendChild(rbIcon);
 
-    // 상세보기 링크
+    var rbActions = document.createElement('span');
+    rbActions.className = 'dc-rb-actions';
+
     var detailLink = document.createElement('span');
-    detailLink.textContent = ' 상세▾';
-    detailLink.style.cssText = 'font-size:10.5px;opacity:.7;margin-left:2px';
-    badge.appendChild(detailLink);
-
-    badge.addEventListener('click', function(e) {
-      e.stopPropagation();
-      openResultDetail(item.id, item, result);
-    });
+    detailLink.className = 'dc-rb-detail-link';
+    detailLink.textContent = '상세▾';
+    rbActions.appendChild(detailLink);
 
     var delBtn = document.createElement('button');
     delBtn.className = 'dc-rb-del';
@@ -1019,7 +1001,51 @@ function buildDetailCard(item, asOf) {
       e.stopPropagation();
       if (confirm('저장된 결과를 삭제하시겠습니까?')) deleteResult(item.id);
     });
-    badge.appendChild(delBtn);
+    rbActions.appendChild(delBtn);
+    rbHeader.appendChild(rbActions);
+    badge.appendChild(rbHeader);
+
+    // ── LT 그리드: 레벨명 행 / % 행 ──
+    if (rbAvail.length > 0) {
+      var lvRow  = document.createElement('div');
+      lvRow.className = 'dc-rb-row';
+      var pctRow = document.createElement('div');
+      pctRow.className = 'dc-rb-row';
+
+      rbAvail.forEach(function(l) {
+        var isSel = l === rbLtSel;
+        var pct   = rbLtLevels[l].pct;
+
+        var lvSpan = document.createElement('span');
+        lvSpan.textContent = 'LT' + l + (isSel ? '★' : '');
+        lvSpan.className = isSel ? 'dc-rb-lv-sel' : 'dc-rb-lv-dim';
+        lvRow.appendChild(lvSpan);
+
+        var pctSpan = document.createElement('span');
+        pctSpan.textContent = pct != null ? pct + '%' : '–';
+        pctSpan.className = isSel ? 'dc-rb-pct-sel' : 'dc-rb-pct-dim';
+        pctRow.appendChild(pctSpan);
+      });
+
+      var grid = document.createElement('div');
+      grid.className = 'dc-rb-grid';
+      grid.appendChild(lvRow);
+      grid.appendChild(pctRow);
+      badge.appendChild(grid);
+    }
+
+    // ── 저장일 ──
+    if (result.savedAt) {
+      var dateEl = document.createElement('div');
+      dateEl.className = 'dc-rb-date';
+      dateEl.textContent = result.savedAt;
+      badge.appendChild(dateEl);
+    }
+
+    badge.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openResultDetail(item.id, item, result);
+    });
 
     wrap.appendChild(badge);
   }

@@ -1226,64 +1226,98 @@ textarea.form-input {
 
 /* ── detail-card 내 결과 요약 뱃지 ──────────────────────────────────── */
 .dc-result-badge {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 5px;
-  margin-top: 5px;
-  padding: 4px 9px;
+  margin-top: 6px;
+  padding: 7px 10px;
   background: rgba(147,51,234,.1);
-  border: 1px solid rgba(147,51,234,.35);
-  border-radius: 4px;
-  font-size: 11.5px;
-  color: #9333ea;
-  font-weight: 700;
+  border: 1px solid rgba(147,51,234,.3);
+  border-radius: 6px;
   cursor: pointer;
-  flex-wrap: wrap;
-  row-gap: 2px;
   transition: background .15s;
 }
-.dc-result-badge:hover {
-  background: rgba(147,51,234,.18);
+.dc-result-badge:hover { background: rgba(147,51,234,.17); }
+
+/* 상단 헤더 행: 아이콘 + 액션 */
+.dc-result-badge .dc-rb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dc-result-badge .dc-rb-icon {
+  font-size: 10.5px;
+  color: rgba(147,51,234,.55);
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.dc-result-badge .dc-rb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dc-result-badge .dc-rb-detail-link {
+  font-size: 10.5px;
+  color: rgba(147,51,234,.6);
+  font-weight: 600;
 }
 .dc-result-badge .dc-rb-del {
-  margin-left: 4px;
   background: none;
   border: none;
-  color: rgba(147,51,234,.5);
+  color: rgba(147,51,234,.4);
   cursor: pointer;
   font-size: 11px;
   padding: 0 2px;
-  border-radius: 2px;
   line-height: 1;
   transition: color .15s;
 }
 .dc-result-badge .dc-rb-del:hover { color: #ef4444; }
-/* 선택 LT 레벨 레이블 — 골드 */
-.dc-result-badge .dc-rb-lt-sel {
-  color: #f59e0b;
-  font-weight: 900;
-  letter-spacing: .01em;
+
+/* LT 그리드 */
+.dc-result-badge .dc-rb-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-/* 비선택 LT 레벨 레이블 — 흐릿한 보라 */
-.dc-result-badge .dc-rb-lt-dim {
-  color: rgba(147,51,234,.5);
+.dc-result-badge .dc-rb-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+/* 선택 LT 레벨명 ★ — 밝은 주황, 크게 */
+.dc-result-badge .dc-rb-lv-sel {
+  color: #fb923c;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+/* 비선택 LT 레벨명 — 흐린 보라 */
+.dc-result-badge .dc-rb-lv-dim {
+  color: rgba(167,139,250,.65);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* 선택 % — 밝은 청록, 크게 */
+.dc-result-badge .dc-rb-pct-sel {
+  color: #2dd4bf;
+  font-size: 14px;
+  font-weight: 900;
+}
+/* 비선택 % — 흐린 보라 */
+.dc-result-badge .dc-rb-pct-dim {
+  color: rgba(167,139,250,.5);
+  font-size: 12.5px;
   font-weight: 600;
 }
-/* 선택 LT % — 연두/민트 */
-.dc-result-badge .dc-rb-pct-sel {
-  color: #10b981;
-  font-weight: 800;
-}
-/* 비선택 LT % — 더 흐릿 */
-.dc-result-badge .dc-rb-pct-dim {
-  color: rgba(147,51,234,.38);
-  font-weight: 500;
-}
+
 /* 저장일 */
 .dc-result-badge .dc-rb-date {
-  color: rgba(147,51,234,.45);
-  font-weight: 500;
   font-size: 10px;
+  color: rgba(147,51,234,.4);
+  font-weight: 500;
 }
 /* ── 결과 상세보기 모달 ──────────────────────────────────────────────── */
 .result-detail-overlay {
