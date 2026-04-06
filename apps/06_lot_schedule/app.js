@@ -1338,7 +1338,15 @@ document.getElementById('modalOverlay').addEventListener('click', function (e) {
   if (e.target === this) closeModal();
 });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') closeModal();
+  if (e.key !== 'Escape') return;
+  // 우선순위: 결과 상세보기 → 결과 입력 팝업 → 날짜 모달 순으로 닫기
+  if (document.getElementById('resultDetailOverlay').classList.contains('open')) {
+    closeResultDetail(); return;
+  }
+  if (document.getElementById('resultPopupOverlay').classList.contains('open')) {
+    closeResultPopup(); return;
+  }
+  closeModal();
 });
 
 
