@@ -66,6 +66,7 @@ const apps = [
     src:         './apps/07_coa_dev/index.html',
     loaderText:  'COA 생성(개발) 로딩 중...',
     locked:      true,
+    wip:         true,
   },
   {
     id:          'coa_prod',
@@ -76,6 +77,7 @@ const apps = [
     src:         './apps/08_coa_prod/index.html',
     loaderText:  'COA 생성(양산) 로딩 중...',
     locked:      true,
+    wip:         true,
   },
   {
     id:          'ext_code',
@@ -86,6 +88,7 @@ const apps = [
     src:         './apps/09_ext_code/index.html',
     loaderText:  '외부코드 관리 로딩 중...',
     locked:      true,
+    wip:         true,
   },
 
   // ── 품질 데이터 ────────────────────────────────────────────────────────────
@@ -108,6 +111,7 @@ const apps = [
     src:         './apps/10_quality_dashboard/index.html',
     loaderText:  '품질 대시보드 로딩 중...',
     locked:      true,
+    wip:         true,
   },
   {
     id:          'complaint',
@@ -118,6 +122,7 @@ const apps = [
     src:         './apps/11_complaint/index.html',
     loaderText:  '불량·컴플레인 관리 로딩 중...',
     locked:      true,
+    wip:         true,
   },
 
   // ── 제품·소재 관리 ─────────────────────────────────────────────────────────
@@ -130,6 +135,7 @@ const apps = [
     src:         './apps/12_spec_ctq/index.html',
     loaderText:  '제품 Spec & CTQ/CTP 로딩 중...',
     locked:      true,
+    wip:         true,
   },
   {
     id:          'iqc',
@@ -140,6 +146,7 @@ const apps = [
     src:         './apps/13_iqc/index.html',
     loaderText:  '원자재 입고검사 로딩 중...',
     locked:      true,
+    wip:         true,
   },
 
   // ── 문서 관리 ──────────────────────────────────────────────────────────────
@@ -152,6 +159,7 @@ const apps = [
     src:         './apps/14_sys_docs/index.html',
     loaderText:  '시스템 문서 & SOP 로딩 중...',
     locked:      true,
+    wip:         true,
   },
   {
     id:          'calibration',
@@ -162,6 +170,7 @@ const apps = [
     src:         './apps/15_calibration/index.html',
     loaderText:  '측정기기 교정 일정 로딩 중...',
     locked:      true,
+    wip:         true,
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,7 +225,7 @@ function renderApps() {
 
     // ── 탭 버튼 ──────────────────────────────────────────────────────────────
     var btn = document.createElement('button');
-    btn.className = 'tab-btn' + (isFirst ? ' active' : '');
+    btn.className = 'tab-btn' + (isFirst ? ' active' : '') + (app.wip ? ' tab-wip' : '');
     btn.dataset.appId = app.id;
     btn.setAttribute('role', 'tab');
     btn.setAttribute('aria-selected', isFirst ? 'true' : 'false');
@@ -229,7 +238,11 @@ function renderApps() {
     iconSpan.textContent = app.icon;
     btn.appendChild(iconSpan);
 
-    btn.appendChild(document.createTextNode(' ' + app.label));
+    var labelSpan = document.createElement('span');
+    labelSpan.className = 'tab-label';
+    labelSpan.textContent = app.label;
+    btn.appendChild(document.createTextNode(' '));
+    btn.appendChild(labelSpan);
 
     if (app.badge) {
       var badge = document.createElement('span');
