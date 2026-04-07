@@ -2,14 +2,28 @@
 
 ## 프로젝트 개요
 
-전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털. 네 가지 도구로 구성됨:
+전자재료사업부 품질경영팀이 사용하는 업무 자동화 포털.
+사이드바는 5개 대분류로 구성되며, 탭 추가/삭제는 `main.js`의 `apps` 배열만 수정하면 됨.
 
-1. **OLED IVL & LT 분석기** - OLED 소재 측정 CSV 데이터를 분석·시각화
-2. **HPLC/DSC Report 자동생성** - 분석 데이터 기반 리포트 자동 생성
-3. **LGD 사전심사자료 자동화** - Google Apps Script 기반 PDF/Excel 문서 자동 생성
-4. **SDC 사전심사자료 자동화** - Google Apps Script 기반 구현 예정 (개발 중)
-5. **소재 Lot 이력 & TREND 분석** - 전 소재 Lot 계보 추적 + 공정별 SPC TREND 시각화
-6. **소자평가 Lot 일정 관리** - 합성생산/정제소자이관 소자평가 일정 캘린더 관리
+### 대분류별 탭 구성
+
+| 대분류 | id | 탭 이름 | 상태 |
+|--------|-----|---------|------|
+| **소자평가** | `oled` | OLED IVL & LT 분석 | 구현 완료 |
+| | `lotschedule` | 소자평가 Lot 일정 관리 | 구현 완료 |
+| **자동화** | `hplc` | HPLC/DSC Report 자동화 | 구현 완료 (locked) |
+| | `lgd` | LGD 사전심사자료 자동화 | 구현 완료 (locked, GAS) |
+| | `sdc` | SDC 사전심사자료 자동화 | 링크만 (locked) |
+| | `coa_dev` | COA 생성 — 개발용 | 개발 예정 (locked) |
+| | `coa_prod` | COA 생성 — 양산용 | 개발 예정 (locked) |
+| | `ext_code` | 외부코드 관리 (고객사별) | 개발 예정 (locked) |
+| **품질 데이터** | `cpl` | Lot 추적관리 & SQC | 구현 완료 (locked) |
+| | `dashboard` | 품질 대시보드 | 개발 예정 (locked) |
+| | `complaint` | 불량·컴플레인 관리 | 개발 예정 (locked) |
+| **제품·소재 관리** | `spec_ctq` | 제품 Spec & CTQ/CTP | 개발 예정 (locked) |
+| | `iqc` | 원자재 입고검사 (IQC) | 개발 예정 (locked) |
+| **문서 관리** | `sys_docs` | 시스템 문서 & SOP | 개발 예정 (locked) |
+| | `calibration` | 측정기기 교정 일정 | 개발 예정 (locked) |
 
 **호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
@@ -30,18 +44,36 @@ QA_manager/
 │       └── main.js                   # 탭·iframe 동적 렌더링 + 테마 관리
 └── apps/
     ├── 01_oled_ivl_lt/
-    │   └── index.html                # OLED IVL & LT 분석기
+    │   └── index.html                # OLED IVL & LT 분석기 [소자평가]
     ├── 02_lgd_eval/
-    │   ├── index.html                # LGD 사전심사자료 자동화 UI (GAS 클라이언트)
+    │   ├── index.html                # LGD 사전심사자료 자동화 UI (GAS 클라이언트) [자동화]
     │   └── code.gs                   # Google Apps Script 백엔드
     ├── 03_hplc_dsc/
-    │   └── index.html                # HPLC/DSC Report 자동생성
+    │   └── index.html                # HPLC/DSC Report 자동생성 [자동화]
     ├── 04_sdc_eval/
-    │   └── index.html                # SDC 사전심사자료 자동화 (개발 중 플레이스홀더)
+    │   └── index.html                # SDC 사전심사자료 자동화 (링크) [자동화]
     ├── 05_cpl_quality/
-    │   └── index.html                # 소재 Lot 이력 & TREND 분석 (단일 파일 앱)
-    └── 06_lot_schedule/
-        └── index.html                # 소자평가 Lot 일정 관리 (단일 파일 앱)
+    │   └── index.html                # 소재 Lot 이력 & TREND 분석 [품질 데이터]
+    ├── 06_lot_schedule/
+    │   └── index.html                # 소자평가 Lot 일정 관리 [소자평가]
+    ├── 07_coa_dev/
+    │   └── index.html                # COA 생성 — 개발용 (개발 예정) [자동화]
+    ├── 08_coa_prod/
+    │   └── index.html                # COA 생성 — 양산용 (개발 예정) [자동화]
+    ├── 09_ext_code/
+    │   └── index.html                # 외부코드 관리 (개발 예정) [자동화]
+    ├── 10_quality_dashboard/
+    │   └── index.html                # 품질 대시보드 (개발 예정) [품질 데이터]
+    ├── 11_complaint/
+    │   └── index.html                # 불량·컴플레인 관리 (개발 예정) [품질 데이터]
+    ├── 12_spec_ctq/
+    │   └── index.html                # 제품 Spec & CTQ/CTP (개발 예정) [제품·소재 관리]
+    ├── 13_iqc/
+    │   └── index.html                # 원자재 입고검사 IQC (개발 예정) [제품·소재 관리]
+    ├── 14_sys_docs/
+    │   └── index.html                # 시스템 문서 & SOP (개발 예정) [문서 관리]
+    └── 15_calibration/
+        └── index.html                # 측정기기 교정 일정 (개발 예정) [문서 관리]
 ```
 
 ---
@@ -72,16 +104,20 @@ QA_manager/
 const apps = [
   {
     id:         'oled',                             // 탭 식별자 (고유해야 함)
-    label:      'OLED IVL & LT 분석기',              // 탭 버튼에 표시되는 이름
-    icon:       '📊',                               // 탭 버튼 앞 아이콘
+    group:      '소자평가',                          // 사이드바 대분류 헤더
+    label:      'OLED IVL & LT 분석',               // 탭 버튼에 표시되는 이름
+    icon:       '·',                                // 탭 버튼 앞 dot (이모지 사용 안 함)
     badge:      null,                               // 뱃지 텍스트 (없으면 null)
     src:        './apps/01_oled_ivl_lt/index.html', // iframe src (상대경로 or 외부 URL)
-    loaderText: 'OLED IVL & LT 분석기 로딩 중...',  // 로딩 오버레이 텍스트
+    loaderText: 'OLED IVL & LT 분석 로딩 중...',    // 로딩 오버레이 텍스트
     // sandbox: '...',                              // 외부 URL(GAS) 앱에만 추가 — 아래 설명 참고
+    // locked:  true,                               // 비밀번호 잠금 (공개 탭에는 생략)
   },
   // ... 나머지 앱
 ];
 ```
+
+> **아이콘 규칙**: 이모지 대신 `'·'` (middle dot) 고정 사용. CSS `.tab-btn` 스타일에서 통일된 도트로 표현됨.
 
 #### `sandbox` 필드 — 외부 URL(GAS) 앱 전용
 
@@ -238,7 +274,7 @@ html[data-theme="dark"] {
 
 ## 새 도구 추가 가이드 (Step-by-Step)
 
-> 현재 5개 도구(01~05)가 구현되어 있음. **6번째 이후 도구를 추가할 때** 이 순서를 따르면 됩니다.
+> 현재 앱 폴더는 `01~15`번까지 생성되어 있음. **16번째 이후 도구를 추가할 때** 이 순서를 따르면 됩니다.
 
 ### Step 1 — 폴더 및 파일 생성
 
@@ -246,11 +282,11 @@ html[data-theme="dark"] {
 
 ```
 apps/
-└── 06_새도구이름/
+└── 16_새도구이름/
     └── index.html
 ```
 
-> 폴더명 규칙: `숫자두자리_영문이름` (예: `06_chemical_db`)
+> 폴더명 규칙: `숫자두자리_영문이름` (예: `16_chemical_db`)
 
 ### Step 2 — index.html 기본 뼈대 작성
 
@@ -314,9 +350,9 @@ const apps = [
   {
     id:         '새도구아이디',              // 영문 고유값 (다른 id와 중복 불가)
     label:      '새 도구 이름',              // 탭 버튼에 표시할 한글 이름
-    icon:       '🔧',                       // 이모지 아이콘
+    icon:       '·',                        // 항상 middle dot — 이모지 사용 안 함
     badge:      null,                       // 뱃지 없으면 null, 있으면 예: 'NEW' 또는 'GAS'
-    src:        './apps/06_새도구이름/index.html', // 상대경로 (또는 GAS 배포 URL)
+    src:        './apps/16_새도구이름/index.html', // 상대경로 (또는 GAS 배포 URL)
     loaderText: '새 도구 로딩 중...',        // 로딩 오버레이 메시지
   },
 ];
@@ -332,7 +368,7 @@ const apps = [
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
-- [ ] `id`가 기존 앱들과 겹치지 않는가? (`oled`, `hplc`, `lgd`, `sdc`, `cpl` 사용 중)
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (사용 중: `oled`, `lotschedule`, `hplc`, `lgd`, `sdc`, `coa_dev`, `coa_prod`, `ext_code`, `cpl`, `dashboard`, `complaint`, `spec_ctq`, `iqc`, `sys_docs`, `calibration`)
 - [ ] GAS 외부 URL 앱이라면 `sandbox` 필드를 추가했는가?
 
 ---
@@ -969,6 +1005,39 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | `.rd-table` / `.rd-table-wrap` | 결과 상세 테이블 / 스크롤 래퍼 |
 | `.rd-th-lt-sel` / `.rd-lt-sel-cell` / `.rd-lt-sel-bot` | 선택 LT★ 열 주황 박스 테두리 |
 | `.rd-ivl-l/r/t/b` | IVL 섹션 외곽 주황 테두리 (각 방향) |
+
+---
+
+## 7~15번 앱 — 개발 예정 플레이스홀더
+
+아래 앱들은 `apps/` 폴더에 플레이스홀더 `index.html`이 생성되어 있음.
+실제 기능 구현 시 해당 파일을 교체하면 됨. `main.js`의 `src` 경로는 변경 불필요.
+
+| 번호 | 폴더 | 대분류 | 설명 |
+|------|------|--------|------|
+| 07 | `07_coa_dev/` | 자동화 | COA 생성 — 개발용. 개발 단계 소재 COA 자동 생성 |
+| 08 | `08_coa_prod/` | 자동화 | COA 생성 — 양산용. Lot 번호 → DB 연동 → PDF 자동 발행 |
+| 09 | `09_ext_code/` | 자동화 | 외부코드 관리. 고객사별 외부 코드 ↔ 내부 코드 매핑 (내부 코드 비공개 유지) |
+| 10 | `10_quality_dashboard/` | 품질 데이터 | 품질 대시보드. 월/분기/연 단위 품질 지표 집계·시각화 |
+| 11 | `11_complaint/` | 품질 데이터 | 불량·컴플레인 관리. 05번 앱 Lot 계보와 연동하여 원인 역추적 |
+| 12 | `12_spec_ctq/` | 제품·소재 관리 | 제품 Spec & CTQ/CTP. 소재별 규격 + 핵심 품질/공정 파라미터 등록 |
+| 13 | `13_iqc/` | 제품·소재 관리 | 원자재 입고검사(IQC). 입고 검사 결과 등록·이력 관리 |
+| 14 | `14_sys_docs/` | 문서 관리 | 시스템 문서 & SOP. 품질·환경·안전·보건 문서 + 작업 SOP 통합 관리 |
+| 15 | `15_calibration/` | 문서 관리 | 측정기기 교정 일정. 기기별 교정 주기·이력·만료 알림 |
+
+### 플레이스홀더 공통 구조
+
+모든 플레이스홀더는 동일한 패턴:
+- `개발 예정` 뱃지 + 도구 설명 텍스트
+- `global_style.css` 링크 + 테마 동기화 스크립트 포함
+- 기능 구현 시 이 파일 전체를 교체
+
+### CTQ/CTP 설계 원칙
+
+- **CTQ** (Critical to Quality): 고객·규격 관점의 핵심 품질 특성 (순도%, Tm℃ 등)
+- **CTP** (Critical to Process): 공정 관점의 핵심 파라미터
+- 12번 앱(Spec 등록)에서 소재별로 CTQ/CTP 파라미터를 정의
+- 정의된 CTQ/CTP는 05번 앱(SQC 차트) 및 COA 생성(07/08번 앱)과 연동 예정
 
 ---
 
