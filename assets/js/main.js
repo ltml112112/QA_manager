@@ -125,12 +125,7 @@ function renderApps() {
     btn.id = 'tabbtn-' + app.id;
     if (hidden) btn.style.display = 'none';
 
-    var iconSpan = document.createElement('span');
-    iconSpan.setAttribute('aria-hidden', 'true');
-    iconSpan.textContent = app.icon;
-    btn.appendChild(iconSpan);
-
-    btn.appendChild(document.createTextNode(' ' + app.label));
+    btn.appendChild(document.createTextNode(app.label));
 
     if (app.badge) {
       var badge = document.createElement('span');
