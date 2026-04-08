@@ -8,8 +8,9 @@
    3. 디자인 토큰 (CSS 변수)
       3-A. 포털 크롬 변수 — 항상 라이트 고정 (--portal-*)
       3-B. 앱 콘텐츠 변수 — 라이트 기본 (:root)
-      3-C. 앱 콘텐츠 변수 — 다크 오버라이드 (html[data-theme="dark"]) ← 미구현, 필요 시 추가
-      3-D. 구형 변수명 aliases (각 앱 하위 호환)
+      3-C. 구형 변수명 aliases (각 앱 하위 호환)
+      ── 다크 모드 오버라이드는 현재 미구현. 필요 시 3-B 뒤에
+         html[data-theme="dark"] { ... } 블록 추가 ──
    4. 기반 타이포그래피
    5. 포털 레이아웃 (topbar · 탭 내비게이션 · frame 영역 · 로더)
    6. 공통 컴포넌트
@@ -55,6 +56,7 @@
   --portal-border:       #e8d0d4;
   --portal-text:         #1e1a1b;
   --portal-text-muted:   #6b7280;
+  --portal-text-faint:   #9ca3af;
   --portal-accent:       #be0039;
   --portal-accent-hover: #d4004a;
   --portal-accent-glow:  rgba(190, 0, 57, 0.10);
@@ -65,7 +67,7 @@
 
 
 /* ─────────────────────────────────────────────────────────────
-   3-B. 앱 콘텐츠 변수 — 라이트 기본값 (다크 오버라이드는 3-C에서 추가)
+   3-B. 앱 콘텐츠 변수 — 라이트 기본값 (다크 오버라이드는 미구현)
    ───────────────────────────────────────────────────────────── */
 :root {
   /* 배경 계층 */
@@ -305,7 +307,7 @@ html, body {
 
 /* 개발 예정(wip) 탭 — 취소선 + 흐린 색상 */
 .tab-btn.tab-wip {
-  color: var(--portal-text-faint, #9ca3af);
+  color: var(--portal-text-faint);
 }
 .tab-btn.tab-wip .tab-label {
   text-decoration: line-through;
