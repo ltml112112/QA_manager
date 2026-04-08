@@ -158,6 +158,7 @@ const apps = [
     badge:       null,
     src:         './apps/14_sys_docs/index.html',
     loaderText:  '시스템 문서 & SOP 로딩 중...',
+    locked:      true,
   },
   {
     id:          'calibration',
