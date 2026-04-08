@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { padding: 24px; }
+.container { max-width: 900px; margin: 0 auto; }
+.center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 320px; text-align: center; gap: 12px; }
+.wip-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--warning); background: var(--warning-bg); border: 1px solid var(--warning); border-radius: 4px; padding: 2px 8px; display: inline-block; }
+.wip-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+.wip-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; max-width: 480px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="card-header">제품 Spec &amp; CTQ/CTP</div>
+    <div class="center">
+      <span class="wip-label">개발 예정</span>
+      <div class="wip-title">제품 Spec &amp; CTQ/CTP</div>
+      <div class="wip-desc">
+        소재별 규격(Spec)과 핵심 품질 특성(CTQ) / 핵심 공정 파라미터(CTP)를 등록·관리하는 도구입니다.<br>
+        등록된 CTQ/CTP는 SQC 차트(05번 앱) 및 COA 생성과 자동 연동될 예정입니다.
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+</script>
+</body>
+</html>

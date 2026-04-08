@@ -303,6 +303,18 @@ html, body {
   border-color: rgba(190, 0, 57, 0.35);
 }
 
+/* 개발 예정(wip) 탭 — 취소선 + 흐린 색상 */
+.tab-btn.tab-wip {
+  color: var(--portal-text-faint, #9ca3af);
+}
+.tab-btn.tab-wip .tab-label {
+  text-decoration: line-through;
+  text-decoration-color: var(--portal-text-muted);
+}
+.tab-btn.tab-wip:hover {
+  color: var(--portal-text-muted);
+}
+
 .tab-badge {
   font-size: 9px;
   font-weight: 700;
