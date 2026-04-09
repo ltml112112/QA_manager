@@ -9,11 +9,52 @@
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 <style>
 body { padding: 24px; }
-.container { max-width: 900px; margin: 0 auto; }
-.center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 320px; text-align: center; gap: 12px; }
-.wip-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--warning); background: var(--warning-bg); border: 1px solid var(--warning); border-radius: 4px; padding: 2px 8px; display: inline-block; }
-.wip-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
-.wip-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.7; max-width: 480px; }
+.container { max-width: 720px; margin: 0 auto; }
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  text-align: center;
+  gap: 20px;
+}
+.doc-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.doc-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 440px;
+}
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.1s;
+}
+.link-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.link-btn:active {
+  transform: translateY(0);
+}
+.link-btn svg {
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -21,12 +62,22 @@ body { padding: 24px; }
   <div class="card">
     <div class="card-header">시스템 문서 &amp; SOP</div>
     <div class="center">
-      <span class="wip-label">개발 예정</span>
-      <div class="wip-title">시스템 문서 &amp; SOP</div>
-      <div class="wip-desc">
-        품질·환경·안전·보건 관련 시스템 문서 및 작업 SOP를 통합 관리하는 도구입니다.<br>
-        문서 등록·버전 관리·검색·열람 권한 설정 기능이 구현될 예정입니다.
+      <div class="doc-title">품질경영팀 문서 관리 시스템</div>
+      <div class="doc-desc">
+        품질·환경·안전·보건 관련 시스템 문서 및 작업 SOP는<br>
+        내부 클라우드(ECM)에서 통합 관리되고 있습니다.
       </div>
+      <a class="link-btn" href="https://ecm.ltml.co.kr/url/?key=4495z1PrhUEkZ9nK" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        내부 클라우드 폴더 열기
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </a>
     </div>
   </div>
 </div>
