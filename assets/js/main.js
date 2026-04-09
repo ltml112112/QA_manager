@@ -151,26 +151,15 @@ const apps = [
 
   // ── 문서 관리 ──────────────────────────────────────────────────────────────
   {
-    id:          'sys_docs',
-    group:       '문서 관리',
-    label:       '시스템 문서 & SOP',
-    icon:        '·',
-    badge:       null,
-    src:         './apps/14_sys_docs/index.html',
-    loaderText:  '시스템 문서 & SOP 로딩 중...',
-    locked:      true,
-    wip:         true,
-  },
-  {
-    id:          'calibration',
-    group:       '문서 관리',
-    label:       '측정기기 교정 일정',
-    icon:        '·',
-    badge:       null,
-    src:         './apps/15_calibration/index.html',
-    loaderText:  '측정기기 교정 일정 로딩 중...',
-    locked:      true,
-    wip:         true,
+    id:           'sys_docs',
+    group:        '문서 관리',
+    label:        '시스템 문서 & SOP',
+    icon:         '·',
+    badge:        null,
+    src:          'https://ecm.ltml.co.kr/url/?key=4495z1PrhUEkZ9nK',
+    loaderText:   '시스템 문서 & SOP 로딩 중...',
+    locked:       true,
+    externalLink: true,
   },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,10 +240,16 @@ function renderApps() {
       btn.appendChild(badge);
     }
 
-    btn.addEventListener('click', function() { switchTab(app.id, btn); });
+    if (app.externalLink) {
+      btn.addEventListener('click', function() { window.open(app.src, '_blank'); });
+    } else {
+      btn.addEventListener('click', function() { switchTab(app.id, btn); });
+    }
     nav.appendChild(btn);
 
-    // ── iframe 래퍼 ──────────────────────────────────────────────────────────
+    // ── iframe 래퍼 (외부 링크 앱은 건너뜀) ────────────────────────────────
+    if (app.externalLink) return;
+
     var wrap = document.createElement('div');
     wrap.className = 'frame-wrap' + (isFirst ? ' active' : '');
     wrap.id = 'tab-' + app.id;
