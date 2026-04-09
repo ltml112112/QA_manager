@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 <style>
 /* ── App-specific overrides (base: global_style.css) ── */
+/* Compact 13px font for dense IVL/LT data tables */
 body{font-size:13px;line-height:1.5}
 .wrap{max-width:1400px;margin:0 auto;padding:1rem}
 header{text-align:center;margin-bottom:1rem;position:relative}
@@ -30,22 +31,22 @@ header p{color:var(--tx2);font-size:.8rem}
 /* File Grid */
 .fg{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem}
 .fs{display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border:1px solid var(--bdr);border-radius:4px;font-size:.78rem}
-.fs.ok{border-color:#238636;background:var(--bg)}
+.fs.ok{border-color:var(--success);background:var(--bg)}
 .fs .lb{font-weight:700;min-width:100px;flex-shrink:0;color:var(--acc)}
 .fs .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2);font-size:.72rem;direction:rtl;text-align:left}
 .fs .st{flex-shrink:0}
 .fs .mb{background:var(--bdr);border:none;color:var(--tx2);padding:1px 5px;border-radius:3px;cursor:pointer;font-size:.7rem}
 .fs .mb:hover{background:var(--acc);color:#000}
 .fs input[type=file]{display:none}
-.um{margin-top:.6rem;padding:.5rem .7rem;background:#2d1b00;border:1px solid #6e4000;border-radius:4px;font-size:.75rem;color:#d29922}
+.um{margin-top:.6rem;padding:.5rem .7rem;background:rgba(245,158,11,.08);border:1px solid var(--warning);border-radius:4px;font-size:.75rem;color:var(--warning)}
 .um-title{font-weight:700;margin-bottom:.3rem}
 .um-list{list-style:none;padding:0;margin:0}
-.um-list li{padding:2px 0;font-size:.72rem;color:#d29922}
-.um-list li::before{content:'• ';color:#6e4000}
-.um-dup{margin-top:.6rem;padding:.5rem .7rem;background:#3d0a0a;border:1px solid #9e2a2a;border-radius:4px;font-size:.75rem;color:#f85149}
-.um-dup .um-title{color:#f85149}
-.um-dup .um-list li{color:#f85149}
-.um-dup .um-list li::before{color:#9e2a2a}
+.um-list li{padding:2px 0;font-size:.72rem;color:var(--warning)}
+.um-list li::before{content:'• ';color:var(--warning)}
+.um-dup{margin-top:.6rem;padding:.5rem .7rem;background:rgba(239,68,68,.08);border:1px solid var(--danger);border-radius:4px;font-size:.75rem;color:var(--danger)}
+.um-dup .um-title{color:var(--danger)}
+.um-dup .um-list li{color:var(--danger)}
+.um-dup .um-list li::before{color:var(--danger)}
 
 /* Tables */
 .tw{overflow-x:auto}
@@ -62,16 +63,16 @@ header p{color:var(--tx2);font-size:.8rem}
 .t td:first-child{text-align:left;font-weight:600}
 
 /* Copy Button */
-.cpb{position:absolute;top:8px;right:8px;background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 10px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit}
-.cpb:hover{background:var(--acc);color:#000}
-.cpb.done{background:#238636;color:#fff}
-.cpb.sum{right:65px;background:#f85149;border-color:#da3633;color:#fff;font-weight:700}
-.cpb.sum:hover{background:#da3633}
-.cpb.sum.done{background:#238636;border-color:#2ea043}
-.sel-tag{display:inline-block;padding:0 5px;border-radius:3px;font-size:.65rem;cursor:pointer;margin-left:4px;border:1.5px solid #484f58;color:var(--tx2);transition:.15s;user-select:none;vertical-align:middle}
-.sel-tag:hover{border-color:#f85149;color:#f85149}
-.sel-tag.rec{border-color:#f85149;border-style:dashed;color:#f85149}
-.sel-tag.act{background:#f85149;border-color:#f85149;color:#fff;font-weight:700}
+.cpb{position:absolute;top:8px;right:8px;background:var(--bdr);border:1px solid var(--border);color:var(--tx2);padding:2px 10px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit}
+.cpb:hover{background:var(--acc);color:#fff}
+.cpb.done{background:var(--success);color:#fff}
+.cpb.sum{right:65px;background:var(--danger);border-color:var(--danger);color:#fff;font-weight:700}
+.cpb.sum:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.cpb.sum.done{background:var(--success);border-color:var(--success)}
+.sel-tag{display:inline-block;padding:0 5px;border-radius:3px;font-size:.65rem;cursor:pointer;margin-left:4px;border:1.5px solid var(--border);color:var(--tx2);transition:.15s;user-select:none;vertical-align:middle}
+.sel-tag:hover{border-color:var(--danger);color:var(--danger)}
+.sel-tag.rec{border-color:var(--danger);border-style:dashed;color:var(--danger)}
+.sel-tag.act{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:700}
 .t td.ivl-d{background:rgba(248,81,73,.22)!important;border-color:rgba(248,81,73,.5)!important}
 .t td.lt-sum{background:rgba(88,166,255,.22)!important;border-color:rgba(88,166,255,.5)!important}
 
@@ -87,11 +88,11 @@ header p{color:var(--tx2);font-size:.8rem}
 .ct-sl .rv{color:var(--acc);font-weight:700;min-width:44px;text-align:right;font-size:.88rem}
 .ct-grp{display:inline-flex;align-items:center;gap:3px;padding:4px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--bdr);border-radius:5px}
 .ct-gl{color:var(--tx);font-size:.68rem;font-weight:700;margin-right:5px;letter-spacing:.5px}
-.ct-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx);padding:4px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.15s}
+.ct-btn{background:var(--bdr);border:1px solid var(--border);color:var(--tx);padding:4px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:.78rem;transition:.15s}
 .ct-btn:hover{background:var(--acc);color:#fff}
 .ct-btn.active{background:var(--acc);color:#fff}
-.ct-btn.copy{background:#238636;border-color:#2ea043;color:#fff;font-weight:700;padding:4px 16px}
-.ct-btn.copy:hover{background:#2ea043}
+.ct-btn.copy{background:var(--success);border-color:var(--success);color:#fff;font-weight:700;padding:4px 16px}
+.ct-btn.copy:hover{filter:brightness(1.08)}
 .ct-data{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
 .ct-data label{display:inline-flex;align-items:center;gap:3px;font-size:.8rem;cursor:pointer}
 .ct-data input[type=checkbox]{accent-color:var(--acc)}
@@ -101,7 +102,7 @@ header p{color:var(--tx2);font-size:.8rem}
 /* Decimal Precision Selector */
 .dp-wrap{display:inline-flex;align-items:center;gap:6px;position:absolute;top:8px;right:125px}
 .dp-wrap .dp-label{color:var(--tx2);font-size:.72rem;font-weight:600}
-.dp-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit;transition:.15s}
+.dp-btn{background:var(--bdr);border:1px solid var(--border);color:var(--tx2);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:.7rem;font-family:inherit;transition:.15s}
 .dp-btn:hover{background:var(--acc);color:#fff}
 .dp-btn.active{background:var(--acc);color:#fff;font-weight:700}
 
@@ -139,7 +140,7 @@ footer{text-align:center;padding:1rem 0;color:var(--tx2);font-size:.8rem}
 .hm-dz{border:2px dashed var(--bdr);border-radius:5px;padding:.8rem;text-align:center;color:var(--tx2);font-size:.72rem}
 .hm-dz .hm-ic{font-size:1.4rem;margin-bottom:4px}
 .hm-slot{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--bdr);border-radius:3px;margin:3px 0;font-size:.7rem}
-.hm-slot.ok{border-color:#238636;background:rgba(35,134,54,.1)}
+.hm-slot.ok{border-color:var(--success);background:rgba(16,185,129,.1)}
 .hm-slot .hm-lb{color:var(--acc);font-weight:700;min-width:80px}
 .hm-slot .hm-fn{color:var(--tx2);flex:1;font-size:.65rem}
 .hm-slot .hm-st{font-size:.75rem}
@@ -156,7 +157,7 @@ footer{text-align:center;padding:1rem 0;color:var(--tx2);font-size:.8rem}
 .hm-tbl .hm-red{color:var(--red)}
 .hm-ctrl{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:.5rem}
 .hm-ctrl span{font-size:.6rem;color:var(--tx2)}
-.hm-ctrl-btn{background:var(--bdr);border:1px solid #484f58;color:var(--tx2);padding:2px 6px;border-radius:3px;font-size:.6rem;cursor:default}
+.hm-ctrl-btn{background:var(--bdr);border:1px solid var(--border);color:var(--tx2);padding:2px 6px;border-radius:3px;font-size:.6rem;cursor:default}
 .hm-ctrl-btn.on{background:var(--acc);color:#000}
 .hm-slider{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:4px;padding:3px 6px;font-size:.6rem;color:var(--tx2)}
 .hm-slider input[type=range]{width:60px;height:4px}
@@ -166,8 +167,8 @@ footer{text-align:center;padding:1rem 0;color:var(--tx2);font-size:.8rem}
 .hm-tag.blue{background:rgba(88,166,255,.15);color:var(--acc)}
 .hm-tag.red{background:rgba(248,81,73,.15);color:var(--red)}
 .hm-tag.purple{background:rgba(179,136,255,.15);color:#b388ff}
-.hm-tag.green{background:rgba(35,134,54,.15);color:#238636}
-.hm-tag.yellow{background:rgba(210,153,34,.15);color:#d29922}
+.hm-tag.green{background:rgba(16,185,129,.15);color:var(--success)}
+.hm-tag.yellow{background:rgba(245,158,11,.15);color:var(--warning)}
 .hm-arrow{color:var(--acc);font-size:1.2rem;text-align:center;margin:.3rem 0}
 .hm-sep{border:none;border-top:1px solid var(--bdr);margin:1.2rem 0}
 .hm-tip{background:var(--hdr);border:1px solid var(--bdr);border-radius:5px;padding:.5rem .7rem;margin-top:.5rem;font-size:.72rem;color:var(--tx2);line-height:1.5}
@@ -402,7 +403,7 @@ X축: 파장(380~780nm), Y축: 강도(a.u.)
 &#8226; <b style="color:var(--red)">요약 버튼</b> &rarr; 핵심 2행(REF+SAMPLE)만 추출, IVL·LT 블록 독립 선택 가능<br>
 &#8226; 파일을 <b>추가 업로드</b>하면 기존 매칭에 덮어씌워집니다<br>
 &#8226; <b>8개 슬롯 모두</b> 채우지 않아도 분석 가능 (최소 REF+SAMPLE IVL 각 1개)<br>
-&#8226; <b style="color:#1f6feb">&#128190; 분석결과 임시저장</b> &rarr; 현재 분석 상태를 브라우저에 저장 (최대 10개, 초과 시 오래된 항목 자동 삭제)<br>
+&#8226; <b style="color:var(--acc)">&#128190; 분석결과 임시저장</b> &rarr; 현재 분석 상태를 브라우저에 저장 (최대 10개, 초과 시 오래된 항목 자동 삭제)<br>
 &#8226; <b>임시저장 목록</b> 버튼 &rarr; 저장된 세션 목록 확인 · 불러오기 · 삭제 가능, 메모로 검색 지원
 </div>
 </div>
@@ -467,11 +468,11 @@ X축: 파장(380~780nm), Y축: 강도(a.u.)
 <div id="res" class="hidden results">
     <!-- Save Result -->
     <div class="card" style="padding:.6rem 1rem">
-        <button class="btn btn-primary btn-block" id="saveBtn" style="background:#1f6feb;font-size:.85rem" onclick="showSaveModal()">&#128190; 분석결과 임시저장</button>
+        <button class="btn btn-primary btn-block" id="saveBtn" style="font-size:.85rem" onclick="showSaveModal()">&#128190; 분석결과 임시저장</button>
     </div>
     <!-- Embed mode: 소자평가 일정에서 팝업으로 열릴 때만 표시 -->
     <div class="card" id="embedSaveCard" style="display:none;padding:.6rem 1rem">
-        <button class="btn btn-primary btn-block" id="embedSaveBtn" style="background:#10b981;font-size:.9rem;font-weight:700">&#128229; 이 Lot에 결과 저장</button>
+        <button class="btn btn-primary btn-block" id="embedSaveBtn" style="background:var(--success);font-size:.9rem;font-weight:700">&#128229; 이 Lot에 결과 저장</button>
     </div>
     <!-- IVL -->
     <div class="card">
@@ -841,7 +842,7 @@ function renderTbl(tblId,blocks,ivl,ltLv){
       if(v1!=null&&v2!=null){
         const pct=v2/v1*100;
         const cls=pct<95?'red':pct>105?'purple':'blue';
-        const warn=(v1<100||v2<100)?'<br><span style="font-size:.65rem;color:#d29922">(100h 미만)</span>':'';
+        const warn=(v1<100||v2<100)?'<br><span style="font-size:.65rem;color:var(--warning)">(100h 미만)</span>':'';
         h+=`<td class="${cls}">${pct.toFixed(ivlDP)}%${warn}</td>`;
       }else h+='<td>-</td>';
     }
@@ -1058,7 +1059,7 @@ function copyChart(){
   const cv=$('ltC');
   cv.toBlob(blob=>{
     navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(()=>{
-      const b=$('ccpy');if(b){b.textContent='Copied!';b.style.background='#1f6feb';setTimeout(()=>{b.textContent='COPY CHART';b.style.background=''},1500)}
+      const b=$('ccpy');if(b){b.textContent='Copied!';b.style.background='var(--success)';setTimeout(()=>{b.textContent='COPY CHART';b.style.background=''},1500)}
     }).catch(()=>{
       const url=cv.toDataURL('image/png');
       const a=document.createElement('a');a.href=url;a.download='LT_Chart.png';a.click();
@@ -1393,8 +1394,8 @@ async function confirmSave(){
     await saveSession(label);
     closeSaveModal();
     const btn=$('saveBtn');
-    if(btn){btn.textContent='저장됨!';btn.style.background='#238636';
-      setTimeout(()=>{btn.innerHTML='&#128190; 분석결과 임시저장';btn.style.background='#1f6feb';},1800);}
+    if(btn){btn.textContent='저장됨!';btn.style.background='var(--success)';
+      setTimeout(()=>{btn.innerHTML='&#128190; 분석결과 임시저장';btn.style.background='';},1800);}
   }catch(e){alert('저장 실패: '+e.message);}
 }
 window.showSaveModal=showSaveModal;window.closeSaveModal=closeSaveModal;window.confirmSave=confirmSave;
@@ -1503,10 +1504,10 @@ init();
     window.parent.postMessage({ type: 'oledResult', ivl: ivlResult, lt: ltResult }, '*');
 
     btn.textContent = '✓ 전송 완료!';
-    btn.style.background = '#238636';
+    btn.style.background = 'var(--accent)';
     setTimeout(function() {
       btn.innerHTML = '&#128229; 이 Lot에 결과 저장';
-      btn.style.background = '#10b981';
+      btn.style.background = 'var(--success)';
     }, 2000);
   });
 })();
