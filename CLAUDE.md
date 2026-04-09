@@ -186,14 +186,15 @@ const apps = [
 ```css
 /* global_style.css · 섹션 3-A */
 :root {
-  --portal-bg:           #f4f6fb;   /* 사이드바 배경 */
+  --portal-bg:           #fdf5f6;   /* 사이드바 배경 */
   --portal-surface:      #ffffff;   /* 사이드바 카드 배경 */
-  --portal-surface-2:    #eef0f7;   /* 사이드바 2단계 표면 */
-  --portal-border:       #d1d5e8;   /* 사이드바 구분선 */
-  --portal-text:         #1a1f3e;   /* 사이드바 텍스트 */
+  --portal-surface-2:    #f5eaec;   /* 사이드바 2단계 표면 */
+  --portal-border:       #e8d0d4;   /* 사이드바 구분선 */
+  --portal-text:         #1e1a1b;   /* 사이드바 텍스트 */
   --portal-text-muted:   #6b7280;   /* 사이드바 보조 텍스트 */
   --portal-accent:       #be0039;   /* 활성 탭 강조색 */
   --portal-accent-hover: #d4004a;   /* 활성 탭 hover */
+  --portal-accent-glow:  rgba(190, 0, 57, 0.10); /* 활성 탭 배경 glow */
   --portal-success:      #10b981;   /* 가동 중 상태 점 */
   --portal-danger:       #ef4444;   /* 오류 상태 */
   --portal-warning:      #f59e0b;   /* 경고 상태 */
@@ -216,30 +217,36 @@ const apps = [
 ```css
 /* global_style.css · 섹션 3-B */
 :root {
-  --bg:           #f4f6fb;          /* 앱 전체 배경 */
+  --bg:           #fdf5f6;          /* 앱 전체 배경 */
   --surface:      #ffffff;          /* 카드·패널 배경 */
-  --surface-2:    #eef0f7;          /* 2단계 표면 (테이블 헤더 등) */
-  --border:       #d1d5e8;          /* 테두리 */
-  --border-hover: #b0b7d1;          /* hover 테두리 */
-  --text:         #1a1f3e;          /* 본문 텍스트 */
+  --surface-2:    #f5eaec;          /* 2단계 표면 (테이블 헤더 등) */
+  --bg-deep:      #ede0e3;          /* 3단계 배경 (가장 진함) */
+  --border:       #e8d0d4;          /* 테두리 */
+  --border-hover: #d4b0b7;          /* hover 테두리 */
+  --text:         #1e1a1b;          /* 본문 텍스트 */
   --text-muted:   #6b7280;          /* 보조 텍스트 */
   --text-faint:   #9ca3af;          /* 희미한 텍스트 (placeholder 등) */
   --accent:       #be0039;          /* 강조색 (버튼·링크) */
   --accent-hover: #d4004a;          /* 강조색 hover */
+  --accent-glow:  rgba(190, 0, 57, 0.08); /* 강조색 글로우 */
   --success:      #10b981;          /* 성공 */
   --danger:       #ef4444;          /* 오류·삭제 */
   --warning:      #f59e0b;          /* 경고 */
   --radius:       12px;             /* 카드 모서리 반경 */
   --radius-sm:    8px;              /* 인풋·버튼 모서리 반경 */
+  --radius-xs:    4px;              /* 뱃지·작은 요소 모서리 반경 */
 }
 ```
 
 > 현재 기본 테마는 **라이트 모드** 기준으로 설정되어 있음.
 
-#### 다크 모드 색상 변경 → 섹션 3-C (미구현 — 필요 시 추가)
+#### 다크 모드 (미구현)
+
+현재 `global_style.css`에는 다크 모드 오버라이드 블록이 **존재하지 않음**. 각 앱의 `<html data-theme="dark">` 선언과 테마 동기화 IIFE만 남아 있어 사실상 라이트 테마만 동작함.
+
+필요 시 섹션 3-B 뒤에 다음 블록을 추가:
 
 ```css
-/* global_style.css · 섹션 3-C */
 html[data-theme="dark"] {
   --bg:      #0f1117;
   --surface: #1a1f2e;
@@ -248,6 +255,10 @@ html[data-theme="dark"] {
 ```
 
 > **주의**: 여기서 `--portal-*` 변수는 절대 추가하지 않음. 추가하는 순간 다크 모드에서 사이드바도 어두워짐.
+
+#### 구형 변수명 Aliases → 섹션 3-C
+
+`global_style.css` 섹션 3-C에는 각 앱이 기존에 쓰던 구형 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error`, `--card`, `--panel` 등)이 신형 변수의 alias로 정의되어 있음. 기존 앱 코드를 수정하지 않고도 동작하도록 유지하는 호환 레이어.
 
 #### 공통 컴포넌트 클래스
 
@@ -362,7 +373,7 @@ const apps = [
 
 ### Step 4 — 확인 체크리스트
 
-- [ ] `apps/06_xxx/index.html` 존재하는가?
+- [ ] `apps/16_xxx/index.html` 존재하는가?
 - [ ] `<html lang="ko" data-theme="dark">` 로 시작하는가?
 - [ ] `<link rel="preconnect">` 2개 + Google Fonts `<link>` 포함되어 있는가?
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
@@ -479,7 +490,40 @@ window.parent.postMessage({ type: 'oledResult', ivl: {...}, lt: {...} }, '*');
 
 ## 2. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
 
-분석 데이터 기반 리포트 자동 생성 도구. 독립 실행 가능한 단일 HTML 파일.
+HPLC·DSC 통합 분석 PDF에서 그래프 영역을 자동 크롭해 PPTX 슬라이드로 변환하는 도구. 단일 HTML 파일에 CSS·HTML·JS 전부 포함.
+
+### 주요 흐름
+1. PDF 업로드 → `pdf.js`로 페이지 파싱 (`buildPageMap()`)
+2. 페이지 유형 자동 판별 — 가로(landscape)=DSC, 세로(portrait)=HPLC
+3. HPLC: 상단 메타 테이블 추출 → 그래프 영역 크롭
+4. DSC: 그래프 영역 크롭 (슬라이더로 확대/여백 미세조정)
+5. `pptxgenjs`로 슬라이드 병합 → HPLC + DSC 1개 PPTX 다운로드
+
+### CDN 라이브러리
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+```
+
+`pptxgenjs` CDN 로드 실패 시 `cdnjs` fallback 자동 시도(`loadPptxFallback()`).
+
+### 주요 함수
+| 함수 | 역할 |
+|------|------|
+| `buildPageMap()` | PDF 페이지 순회 → 각 페이지 유형(hplc/dsc) 판별 |
+| `getPageType(page)` | 페이지 종횡비로 유형 결정 |
+| `extractHplcMeta(page)` | HPLC 상단 메타 테이블 OCR/좌표 추출 |
+| `processHplcPage(p)` / `processDscPage(p)` | 크롭 수행 |
+| `computeDscCrop()` | DSC 그래프 영역 좌표 계산 |
+| `renderPage(p, scale)` | 페이지를 canvas로 렌더 |
+| `cropB64(canvas, box)` | canvas 부분 → base64 PNG |
+| `drawB64(b64)` | 미리보기 썸네일 그리기 |
+| `buildPptx(items)` | 최종 PPTX 병합 생성 |
+| `addSumBoxToChart(slide, ...)` | HPLC 슬라이드 요약 박스 추가 |
+
+### DSC 슬라이드 테두리
+DSC 이미지는 `addImage()` 후 별도 `addShape(rect)`로 오버레이 테두리를 그림
+(`pptxgenjs`의 `addImage`가 `line` 옵션을 지원하지 않아 rect 오버레이 방식 사용).
 
 ---
 
@@ -560,15 +604,27 @@ window.parent.postMessage({ type: 'oledResult', ivl: {...}, lt: {...} }, '*');
 ## 5. 소재 Lot 이력 & TREND 분석 (`apps/05_cpl_quality/`)
 
 모든 소재의 Lot 계보 추적 + 공정별 SPC TREND를 확인하는 도구.
-단일 HTML 파일(`index.html`)에 CSS·HTML·JS 전부 포함.
+
+### 파일 구조
+
+```
+apps/05_cpl_quality/
+├── index.html   # 레이아웃 shell (업로드 바·사이드바·카드 컨테이너)
+├── style.css    # 앱 고유 스타일 (계보 플로우·SPC 차트·Deep-Dive)
+└── app.js       # 모든 로직 (Excel 파싱·계보 레이아웃·SPC 렌더·검색)
+```
+
+> `index.html`은 shell만 담당하고, 스타일과 로직은 외부 파일로 분리되어 있음.
+> `global_style.css`는 `index.html`에서 `../../assets/css/global_style.css`로 참조.
 
 ### CDN 라이브러리
 ```html
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 ```
+
+> 계보도는 자체 SVG 절대좌표 레이아웃으로 그려짐 (Mermaid 미사용).
 
 ### 화면 레이아웃
 
@@ -705,7 +761,17 @@ STATE = {
 ## 6. 소자평가 Lot 일정 관리 (`apps/06_lot_schedule/`)
 
 합성생산·정제생산/소자이관 부서의 소자평가 이관 일정을 월별 캘린더로 관리하는 도구.
-단일 HTML 파일(`index.html`)에 CSS·HTML·JS 전부 포함.
+
+### 파일 구조
+
+```
+apps/06_lot_schedule/
+├── index.html   # 레이아웃 shell (캘린더·팝업·모달 DOM)
+├── style.css    # 앱 고유 스타일 (캘린더 그리드·Lot 카드·모달·팝업)
+└── app.js       # 모든 로직 (Firebase 동기화·메일 파싱·OLED 결과·렌더)
+```
+
+> `index.html`은 shell만 담당하고, 스타일과 로직은 외부 파일로 분리되어 있음.
 
 ### 화면 레이아웃
 
@@ -1057,7 +1123,7 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
    - **예외 — `02_lgd_eval/index.html`**: 이 앱은 GAS URL로 서빙되어 `global_style.css` 상대경로가 동작하지 않음. 인라인 `:root`·리셋·컴포넌트 CSS는 GAS 단독 실행 fallback으로 **의도적으로 유지**함
    - **브랜드 테마 변형 시 주의**: `global_style.css`의 색상 변수를 바꿔도 LGD 앱 GAS 화면에는 반영 안 됨. `apps/02_lgd_eval/index.html` 인라인 `:root` 변수도 **반드시 같이 수정**하고 GAS에 재배포해야 함
 
-6. **구형 변수명 호환**: `global_style.css` 섹션 3-D에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
+6. **구형 변수명 호환**: `global_style.css` 섹션 3-C에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
 
 ---
 

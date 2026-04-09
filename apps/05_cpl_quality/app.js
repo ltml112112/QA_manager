@@ -15,7 +15,6 @@
 })();
 
 /* ── Mermaid 초기화 ── */
-mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose' });
 
 /* ── 전역 상태 ── */
 const STATE = {
@@ -1044,7 +1043,7 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
 /* 6-F: 계보도 렌더링 메인 (절대좌표 tree layout) */
 function renderGenealogy(lot) {
   var flowCard  = document.getElementById('flow-card');
-  var container = document.getElementById('mermaid-viewer');
+  var container = document.getElementById('genealogy-viewer');
 
   var result = collectFullChain(lot);
   var nodes  = Array.from(result.nodes);

@@ -176,7 +176,6 @@ const apps = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── 잠금 해제 상태 관리 ───────────────────────────────────────────────────────
-var _UK = 'qa_p_ulk';
 var _UC = [57, 52, 48, 52, 49, 52]; // '9','4','0','4','1','4'
 
 var _sessionUnlocked = false;
@@ -309,49 +308,6 @@ function _revealLockedTabs() {
       iframe.src = iframe.dataset.src;
     }
   });
-}
-
-// ── 잠긴 탭 숨기기/보이기 토글 ───────────────────────────────────────────────
-var _lockedHidden = false;
-
-function _toggleLockedVisibility() {
-  _lockedHidden = !_lockedHidden;
-
-  apps.forEach(function(app) {
-    if (!app.locked) return;
-    var btn  = document.getElementById('tabbtn-' + app.id);
-    var wrap = document.getElementById('tab-' + app.id);
-    if (btn)  btn.style.display  = _lockedHidden ? 'none' : '';
-    if (wrap && _lockedHidden) wrap.style.display = 'none';
-    else if (wrap) wrap.style.display = '';
-  });
-
-  // 전체 locked 그룹 헤더 토글
-  var seenGroups = {};
-  apps.forEach(function(app) {
-    if (!app.group || seenGroups[app.group]) return;
-    seenGroups[app.group] = true;
-    if (_isGroupAllLocked(app.group)) {
-      var hdr = document.getElementById('grphdr-' + app.group);
-      if (hdr) hdr.style.display = _lockedHidden ? 'none' : '';
-    }
-  });
-
-  // 현재 활성 탭이 숨겨졌으면 첫 번째 공개 탭으로 전환
-  if (_lockedHidden) {
-    var activeBtn = document.querySelector('.tab-btn.active');
-    if (activeBtn && activeBtn.style.display === 'none') {
-      var firstVisible = document.querySelector('.tab-btn:not([style*="display: none"]):not([style*="display:none"])');
-      if (firstVisible) firstVisible.click();
-    }
-  }
-
-  // 상태 점 스타일 업데이트
-  var dot = document.querySelector('.status-dot');
-  if (dot) {
-    dot.style.opacity = _lockedHidden ? '0.45' : '';
-    dot.title = _lockedHidden ? '공개 탭만 표시 중 (클릭하여 전체 표시)' : '클릭하여 공개 탭만 표시';
-  }
 }
 
 // ── 비밀번호 모달 ─────────────────────────────────────────────────────────────

@@ -1052,15 +1052,6 @@ function buildDetailCard(item, asOf) {
   return wrap;
 }
 
-/* ── 수정 (왼쪽 패널 — 사용되지 않지만 외부 호출 호환 유지) ─────────── */
-function editItem(id) {
-  var items = loadItems();
-  var item  = items.find(function (it) { return it.id === id; });
-  if (!item) return;
-  closeModal();
-  fillForm(item);
-}
-
 /* ── 인라인 수정 (모달 내 카드 → 폼 변환) ───────────────────────────── */
 function editInModal(itemId, cardEl) {
   var items = loadItems();
@@ -1513,13 +1504,6 @@ function normDate(s) {
   var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (!m) return s.trim();
   return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
-}
-
-/* ── 부서 자동 감지 ──────────────────────────────────────────────────── */
-// 합성생산 표 여부는 원문 문구('합성생산팀 충주 이관내역')로만 판별하므로
-// default 표는 무조건 정제생산/소자이관
-function autoDept() {
-  return '정제생산/소자이관';
 }
 
 
