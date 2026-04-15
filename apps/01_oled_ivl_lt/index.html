@@ -96,7 +96,10 @@ header p{color:var(--tx2);font-size:.8rem}
 .ct-data{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
 .ct-data label{display:inline-flex;align-items:center;gap:3px;font-size:.8rem;cursor:pointer}
 .ct-data input[type=checkbox]{accent-color:var(--acc)}
-.ct-cp{width:22px;height:22px;padding:1px 2px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;background:none;vertical-align:middle;flex-shrink:0}
+.cp-pal{display:inline-flex;gap:3px;align-items:center;flex-shrink:0}
+.cp-dot{width:13px;height:13px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex-shrink:0;transition:transform .1s}
+.cp-dot:hover{transform:scale(1.25)}
+.cp-dot.sel{box-shadow:0 0 0 1.5px #fff,0 0 0 3px #555}
 .ct-ni{background:var(--input);border:1px solid var(--bdr);color:inherit;padding:2px 5px;border-radius:3px;font-family:inherit;font-size:.78rem;width:120px}
 .ch-wrap.sq{max-width:600px;height:600px;margin-left:auto;margin-right:auto}
 
@@ -547,6 +550,8 @@ const BLOCKS_EXTRA=[
   {lb:'REF2 vs REF1',r1:'REF_IVL2',r2:'REF_IVL1',lt1:'REF_LT2',lt2:'REF_LT1'},
 ];
 
+const COLOR_PALETTE=['#000000','#ef4444','#4a9eff','#a855f7','#f59e0b'];
+
 const COL={REF_LT1:'#4a9eff',REF_LT2:'#a855f7',SAMPLE_LT1:'#ef4444',SAMPLE_LT2:'#f59e0b',
            REF_IVL1:'#4a9eff',REF_IVL2:'#a855f7',SAMPLE_IVL1:'#ef4444',SAMPLE_IVL2:'#f59e0b'};
 
@@ -924,7 +929,12 @@ function buildCtrl(){
   for(const k in ltRawG){
     const c=ltState.dsColors[k]||COL[k]||'#fff';
     const nm=ltState.dsNames[k]||S[k]?.l||k;
-    h+=`<label style="color:${c}"><input type="checkbox" data-ds="${k}" ${ltState.dsVis[k]?'checked':''}> <input type="color" class="ct-cp" data-dc="${k}" value="${c}" title="색상 변경"> <input type="text" class="ct-ni" data-dn="${k}" value="${nm}" style="color:${c};border-color:${c}44"></label>`;
+    let dots='';
+    for(const pc of COLOR_PALETTE){
+      const sel=c.toLowerCase()===pc.toLowerCase();
+      dots+=`<button class="cp-dot${sel?' sel':''}" data-dc="${k}" data-color="${pc}" style="background:${pc}" title="${pc}"></button>`;
+    }
+    h+=`<label style="color:${c}"><input type="checkbox" data-ds="${k}" ${ltState.dsVis[k]?'checked':''}> <span class="cp-pal">${dots}</span> <input type="text" class="ct-ni" data-dn="${k}" value="${nm}" style="color:${c};border-color:${c}44"></label>`;
   }
   h+='</div>';
 
@@ -947,14 +957,16 @@ function buildCtrl(){
   $('ccpy').onclick=copyChart;
   el.querySelectorAll('[data-ds]').forEach(cb=>cb.onchange=function(){ltState.dsVis[this.dataset.ds]=this.checked;drawLT()});
   el.querySelectorAll('[data-dn]').forEach(inp=>{inp.onchange=function(){ltState.dsNames[this.dataset.dn]=this.value;drawLT()};inp.onclick=function(e){e.stopPropagation()}});
-  el.querySelectorAll('[data-dc]').forEach(inp=>{inp.oninput=function(){
-    const k=this.dataset.dc,v=this.value;
+  el.querySelectorAll('.cp-dot').forEach(btn=>{btn.onclick=function(e){
+    e.stopPropagation();
+    const k=this.dataset.dc,v=this.dataset.color;
     ltState.dsColors[k]=v;
+    el.querySelectorAll(`.cp-dot[data-dc="${k}"]`).forEach(d=>d.classList.toggle('sel',d.dataset.color===v));
     const lbl=this.closest('label');
     if(lbl){lbl.style.color=v;const ni=lbl.querySelector('.ct-ni');if(ni){ni.style.color=v;ni.style.borderColor=v+'44';}}
     drawLT();
     if(Object.keys(lastIvl||{}).length)renderSpec(lastIvl);
-  };inp.onclick=function(e){e.stopPropagation()}});
+  }});
 }
 
 function maSmooth(arr,w){
