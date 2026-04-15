@@ -96,6 +96,7 @@ header p{color:var(--tx2);font-size:.8rem}
 .ct-data{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
 .ct-data label{display:inline-flex;align-items:center;gap:3px;font-size:.8rem;cursor:pointer}
 .ct-data input[type=checkbox]{accent-color:var(--acc)}
+.ct-cp{width:22px;height:22px;padding:1px 2px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;background:none;vertical-align:middle;flex-shrink:0}
 .ct-ni{background:var(--input);border:1px solid var(--bdr);color:inherit;padding:2px 5px;border-radius:3px;font-family:inherit;font-size:.78rem;width:120px}
 .ch-wrap.sq{max-width:600px;height:600px;margin-left:auto;margin-right:auto}
 
@@ -882,7 +883,7 @@ function eTd(num,den){
 function ci(n){return String.fromCodePoint(0x245F+n)}
 
 /* ===== LT CHART ===== */
-let ltState={xMax:150,yMin:95,yMax:101,smooth:1,xOn:true,yOn:true,xTicks:true,yTicks:true,gridOn:true,white:true,square:true,dsVis:{},dsNames:{}};
+let ltState={xMax:150,yMin:95,yMax:101,smooth:1,xOn:true,yOn:true,xTicks:true,yTicks:true,gridOn:true,white:true,square:true,dsVis:{},dsNames:{},dsColors:{}};
 let ltRawG={},ltLvG={},ltDataMaxHr=500;
 
 function renderLTC(ltD,ltLv){
@@ -921,9 +922,9 @@ function buildCtrl(){
   h+='<div class="ct-row ct-data">';
   h+='<span class="ct-gl">DATA</span>';
   for(const k in ltRawG){
-    const c=COL[k]||'#fff';
+    const c=ltState.dsColors[k]||COL[k]||'#fff';
     const nm=ltState.dsNames[k]||S[k]?.l||k;
-    h+=`<label style="color:${c}"><input type="checkbox" data-ds="${k}" ${ltState.dsVis[k]?'checked':''}> <input type="text" class="ct-ni" data-dn="${k}" value="${nm}" style="color:${c};border-color:${c}44"></label>`;
+    h+=`<label style="color:${c}"><input type="checkbox" data-ds="${k}" ${ltState.dsVis[k]?'checked':''}> <input type="color" class="ct-cp" data-dc="${k}" value="${c}" title="색상 변경"> <input type="text" class="ct-ni" data-dn="${k}" value="${nm}" style="color:${c};border-color:${c}44"></label>`;
   }
   h+='</div>';
 
@@ -946,6 +947,14 @@ function buildCtrl(){
   $('ccpy').onclick=copyChart;
   el.querySelectorAll('[data-ds]').forEach(cb=>cb.onchange=function(){ltState.dsVis[this.dataset.ds]=this.checked;drawLT()});
   el.querySelectorAll('[data-dn]').forEach(inp=>{inp.onchange=function(){ltState.dsNames[this.dataset.dn]=this.value;drawLT()};inp.onclick=function(e){e.stopPropagation()}});
+  el.querySelectorAll('[data-dc]').forEach(inp=>{inp.oninput=function(){
+    const k=this.dataset.dc,v=this.value;
+    ltState.dsColors[k]=v;
+    const lbl=this.closest('label');
+    if(lbl){lbl.style.color=v;const ni=lbl.querySelector('.ct-ni');if(ni){ni.style.color=v;ni.style.borderColor=v+'44';}}
+    drawLT();
+    if(Object.keys(lastIvl||{}).length)renderSpec(lastIvl);
+  };inp.onclick=function(e){e.stopPropagation()}});
 }
 
 function maSmooth(arr,w){
@@ -970,8 +979,8 @@ function ltBuildDS(){
     ds.push({
       label:ltState.dsNames[k]||S[k]?.l||k,
       data:d.h.map((h,i)=>({x:h,y:ys[i]})),
-      borderColor:COL[k],
-      backgroundColor:COL[k]+'22',
+      borderColor:ltState.dsColors[k]||COL[k],
+      backgroundColor:(ltState.dsColors[k]||COL[k])+'22',
       borderWidth:2.5,
       pointRadius:0,
       pointHoverRadius:5,
@@ -1082,8 +1091,8 @@ function renderSpec(ivl){
     ds.push({
       label:S[k]?.l+' (@J='+(d.absJ?.toFixed(1)||'10')+')',
       data:d.spec,
-      borderColor:COL[k],
-      backgroundColor:COL[k]+'18',
+      borderColor:ltState.dsColors[k]||COL[k],
+      backgroundColor:(ltState.dsColors[k]||COL[k])+'18',
       borderWidth:1.8,
       pointRadius:0,
       tension:0.2,
