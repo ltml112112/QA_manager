@@ -157,6 +157,7 @@ function setupRealtimeSync() {
 function setupResultsSync() {
   RESULT_REF.on('value', function(snap) {
     window._cachedResults = snap.val() || {};
+    renderCalendar(); // 결과 배지 반영을 위해 재렌더
   });
 }
 
