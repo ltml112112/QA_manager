@@ -34,8 +34,20 @@ window._cachedResults = {}; // {lotId: {savedAt, ivl, lt}}
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var today    = new Date();
-var curYear  = today.getFullYear();
-var curMonth = today.getMonth(); // 0-indexed
+var curYear, curMonth;
+(function () {
+  var saved = localStorage.getItem('qa_lot_schedule_month');
+  if (saved) {
+    var p = saved.split('-');
+    var y = parseInt(p[0], 10);
+    var m = parseInt(p[1], 10);
+    if (!isNaN(y) && !isNaN(m) && m >= 0 && m <= 11) {
+      curYear = y; curMonth = m; return;
+    }
+  }
+  curYear  = today.getFullYear();
+  curMonth = today.getMonth(); // 0-indexed
+}());
 
 /* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
 function toDateStr(d) {
@@ -250,6 +262,7 @@ function renderSummary(items) {
 var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
 
 function renderCalendar() {
+  localStorage.setItem('qa_lot_schedule_month', curYear + '-' + curMonth);
   updateTitle();
   var grid  = document.getElementById('calGrid');
   grid.innerHTML = '';
@@ -548,6 +561,23 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
   var fd = readFormData();
   if (!fd.dept || !fd.material || !fd.transferDate) {
     alert('부서/상태, 재료명, 이관일은 필수 항목입니다.');
+    return;
+  }
+
+  // 날짜 상호 검증
+  if (fd.evalStart && fd.evalStart < fd.transferDate) {
+    alert('소자평가 시작일은 이관일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalStart').focus();
+    return;
+  }
+  if (fd.evalTarget && fd.evalStart && fd.evalTarget < fd.evalStart) {
+    alert('완료 요청일은 평가 시작일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalTarget').focus();
+    return;
+  }
+  if (fd.evalTarget && !fd.evalStart && fd.evalTarget < fd.transferDate) {
+    alert('완료 요청일은 이관일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalTarget').focus();
     return;
   }
 
