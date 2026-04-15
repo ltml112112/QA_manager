@@ -77,37 +77,7 @@ firebase.auth().signInAnonymously().catch(function(e){ console.error(e); });
 
 ## 🟠 중요 — 버그/정합성
 
-### 2. `15_calibration` 탭이 `main.js`에 누락됨
-
-**파일**: `assets/js/main.js` (마지막 탭 항목 뒤, `];` 직전)
-
-**현상**
-- `apps/15_calibration/index.html` 플레이스홀더 파일 존재
-- `CLAUDE.md` 에는 "문서 관리" 대분류 하위로 등록돼 있음 (line 26, 75, 382, 1092)
-- 하지만 `main.js` `apps` 배열에는 누락 — 포털에서 탭이 안 보임
-- 현재 마지막 탭은 `sys_docs` (line 154~162)
-
-**수정**
-`assets/js/main.js:162` 의 `sys_docs` 항목 뒤, `];` 앞에 아래 추가:
-```javascript
-  {
-    id:          'calibration',
-    group:       '문서 관리',
-    label:       '측정기기 교정 일정',
-    icon:        '·',
-    badge:       null,
-    src:         './apps/15_calibration/index.html',
-    loaderText:  '측정기기 교정 일정 로딩 중...',
-    locked:      true,
-    wip:         true,
-  },
-```
-
-**검증**: 저장 후 브라우저 새로고침 → 코드 입력 후 "문서 관리" 그룹에 탭 2개(`시스템 문서 & SOP`, `측정기기 교정 일정`)가 보이면 OK.
-
----
-
-### 3. `06_lot_schedule/index.html` 타이틀 오탈자 ("test")
+### 2. `06_lot_schedule/index.html` 타이틀 오탈자 ("test")
 
 **파일**: `apps/06_lot_schedule/index.html:13`
 
@@ -199,9 +169,9 @@ div.querySelectorAll('*').forEach(function(el){
 
 ## 🟢 경미 — 코드 품질
 
-### 7. 플레이스홀더 앱 공통화 (04, 07~15)
+### 7. 플레이스홀더 앱 공통화 (04, 07~14)
 
-**파일**: `apps/04_sdc_eval/index.html`, `apps/07_coa_dev/` ~ `apps/15_calibration/`
+**파일**: `apps/04_sdc_eval/index.html`, `apps/07_coa_dev/` ~ `apps/14_sys_docs/`
 
 **현상**
 - 9개 앱의 `index.html`이 동일한 "개발 예정" 플레이스홀더를 복붙
