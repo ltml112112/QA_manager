@@ -419,6 +419,7 @@ html, body {
 
 /* 시급 요청 카드 강조 */
 .lot-card.is-urgent {
+  border-width: 2px !important;
   border-style: dashed !important;
   border-left-style: solid !important;
 }
