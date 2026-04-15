@@ -27,6 +27,7 @@ const STATE = {
   lotStage:       {},     // Lot → 단계 인덱스 (0=완제품/1단계, N=원료/마지막단계)
   stageLabels:    [],     // 흐름도 Excel 헤더 라벨 ["1단계","2단계",...]
   stageTypeLabels:[],     // 실제 공정명 ["완제품","정제1차품","정제원재료",...]
+  lotSearchIndex: {},     // Lot → 'lot|itemName|remark' 소문자 캐시 (검색 성능)
   selectedLot:    null,
   selectedBatch:  null,
   traceDir:       'backward', // 'backward' | 'forward'
@@ -522,6 +523,13 @@ function parseFlowData() {
   STATE.stageLabels      = subCols.map(function(sub) { return sub.stageLabel; });
   STATE.stageTypeLabels  = maps.stageTypeLabels;
 
+  // 검색 인덱스 빌드 — 키 입력마다 toLowerCase 반복 방지
+  STATE.lotSearchIndex = {};
+  Object.keys(STATE.lotMeta).forEach(function(lot) {
+    var m = STATE.lotMeta[lot];
+    STATE.lotSearchIndex[lot] = (lot + '|' + (m.itemName || '') + '|' + (m.remark || '')).toLowerCase();
+  });
+
   var lotCount = Object.keys(maps.lotMeta).length;
   var edgeCount = Object.keys(maps.byOutput).reduce(function(s, k) {
     return s + maps.byOutput[k].length;
@@ -564,14 +572,13 @@ function getStageLabel(si) {
          ('단계 ' + (si + 1));
 }
 
-/* 5-C: 검색어 기반 Lot 필터 */
-function matchLot(lot, query) {
-  if (!query) return true;
-  var q = query.toLowerCase();
-  if (lot.toLowerCase().indexOf(q) !== -1) return true;
-  var meta = STATE.lotMeta[lot];
-  if (meta && meta.itemName && meta.itemName.toLowerCase().indexOf(q) !== -1) return true;
-  return !!(meta && meta.remark && meta.remark.toLowerCase().indexOf(q) !== -1);
+/* 5-C: 검색어 기반 Lot 필터 — lq 는 이미 toLowerCase() 된 값 */
+function matchLot(lot, lq) {
+  if (!lq) return true;
+  var cached = STATE.lotSearchIndex[lot];
+  return cached !== undefined
+    ? cached.indexOf(lq) !== -1
+    : lot.toLowerCase().indexOf(lq) !== -1;
 }
 
 /* 5-D: 단계 그룹 목록 렌더링 */
@@ -579,6 +586,8 @@ function renderLotGroups(query) {
   var listEl  = document.getElementById('lot-list');
   var countEl = document.getElementById('lot-count');
   listEl.innerHTML = '';
+
+  var lq = query ? query.toLowerCase() : ''; // 한 번만 계산해서 matchLot에 전달
 
   var stageIdxs = getSortedStageIdxs();
   // 단계 필터 적용
@@ -591,7 +600,7 @@ function renderLotGroups(query) {
 
   stageIdxs.forEach(function(si) {
     var lots = Object.keys(STATE.lotMeta)
-      .filter(function(l) { return STATE.lotStage[l] === si && matchLot(l, query); })
+      .filter(function(l) { return STATE.lotStage[l] === si && matchLot(l, lq); })
       .sort(function(a, b) { return b.localeCompare(a); });
     if (lots.length === 0) return;
     total += lots.length;
@@ -601,7 +610,7 @@ function renderLotGroups(query) {
     hdr.className = 'stage-group-header';
 
     // 검색 중이거나 필터 단일 단계이거나 첫 그룹이면 펼침, 나머지는 기본 접힘
-    var startOpen = firstGroup || !!query || STATE.filterStage !== null;
+    var startOpen = firstGroup || !!lq || STATE.filterStage !== null;
     firstGroup = false;
 
     hdr.innerHTML =
@@ -729,14 +738,14 @@ function collectRelatedLots(startLot, dir) {
    edges: { from: 완제품_side, to: 원료_side } 형식 유지
 */
 function collectFullChain(startLot) {
-  var nodes = new Set([startLot]);
-  var edgeSeen = {};
-  var edges = [];
-  var MAX   = 100;
+  var nodes   = new Set([startLot]);
+  var edgeSet = new Set();
+  var edges   = [];
+  var MAX     = 100;
 
   function pushEdge(from, to) {
     var k = from + '\u2192' + to;
-    if (!edgeSeen[k]) { edgeSeen[k] = true; edges.push({ from: from, to: to }); }
+    if (!edgeSet.has(k)) { edgeSet.add(k); edges.push({ from: from, to: to }); }
   }
 
   /* ① Backward BFS — byOutputLot (완제품→원료) */

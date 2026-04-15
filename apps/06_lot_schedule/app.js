@@ -34,8 +34,20 @@ window._cachedResults = {}; // {lotId: {savedAt, ivl, lt}}
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var today    = new Date();
-var curYear  = today.getFullYear();
-var curMonth = today.getMonth(); // 0-indexed
+var curYear, curMonth;
+(function () {
+  var saved = localStorage.getItem('qa_lot_schedule_month');
+  if (saved) {
+    var p = saved.split('-');
+    var y = parseInt(p[0], 10);
+    var m = parseInt(p[1], 10);
+    if (!isNaN(y) && !isNaN(m) && m >= 0 && m <= 11) {
+      curYear = y; curMonth = m; return;
+    }
+  }
+  curYear  = today.getFullYear();
+  curMonth = today.getMonth(); // 0-indexed
+}());
 
 /* ── 날짜 유틸 ───────────────────────────────────────────────────────── */
 function toDateStr(d) {
@@ -72,26 +84,70 @@ function loadItems() {
   return window._cachedItems || [];
 }
 
+/* 배열 → {id: item} 객체 변환 헬퍼 */
+function _arrToObj(items) {
+  var obj = {};
+  items.forEach(function (it) { if (it && it.id) obj[it.id] = it; });
+  return obj;
+}
+
+/* 대량 저장 (메일 일괄 등록 등) — 전체를 객체 포맷으로 덮어씀 */
 function saveItems(items) {
-  window._cachedItems = items;
-  DB_REF.set(items.length ? items : null);
+  window._cachedItems = items.slice();
+  DB_REF.set(items.length ? _arrToObj(items) : null);
+}
+
+/* 단건 추가 */
+function addItem(item) {
+  window._cachedItems = (window._cachedItems || []).concat([item]);
+  DB_REF.child(item.id).set(item);
+}
+
+/* 단건 부분 업데이트 — patch 에 포함되지 않은 필드는 Firebase에서 유지 */
+function updateItem(id, patch) {
+  var arr = window._cachedItems || [];
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i].id === id) { window._cachedItems[i] = Object.assign({}, arr[i], patch); break; }
+  }
+  DB_REF.child(id).update(patch);
+}
+
+/* 단건 삭제 */
+function removeItem(id) {
+  window._cachedItems = (window._cachedItems || []).filter(function (it) { return it.id !== id; });
+  DB_REF.child(id).remove();
 }
 
 /* ── 실시간 동기화 ───────────────────────────────────────────────────── */
 function setupRealtimeSync() {
-  // Firebase가 비어있으면 localStorage 기존 데이터로 마이그레이션
   DB_REF.once('value', function (snap) {
-    if (snap.val() === null) {
+    var data = snap.val();
+
+    if (data === null) {
+      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
       var legacy = [];
       try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
-      if (legacy.length > 0) {
-        DB_REF.set(legacy);
-      }
+      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
+
+    } else if (Array.isArray(data)) {
+      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
+      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
+      DB_REF.set(_arrToObj(data.filter(Boolean)));
+      // 마이그레이션 후 리스너가 새 데이터를 자동 수신하므로 별도 처리 불필요
     }
+
     // 실시간 구독 시작 (변경 즉시 재렌더)
     DB_REF.on('value', function (s) {
-      var data = s.val();
-      window._cachedItems = Array.isArray(data) ? data : [];
+      var val = s.val();
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        // 정상 객체 포맷 — 값 배열로 변환
+        window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
+      } else if (Array.isArray(val)) {
+        // 마이그레이션 직전 순간 혹은 예외 상황 대비
+        window._cachedItems = val.filter(Boolean);
+      } else {
+        window._cachedItems = [];
+      }
       renderCalendar();
     });
   });
@@ -250,6 +306,7 @@ function renderSummary(items) {
 var MAX_CARDS = 3; // 셀당 최대 표시 카드 수
 
 function renderCalendar() {
+  localStorage.setItem('qa_lot_schedule_month', curYear + '-' + curMonth);
   updateTitle();
   var grid  = document.getElementById('calGrid');
   grid.innerHTML = '';
@@ -551,16 +608,28 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
     return;
   }
 
-  var items  = loadItems();
+  // 날짜 상호 검증
+  if (fd.evalStart && fd.evalStart < fd.transferDate) {
+    alert('소자평가 시작일은 이관일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalStart').focus();
+    return;
+  }
+  if (fd.evalTarget && fd.evalStart && fd.evalTarget < fd.evalStart) {
+    alert('완료 요청일은 평가 시작일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalTarget').focus();
+    return;
+  }
+  if (fd.evalTarget && !fd.evalStart && fd.evalTarget < fd.transferDate) {
+    alert('완료 요청일은 이관일보다 빠를 수 없습니다.');
+    document.getElementById('fEvalTarget').focus();
+    return;
+  }
+
   var editId = document.getElementById('fEditId').value;
 
   if (editId) {
-    // ── 수정 ──
-    var idx = items.findIndex(function (it) { return it.id === editId; });
-    if (idx !== -1) {
-      // completed / completedAt 은 유지
-      items[idx] = Object.assign(items[idx], fd);
-    }
+    // ── 수정 — completed/completedAt 은 유지되므로 patch 만 전송 ──
+    updateItem(editId, fd);
   } else {
     // ── 신규 등록 ──
     var newItem = Object.assign(fd, {
@@ -569,7 +638,7 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
       completedAt: null,
       createdAt:   getTodayStr(),
     });
-    items.push(newItem);
+    addItem(newItem);
 
     // 등록된 달로 이동
     var d = new Date(fd.transferDate + 'T00:00:00');
@@ -579,7 +648,6 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
     }
   }
 
-  saveItems(items);
   resetForm();
   closeIndivPopup();
   renderCalendar();
@@ -1133,20 +1201,32 @@ function editInModal(itemId, cardEl) {
   btnSave.className = 'btn btn-primary btn-sm';
   btnSave.textContent = '저장';
   btnSave.addEventListener('click', function () {
-    var all = loadItems();
-    var idx = -1;
-    for (var i = 0; i < all.length; i++) { if (all[i].id === itemId) { idx = i; break; } }
-    if (idx === -1) return;
-    all[idx].material    = inpMat.value.trim();
-    all[idx].lot         = inpLot.value.trim();
-    all[idx].request     = inpReq.value.trim();
-    all[idx].transferDate = dTf.i.value;
-    all[idx].evalStart   = dEs.i.value;
-    all[idx].evalTarget  = dEt.i.value;
-    all[idx].urgent      = ckUrg.checked;
-    saveItems(all);
+    var patch = {
+      material:     inpMat.value.trim(),
+      lot:          inpLot.value.trim(),
+      request:      inpReq.value.trim(),
+      transferDate: dTf.i.value,
+      evalStart:    dEs.i.value,
+      evalTarget:   dEt.i.value,
+      urgent:       ckUrg.checked,
+    };
+    // 날짜 상호 검증
+    if (patch.evalStart && patch.evalStart < patch.transferDate) {
+      alert('소자평가 시작일은 이관일보다 빠를 수 없습니다.');
+      dEs.i.focus(); return;
+    }
+    if (patch.evalTarget && patch.evalStart && patch.evalTarget < patch.evalStart) {
+      alert('완료 요청일은 평가 시작일보다 빠를 수 없습니다.');
+      dEt.i.focus(); return;
+    }
+    if (patch.evalTarget && !patch.evalStart && patch.evalTarget < patch.transferDate) {
+      alert('완료 요청일은 이관일보다 빠를 수 없습니다.');
+      dEt.i.focus(); return;
+    }
+    updateItem(itemId, patch);
     renderCalendar();
-    if (parent) parent.replaceChild(buildDetailCard(all[idx]), form);
+    var updated = loadItems().find(function (it) { return it.id === itemId; });
+    if (parent && updated) parent.replaceChild(buildDetailCard(updated), form);
   });
 
   var btnCancel = document.createElement('button');
@@ -1166,8 +1246,7 @@ function editInModal(itemId, cardEl) {
 /* ── 삭제 ────────────────────────────────────────────────────────────── */
 function deleteItem(id) {
   if (!confirm('이 항목을 삭제하시겠습니까?')) return;
-  var items = loadItems().filter(function (it) { return it.id !== id; });
-  saveItems(items);
+  removeItem(id);
   renderCalendar();
   refreshModal();
 }
@@ -1379,23 +1458,13 @@ window.addEventListener('message', function(e) {
 });
 
 function markComplete(id) {
-  var items = loadItems();
-  var item  = items.find(function (it) { return it.id === id; });
-  if (!item) return;
-  item.completed   = true;
-  item.completedAt = getTodayStr();
-  saveItems(items);
+  updateItem(id, { completed: true, completedAt: getTodayStr() });
   renderCalendar();
   refreshModal();
 }
 
 function markUncomplete(id) {
-  var items = loadItems();
-  var item  = items.find(function (it) { return it.id === id; });
-  if (!item) return;
-  item.completed   = false;
-  item.completedAt = null;
-  saveItems(items);
+  updateItem(id, { completed: false, completedAt: null });
   renderCalendar();
   refreshModal();
 }
@@ -1959,9 +2028,7 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
 
   if (!toAdd.length) { alert('날짜와 품명이 있는 선택 항목이 없습니다.'); return; }
 
-  var items = loadItems();
-  toAdd.forEach(function (it) { items.push(it); });
-  saveItems(items);
+  toAdd.forEach(function (it) { addItem(it); });
 
   var d = new Date(toAdd[0].transferDate + 'T00:00:00');
   if (!isNaN(d)) { curYear = d.getFullYear(); curMonth = d.getMonth(); }
