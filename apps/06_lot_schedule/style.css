@@ -419,15 +419,9 @@ html, body {
 
 /* 시급 요청 카드 강조 */
 .lot-card.is-urgent {
-  border-width: 2px !important;
   border-style: dashed !important;
   border-left-style: solid !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
 }
-/* 왼쪽 굵은 바는 부서 색 유지 */
-.lot-card.dept-synth.is-urgent  { border-left-color: #ef4444 !important; }
-.lot-card.dept-refine.is-urgent { border-left-color: #9333ea !important; }
 
 /* ── D+N 뱃지 ────────────────────────────────────────────────────────── */
 .dn-badge {
@@ -764,7 +758,7 @@ textarea.form-input {
 .detail-card.is-done { opacity: 0.6; }
 .detail-card.is-urgent {
   border: 2px solid #f59e0b;
-  box-shadow: 0 0 0 1px rgba(245,158,11,0.25);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
 }
 
 /* 메인 행: D+N 왼쪽 | 정보 오른쪽 */
