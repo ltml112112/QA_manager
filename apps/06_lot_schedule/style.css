@@ -736,9 +736,37 @@ textarea.form-input {
   padding-bottom: 6px;
   border-bottom: 2px solid currentColor;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .modal-col-hd.hd-synth  { color: #ef4444; }
 .modal-col-hd.hd-refine { color: #9333ea; }
+
+/* 오늘 등록 필터 토글 버튼 */
+.today-filter-btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 99px;
+  border: 1.5px solid #9333ea;
+  background: transparent;
+  color: #9333ea;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.today-filter-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.today-filter-btn.is-on {
+  background: #9333ea;
+  color: #fff;
+}
 @media (max-width: 580px) {
   .modal-2col { flex-direction: column; }
   .modal-col + .modal-col { border-left: none; border-top: 1px solid var(--border); }
