@@ -839,7 +839,7 @@ var DB_REF = db.ref('hplc_reports');    // 03번 앱
 #### 결과 저장 구조
 
 ```javascript
-// Firebase: lot_schedule_results/{lotId}
+// Firebase: oled_results/{lotId}
 {
   savedAt: 'YYYY-MM-DD',
   ivl: {
@@ -858,7 +858,7 @@ var DB_REF = db.ref('hplc_reports');    // 03번 앱
 }
 ```
 
-> 저장 경로: `firebase.database().ref('lot_schedule_results')` (별도 경로, lot_schedule와 분리)  
+> 저장 경로: `firebase.database().ref('oled_results')` (별도 경로, lot_schedule와 분리)  
 > 구 포맷(level/refHr/sampleHr/pct 단일값)도 backward compat으로 지원
 
 #### 팝업 흐름
@@ -1001,7 +1001,7 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | 함수 | 역할 |
 |------|------|
 | `loadItems()` / `saveItems(items)` | Firebase 캐시 반환 / Firebase 저장 (전체 덮어쓰기) |
-| `loadResult(lotId)` / `saveResult(lotId, data)` | OLED 결과 로드 / Firebase 저장 (`lot_schedule_results/`) |
+| `loadResult(lotId)` / `saveResult(lotId, data)` | OLED 결과 로드 / Firebase 저장 (`oled_results/`) |
 | `deleteResult(lotId)` | OLED 결과 삭제 |
 | `openResultPopup(lotId, item)` | OLED 결과 입력 팝업 (iframe `?embed=1`) |
 | `closeResultPopup()` | 결과 입력 팝업 닫기 + iframe src 초기화 |

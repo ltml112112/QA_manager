@@ -160,6 +160,17 @@ const apps = [
     loaderText:  '시스템 문서 & SOP 로딩 중...',
     locked:      true,
   },
+  {
+    id:          'calibration',
+    group:       '문서 관리',
+    label:       '측정기기 교정 일정',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/15_calibration/index.html',
+    loaderText:  '측정기기 교정 일정 로딩 중...',
+    locked:      true,
+    wip:         true,
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
