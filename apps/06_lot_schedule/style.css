@@ -422,7 +422,12 @@ html, body {
   border-width: 2px !important;
   border-style: dashed !important;
   border-left-style: solid !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
 }
+/* 왼쪽 굵은 바는 부서 색 유지 */
+.lot-card.dept-synth.is-urgent  { border-left-color: #ef4444 !important; }
+.lot-card.dept-refine.is-urgent { border-left-color: #9333ea !important; }
 
 /* ── D+N 뱃지 ────────────────────────────────────────────────────────── */
 .dn-badge {
