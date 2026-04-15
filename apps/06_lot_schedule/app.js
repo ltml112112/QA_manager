@@ -1210,6 +1210,19 @@ function editInModal(itemId, cardEl) {
       evalTarget:   dEt.i.value,
       urgent:       ckUrg.checked,
     };
+    // 날짜 상호 검증
+    if (patch.evalStart && patch.evalStart < patch.transferDate) {
+      alert('소자평가 시작일은 이관일보다 빠를 수 없습니다.');
+      dEs.i.focus(); return;
+    }
+    if (patch.evalTarget && patch.evalStart && patch.evalTarget < patch.evalStart) {
+      alert('완료 요청일은 평가 시작일보다 빠를 수 없습니다.');
+      dEt.i.focus(); return;
+    }
+    if (patch.evalTarget && !patch.evalStart && patch.evalTarget < patch.transferDate) {
+      alert('완료 요청일은 이관일보다 빠를 수 없습니다.');
+      dEt.i.focus(); return;
+    }
     updateItem(itemId, patch);
     renderCalendar();
     var updated = loadItems().find(function (it) { return it.id === itemId; });
