@@ -889,10 +889,34 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
 
   var rCol = document.createElement('div');
   rCol.className = 'modal-col';
+
   var rHd = document.createElement('div');
   rHd.className = 'modal-col-hd hd-refine';
-  rHd.textContent = '정제생산/소자이관 ' + refine.length + '건';
+
+  var rHdText = document.createElement('span');
+  rHdText.textContent = '정제생산/소자이관 ' + refine.length + '건';
+  rHd.appendChild(rHdText);
+
+  // 이관일 필터 토글 (클릭한 날짜 기준)
+  var _filterDate    = asOf || getTodayStr();
+  var _filterCount   = refine.filter(function (it) { return it.transferDate === _filterDate; }).length;
+  var _filterActive  = false;
+  var todayToggleBtn = document.createElement('button');
+  todayToggleBtn.className   = 'today-filter-btn';
+  todayToggleBtn.textContent = '이관일 ' + _filterCount + '건';
+  todayToggleBtn.title       = '이 날짜가 이관일인 항목만 보기';
+  if (!_filterCount) todayToggleBtn.disabled = true;
+  todayToggleBtn.addEventListener('click', function () {
+    _filterActive = !_filterActive;
+    todayToggleBtn.classList.toggle('is-on', _filterActive);
+    rCol.querySelectorAll('.detail-card').forEach(function (card) {
+      card.style.display = (!_filterActive || card.dataset.transfer === _filterDate) ? '' : 'none';
+    });
+    rHdText.textContent = '정제생산/소자이관 ' + (_filterActive ? _filterCount : refine.length) + '건';
+  });
+  rHd.appendChild(todayToggleBtn);
   rCol.appendChild(rHd);
+
   if (refine.length) {
     refine.forEach(function (it) { rCol.appendChild(buildDetailCard(it, asOf)); });
   } else {
@@ -911,7 +935,8 @@ function renderBodyTwoCols(bodyEl, allItems, asOf) {
 function buildDetailCard(item, asOf) {
   var wrap = document.createElement('div');
   wrap.className = 'detail-card' + (item.completed ? ' is-done' : '') + (item.urgent && !item.completed ? ' is-urgent' : '');
-  wrap.dataset.id = item.id;
+  wrap.dataset.id       = item.id;
+  wrap.dataset.transfer = item.transferDate || '';
 
   // ── 메인 행 ──
   var main = document.createElement('div');
