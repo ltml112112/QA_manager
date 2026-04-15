@@ -1273,6 +1273,7 @@ function editInModal(itemId, cardEl) {
 function deleteItem(id) {
   if (!confirm('이 항목을 삭제하시겠습니까?')) return;
   removeItem(id);
+  RESULT_REF.child(id).remove();
   renderCalendar();
   refreshModal();
 }
