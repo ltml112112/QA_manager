@@ -179,6 +179,8 @@ function _isGroupHiddenForRole(groupName, isAdmin) {
 function renderApps(role) {
   var nav       = document.querySelector('.tab-nav');
   var frameArea = document.querySelector('.frame-area');
+  // 이미 렌더링된 경우 중복 방지 (initPortal이 두 번 호출되어도 탭이 두 배가 되지 않음)
+  if (nav.querySelector('.tab-btn')) return;
   var isAdmin   = (role === 'admin');
   var firstVisible = true;
   var lastGroup = null;

@@ -239,7 +239,9 @@
 
   firebase.initializeApp(firebaseConfig);
   var auth = firebase.auth();
-  var db   = firebase.database();
+  // firebase-database-compat.js 로드 실패 등을 대비해 try-catch
+  var db;
+  try { db = firebase.database(); } catch (e) { db = null; }
 
   // 포털이 이미 초기화됐는지 추적 — 토큰 갱신 등으로 onAuthStateChanged가
   // 여러 번 발화해도 renderApps가 중복 호출되지 않도록 방지
@@ -362,10 +364,28 @@
     }
 
     /* ④ 인증 완료 — 역할 조회 & 자동 배정 */
-    var userRef  = db.ref('portal_users/' + user.uid);
     var userEmail = user.email;
 
+    // DB를 사용할 수 없으면 기본 역할로 바로 열기
+    if (!db) {
+      var fallbackRole = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+      openPortal(fallbackRole, userEmail);
+      return;
+    }
+
+    var userRef = db.ref('portal_users/' + user.uid);
+
+    // Firebase RTDB WebSocket 연결 실패 시 promise가 영원히 pending될 수 있음
+    // → 5초 타임아웃으로 강제 진입
+    var _dbTimer = setTimeout(function () {
+      if (!_portalReady) {
+        var role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+        openPortal(role, userEmail);
+      }
+    }, 5000);
+
     userRef.once('value').then(function (snap) {
+      clearTimeout(_dbTimer);
       if (_portalReady) return;  // DB 응답 오기 전 중복 발화 방어
 
       var data = snap.val();
@@ -378,7 +398,8 @@
 
       openPortal(role, userEmail);
     }).catch(function () {
-      // DB 조회 실패 시 기본 역할로 포털 열기 (스피너가 무한 대기하지 않도록)
+      // DB 조회 실패(권한 거부 등) 시 기본 역할로 포털 열기
+      clearTimeout(_dbTimer);
       if (_portalReady) return;
       var role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
       openPortal(role, userEmail);
