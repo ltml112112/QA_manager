@@ -33,6 +33,8 @@
 ```
 QA_manager/
 ├── index.html                        # 포털 허브 (shell only — 탭/iframe은 JS가 생성)
+├── login.html                        # 로그인 페이지 (Firebase Auth)
+├── register.html                     # 회원가입 페이지 (@ltml.co.kr 전용)
 ├── LT소재 로고(영문).jpg              # 원본 로고 (하위 호환용)
 ├── assets/
 │   ├── img/
@@ -40,7 +42,8 @@ QA_manager/
 │   ├── css/
 │   │   └── global_style.css          # 전체 디자인 시스템 (CSS 변수·컴포넌트·레이아웃)
 │   └── js/
-│       └── main.js                   # 탭·iframe 동적 렌더링 + 테마 관리
+│       ├── main.js                   # 탭·iframe 동적 렌더링 + 역할 기반 탭 제어
+│       └── auth_guard.js             # 앱별 직접 URL 접근 차단 (인증 게이트)
 └── apps/
     ├── 01_oled_ivl_lt/
     │   └── index.html                # OLED IVL & LT 분석기 [소자평가]
