@@ -26,6 +26,25 @@ var _db         = firebase.database();
 var DB_REF      = _db.ref('lot_schedule');
 var RESULT_REF  = _db.ref('oled_results');  // {lotId: {savedAt, ivl, lt}}
 
+/* ── 현재 로그인 사용자 추적 (감사 추적용) ───────────────────────────── */
+var _currentUser = null;
+firebase.auth().onAuthStateChanged(function (u) { _currentUser = u; });
+
+/** 현재 사용자 정보를 감사 추적 객체로 반환 */
+function _byInfo() {
+  if (!_currentUser) return null;
+  return { email: _currentUser.email, at: Date.now() };
+}
+
+/** 타임스탬프(ms) → 'YYYY-MM-DD' 형식 */
+function _fmtAt(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
+}
+
 /* ── 상수 ────────────────────────────────────────────────────────────── */
 var STORAGE_KEY  = 'qa_lot_schedule_v1';
 
@@ -630,14 +649,18 @@ document.getElementById('scheduleForm').addEventListener('submit', function (e) 
 
   if (editId) {
     // ── 수정 — completed/completedAt 은 유지되므로 patch 만 전송 ──
+    fd.updatedBy = _byInfo();
     updateItem(editId, fd);
   } else {
     // ── 신규 등록 ──
+    var _by = _byInfo();
     var newItem = Object.assign(fd, {
       id:          genId(),
       completed:   false,
       completedAt: null,
       createdAt:   getTodayStr(),
+      createdBy:   _by,
+      updatedBy:   _by,
     });
     addItem(newItem);
 
@@ -1143,6 +1166,28 @@ function buildDetailCard(item, asOf) {
     wrap.appendChild(badge);
   }
 
+  // ── 감사 추적 (등록자 / 최종 수정자) ─────────────────────────────────
+  var hasCreated = item.createdBy && item.createdBy.email;
+  var hasUpdated = item.updatedBy && item.updatedBy.email
+    && !(hasCreated && item.updatedBy.at === item.createdBy.at); // 등록과 동일하면 생략
+  if (hasCreated || hasUpdated) {
+    var auditEl = document.createElement('div');
+    auditEl.style.cssText = [
+      'font-size:10px', 'color:var(--text-muted)', 'padding:6px 10px 4px',
+      'border-top:1px solid var(--border)', 'line-height:1.7',
+      'opacity:0.75',
+    ].join(';');
+    var parts = [];
+    if (hasCreated) {
+      parts.push('등록 ' + item.createdBy.email + ' (' + _fmtAt(item.createdBy.at) + ')');
+    }
+    if (hasUpdated) {
+      parts.push('수정 ' + item.updatedBy.email + ' (' + _fmtAt(item.updatedBy.at) + ')');
+    }
+    auditEl.textContent = parts.join('  |  ');
+    wrap.appendChild(auditEl);
+  }
+
   return wrap;
 }
 
@@ -1249,6 +1294,7 @@ function editInModal(itemId, cardEl) {
       alert('완료 요청일은 이관일보다 빠를 수 없습니다.');
       dEt.i.focus(); return;
     }
+    patch.updatedBy = _byInfo();
     updateItem(itemId, patch);
     renderCalendar();
     var updated = loadItems().find(function (it) { return it.id === itemId; });
@@ -1485,13 +1531,13 @@ window.addEventListener('message', function(e) {
 });
 
 function markComplete(id) {
-  updateItem(id, { completed: true, completedAt: getTodayStr() });
+  updateItem(id, { completed: true, completedAt: getTodayStr(), updatedBy: _byInfo() });
   renderCalendar();
   refreshModal();
 }
 
 function markUncomplete(id) {
-  updateItem(id, { completed: false, completedAt: null });
+  updateItem(id, { completed: false, completedAt: null, updatedBy: _byInfo() });
   renderCalendar();
   refreshModal();
 }
@@ -2037,6 +2083,7 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
     var cmtVal  = tr.querySelector('.mp-comment').value.trim();
     var urgVal  = tr.querySelector('.mp-urgent') ? tr.querySelector('.mp-urgent').checked : false;
     if (!dateVal || !matVal) return;
+    var _by2 = _byInfo();
     toAdd.push({
       id:           genId(),
       dept:         dept,
@@ -2050,6 +2097,8 @@ document.getElementById('btnMailGridImport').addEventListener('click', function 
       completed:    false,
       completedAt:  null,
       createdAt:    getTodayStr(),
+      createdBy:    _by2,
+      updatedBy:    _by2,
     });
   });
 

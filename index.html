@@ -8,8 +8,183 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./assets/css/global_style.css">
+<style>
+/* ── 인증 게이트 오버레이 ─────────────────────────────────────────── */
+#auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--portal-bg);
+  gap: 14px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+#auth-gate .ag-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--portal-border);
+  border-top-color: var(--portal-accent);
+  border-radius: 50%;
+  animation: ag-spin 0.8s linear infinite;
+}
+#auth-gate .ag-text {
+  font-size: 12px;
+  color: var(--portal-text-muted);
+}
+/* 인증 미완료 / 접근 불가 안내 카드 */
+#auth-gate .ag-card {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 16px;
+  padding: 32px 32px 28px;
+  width: 340px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#auth-gate .ag-card-icon { font-size: 36px; }
+#auth-gate .ag-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--portal-text);
+}
+#auth-gate .ag-card-msg {
+  font-size: 13px;
+  color: var(--portal-text-muted);
+  line-height: 1.6;
+}
+#auth-gate .ag-card-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--portal-accent);
+  word-break: break-all;
+}
+#auth-gate .ag-card-note {
+  font-size: 11px;
+  color: var(--portal-text-faint);
+  background: var(--portal-surface-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  line-height: 1.6;
+}
+#auth-gate .ag-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+#auth-gate .ag-btn {
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+#auth-gate .ag-btn-primary {
+  background: var(--portal-accent);
+  color: #fff;
+  border: none;
+}
+#auth-gate .ag-btn-primary:hover { background: var(--portal-accent-hover); }
+#auth-gate .ag-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+#auth-gate .ag-btn-ghost {
+  background: transparent;
+  color: var(--portal-text-muted);
+  border: 1px solid var(--portal-border);
+}
+#auth-gate .ag-btn-ghost:hover {
+  background: var(--portal-surface-2);
+  color: var(--portal-text);
+}
+@keyframes ag-spin { to { transform: rotate(360deg); } }
+
+/* ── 사이드바 하단 사용자 영역 ───────────────────────────────────── */
+.sidebar-footer {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 0 !important;
+}
+.footer-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 8px;
+}
+.user-footer {
+  border-top: 1px solid var(--portal-border);
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.user-info-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.user-role-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+.user-role-badge.role-admin {
+  background: var(--portal-accent);
+  color: #fff;
+}
+.user-role-badge.role-user {
+  background: var(--portal-surface-2);
+  color: var(--portal-text-muted);
+  border: 1px solid var(--portal-border);
+}
+.user-email-text {
+  font-size: 11px;
+  color: var(--portal-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.logout-btn {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--portal-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--portal-text-muted);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  text-align: center;
+}
+.logout-btn:hover {
+  background: var(--portal-surface-2);
+  color: var(--portal-text);
+  border-color: var(--portal-text-muted);
+}
+</style>
 </head>
 <body>
+
+<!-- 인증 게이트 — Firebase Auth 확인 전까지 콘텐츠를 가림 -->
+<div id="auth-gate">
+  <div class="ag-spinner"></div>
+  <div class="ag-text">인증 확인 중...</div>
+</div>
 
 <div class="sidebar">
   <div class="sidebar-header">
@@ -26,7 +201,16 @@
     <!-- main.js가 동적으로 탭 버튼을 삽입합니다 -->
   </nav>
   <div class="sidebar-footer">
-    <div class="status"><div class="status-dot"></div>가동 중</div>
+    <div class="footer-status-row">
+      <div class="status"><div class="status-dot"></div>가동 중</div>
+    </div>
+    <div class="user-footer" id="userFooter" style="display:none;">
+      <div class="user-info-row">
+        <span class="user-role-badge" id="userRoleBadge"></span>
+        <span class="user-email-text" id="userEmailText"></span>
+      </div>
+      <button class="logout-btn" id="logoutBtn">로그아웃</button>
+    </div>
   </div>
 </div>
 
@@ -34,6 +218,152 @@
   <!-- main.js가 동적으로 frame-wrap + iframe을 삽입합니다 -->
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
+    authDomain:        'qa-manager-9c145.firebaseapp.com',
+    databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId:         'qa-manager-9c145',
+    storageBucket:     'qa-manager-9c145.firebasestorage.app',
+    messagingSenderId: '1037146076792',
+    appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
+  };
+
+  var ALLOWED_DOMAIN  = '@ltml.co.kr';
+  var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr']; // 이 이메일로 첫 로그인 시 자동으로 admin 역할 부여
+
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db   = firebase.database();
+
+  /* 인증 게이트 → 안내 카드로 교체 */
+  function showAuthCard(icon, title, msg, emailStr, noteLines, buttons) {
+    var gate = document.getElementById('auth-gate');
+    var html = '<div class="ag-card">'
+      + '<div class="ag-card-icon">' + icon + '</div>'
+      + '<div class="ag-card-title">' + title + '</div>'
+      + '<div class="ag-card-msg">' + msg + '</div>';
+    if (emailStr) html += '<div class="ag-card-email">' + emailStr + '</div>';
+    if (noteLines && noteLines.length) {
+      html += '<div class="ag-card-note">' + noteLines.join('<br>') + '</div>';
+    }
+    html += '<div class="ag-btn-row">';
+    buttons.forEach(function (b) {
+      html += '<button class="ag-btn ' + b.cls + '" id="' + b.id + '"'
+        + (b.disabled ? ' disabled' : '') + '>' + b.label + '</button>';
+    });
+    html += '</div></div>';
+    gate.innerHTML = html;
+  }
+
+  auth.onAuthStateChanged(function (user) {
+    /* ① 미로그인 */
+    if (!user) {
+      window.location.replace('./login.html');
+      return;
+    }
+
+    var email = (user.email || '').toLowerCase();
+
+    /* ② 도메인 검증 — @ltml.co.kr 이 아닌 계정 차단 */
+    if (!email.endsWith(ALLOWED_DOMAIN)) {
+      showAuthCard(
+        '🚫', '접근 권한 없음',
+        '회사 이메일(@ltml.co.kr)로만<br>접근할 수 있습니다.',
+        user.email,
+        ['· 개인 이메일 계정으로는 접근 불가'],
+        [{ id: 'agSignout', cls: 'ag-btn-ghost', label: '로그아웃' }]
+      );
+      document.getElementById('agSignout').addEventListener('click', function () {
+        auth.signOut().then(function () { window.location.replace('./login.html'); });
+      });
+      return;
+    }
+
+    /* ③ 이메일 인증 미완료 */
+    if (!user.emailVerified) {
+      showAuthCard(
+        '✉️', '이메일 인증이 필요합니다',
+        '가입 시 발송된 인증 메일의<br>링크를 클릭하면 자동으로 접근됩니다.',
+        user.email,
+        [
+          '· 스팸 메일함도 확인해 보세요',
+          '· 인증 후 이 페이지를 새로고침하세요',
+        ],
+        [
+          { id: 'agResend',  cls: 'ag-btn-primary', label: '인증 메일 재발송' },
+          { id: 'agRefresh', cls: 'ag-btn-ghost',   label: '새로고침 (인증 완료 후)' },
+          { id: 'agSignout', cls: 'ag-btn-ghost',   label: '로그아웃' },
+        ]
+      );
+      document.getElementById('agResend').addEventListener('click', function () {
+        var btn = document.getElementById('agResend');
+        btn.disabled    = true;
+        btn.textContent = '발송 중...';
+        user.sendEmailVerification().then(function () {
+          btn.textContent = '재발송 완료 ✓';
+          setTimeout(function () {
+            btn.disabled    = false;
+            btn.textContent = '인증 메일 재발송';
+          }, 5000);
+        }).catch(function () {
+          btn.disabled    = false;
+          btn.textContent = '재발송 실패 — 다시 시도';
+        });
+      });
+      document.getElementById('agRefresh').addEventListener('click', function () {
+        user.reload().then(function () { window.location.reload(); });
+      });
+      document.getElementById('agSignout').addEventListener('click', function () {
+        auth.signOut().then(function () { window.location.replace('./login.html'); });
+      });
+      return;
+    }
+
+    /* ④ 인증 완료 — 역할 조회 & 자동 배정 */
+    var userRef = db.ref('portal_users/' + user.uid);
+    userRef.once('value').then(function (snap) {
+      var data = snap.val();
+      var role = data && data.role;
+
+      if (!role) {
+        // 첫 로그인: 역할 자동 배정
+        role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+        userRef.set({ role: role, email: user.email, createdAt: Date.now() });
+      }
+
+      // 사이드바 사용자 정보 표시
+      document.getElementById('userEmailText').textContent = user.email;
+      var badge = document.getElementById('userRoleBadge');
+      if (role === 'admin') {
+        badge.textContent = '관리자';
+        badge.className   = 'user-role-badge role-admin';
+      } else {
+        badge.textContent = '사용자';
+        badge.className   = 'user-role-badge role-user';
+      }
+      document.getElementById('userFooter').style.display = '';
+
+      // 인증 게이트 제거 → 포털 초기화
+      document.getElementById('auth-gate').remove();
+      window.initPortal(role);
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    auth.signOut().then(function () {
+      window.location.replace('./login.html');
+    });
+  });
+})();
+</script>
+
+<!-- 포털 렌더러 (initPortal 함수 정의) -->
 <script src="./assets/js/main.js"></script>
 </body>
 </html>
