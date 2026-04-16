@@ -35,7 +35,6 @@ QA_manager/
 ├── index.html                        # 포털 허브 (shell only — 탭/iframe은 JS가 생성)
 ├── login.html                        # 로그인 페이지 (Firebase Auth)
 ├── register.html                     # 회원가입 페이지 (@ltml.co.kr 전용)
-├── LT소재 로고(영문).jpg              # 원본 로고 (하위 호환용)
 ├── assets/
 │   ├── img/
 │   │   └── lt_logo.jpg               # 포털 사이드바 로고
@@ -1110,19 +1109,15 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 
 1. **앱 수정 후 파일 저장 → 배포**만 하면 바로 반영됨 (base64 재인코딩 불필요)
 
-2. **로고 이미지 경로**
-   - 포털(`index.html`)에서: `./assets/img/lt_logo.jpg`
-   - 루트의 원본 `LT소재 로고(영문).jpg`는 하위 호환용으로 유지
+2. **로고 이미지 경로**: `./assets/img/lt_logo.jpg` (포털·로그인 공통)
 
 3. **`code.gs` 수정 시**: Google Apps Script 편집기에서 배포(새 버전)해야 반영됨
 
-4. **파일명에 한글·공백 포함** (`LT소재 로고(영문).jpg`) — 경로 처리 시 주의
-
-5. **앱에서 CSS 작성 시 중복 금지**: `:root` 변수, `* reset`, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등은 `global_style.css`가 이미 제공. 앱 고유 레이아웃만 `<style>`에 추가
+4. **앱에서 CSS 작성 시 중복 금지**: `:root` 변수, `* reset`, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등은 `global_style.css`가 이미 제공. 앱 고유 레이아웃만 `<style>`에 추가
    - **예외 — `02_lgd_eval/index.html`**: 이 앱은 GAS URL로 서빙되어 `global_style.css` 상대경로가 동작하지 않음. 인라인 `:root`·리셋·컴포넌트 CSS는 GAS 단독 실행 fallback으로 **의도적으로 유지**함
    - **브랜드 테마 변형 시 주의**: `global_style.css`의 색상 변수를 바꿔도 LGD 앱 GAS 화면에는 반영 안 됨. `apps/02_lgd_eval/index.html` 인라인 `:root` 변수도 **반드시 같이 수정**하고 GAS에 재배포해야 함
 
-6. **구형 변수명 호환**: `global_style.css` 섹션 3-C에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
+5. **구형 변수명 호환**: `global_style.css` 섹션 3-C에 각 앱이 기존에 쓰던 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등)이 alias로 정의되어 있음 — 기존 앱 코드를 수정하지 않아도 동작
 
 ---
 
