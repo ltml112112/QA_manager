@@ -20,6 +20,7 @@
   justify-content: center;
   background: var(--portal-bg);
   gap: 14px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 #auth-gate .ag-spinner {
   width: 30px;
@@ -32,6 +33,76 @@
 #auth-gate .ag-text {
   font-size: 12px;
   color: var(--portal-text-muted);
+}
+/* 인증 미완료 / 접근 불가 안내 카드 */
+#auth-gate .ag-card {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 16px;
+  padding: 32px 32px 28px;
+  width: 340px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#auth-gate .ag-card-icon { font-size: 36px; }
+#auth-gate .ag-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--portal-text);
+}
+#auth-gate .ag-card-msg {
+  font-size: 13px;
+  color: var(--portal-text-muted);
+  line-height: 1.6;
+}
+#auth-gate .ag-card-email {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--portal-accent);
+  word-break: break-all;
+}
+#auth-gate .ag-card-note {
+  font-size: 11px;
+  color: var(--portal-text-faint);
+  background: var(--portal-surface-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  line-height: 1.6;
+}
+#auth-gate .ag-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+#auth-gate .ag-btn {
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s;
+}
+#auth-gate .ag-btn-primary {
+  background: var(--portal-accent);
+  color: #fff;
+  border: none;
+}
+#auth-gate .ag-btn-primary:hover { background: var(--portal-accent-hover); }
+#auth-gate .ag-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+#auth-gate .ag-btn-ghost {
+  background: transparent;
+  color: var(--portal-text-muted);
+  border: 1px solid var(--portal-border);
+}
+#auth-gate .ag-btn-ghost:hover {
+  background: var(--portal-surface-2);
+  color: var(--portal-text);
 }
 @keyframes ag-spin { to { transform: rotate(360deg); } }
 
@@ -163,30 +234,118 @@
     appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
   };
 
+  var ALLOWED_DOMAIN  = '@ltml.co.kr';
+  var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr']; // 이 이메일로 첫 로그인 시 자동으로 admin 역할 부여
+
   firebase.initializeApp(firebaseConfig);
   var auth = firebase.auth();
   var db   = firebase.database();
 
+  /* 인증 게이트 → 안내 카드로 교체 */
+  function showAuthCard(icon, title, msg, emailStr, noteLines, buttons) {
+    var gate = document.getElementById('auth-gate');
+    var html = '<div class="ag-card">'
+      + '<div class="ag-card-icon">' + icon + '</div>'
+      + '<div class="ag-card-title">' + title + '</div>'
+      + '<div class="ag-card-msg">' + msg + '</div>';
+    if (emailStr) html += '<div class="ag-card-email">' + emailStr + '</div>';
+    if (noteLines && noteLines.length) {
+      html += '<div class="ag-card-note">' + noteLines.join('<br>') + '</div>';
+    }
+    html += '<div class="ag-btn-row">';
+    buttons.forEach(function (b) {
+      html += '<button class="ag-btn ' + b.cls + '" id="' + b.id + '"'
+        + (b.disabled ? ' disabled' : '') + '>' + b.label + '</button>';
+    });
+    html += '</div></div>';
+    gate.innerHTML = html;
+  }
+
   auth.onAuthStateChanged(function (user) {
+    /* ① 미로그인 */
     if (!user) {
-      // 미로그인 → 로그인 페이지로
       window.location.replace('./login.html');
       return;
     }
 
-    // 역할(role) 조회
-    db.ref('portal_users/' + user.uid + '/role').once('value').then(function (snap) {
-      var role = snap.val() || 'user';
+    var email = (user.email || '').toLowerCase();
+
+    /* ② 도메인 검증 — @ltml.co.kr 이 아닌 계정 차단 */
+    if (!email.endsWith(ALLOWED_DOMAIN)) {
+      showAuthCard(
+        '🚫', '접근 권한 없음',
+        '회사 이메일(@ltml.co.kr)로만<br>접근할 수 있습니다.',
+        user.email,
+        ['· 개인 이메일 계정으로는 접근 불가'],
+        [{ id: 'agSignout', cls: 'ag-btn-ghost', label: '로그아웃' }]
+      );
+      document.getElementById('agSignout').addEventListener('click', function () {
+        auth.signOut().then(function () { window.location.replace('./login.html'); });
+      });
+      return;
+    }
+
+    /* ③ 이메일 인증 미완료 */
+    if (!user.emailVerified) {
+      showAuthCard(
+        '✉️', '이메일 인증이 필요합니다',
+        '가입 시 발송된 인증 메일의<br>링크를 클릭하면 자동으로 접근됩니다.',
+        user.email,
+        [
+          '· 스팸 메일함도 확인해 보세요',
+          '· 인증 후 이 페이지를 새로고침하세요',
+        ],
+        [
+          { id: 'agResend',  cls: 'ag-btn-primary', label: '인증 메일 재발송' },
+          { id: 'agRefresh', cls: 'ag-btn-ghost',   label: '새로고침 (인증 완료 후)' },
+          { id: 'agSignout', cls: 'ag-btn-ghost',   label: '로그아웃' },
+        ]
+      );
+      document.getElementById('agResend').addEventListener('click', function () {
+        var btn = document.getElementById('agResend');
+        btn.disabled    = true;
+        btn.textContent = '발송 중...';
+        user.sendEmailVerification().then(function () {
+          btn.textContent = '재발송 완료 ✓';
+          setTimeout(function () {
+            btn.disabled    = false;
+            btn.textContent = '인증 메일 재발송';
+          }, 5000);
+        }).catch(function () {
+          btn.disabled    = false;
+          btn.textContent = '재발송 실패 — 다시 시도';
+        });
+      });
+      document.getElementById('agRefresh').addEventListener('click', function () {
+        user.reload().then(function () { window.location.reload(); });
+      });
+      document.getElementById('agSignout').addEventListener('click', function () {
+        auth.signOut().then(function () { window.location.replace('./login.html'); });
+      });
+      return;
+    }
+
+    /* ④ 인증 완료 — 역할 조회 & 자동 배정 */
+    var userRef = db.ref('portal_users/' + user.uid);
+    userRef.once('value').then(function (snap) {
+      var data = snap.val();
+      var role = data && data.role;
+
+      if (!role) {
+        // 첫 로그인: 역할 자동 배정
+        role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+        userRef.set({ role: role, email: user.email, createdAt: Date.now() });
+      }
 
       // 사이드바 사용자 정보 표시
       document.getElementById('userEmailText').textContent = user.email;
       var badge = document.getElementById('userRoleBadge');
       if (role === 'admin') {
-        badge.textContent  = '관리자';
-        badge.className    = 'user-role-badge role-admin';
+        badge.textContent = '관리자';
+        badge.className   = 'user-role-badge role-admin';
       } else {
-        badge.textContent  = '사용자';
-        badge.className    = 'user-role-badge role-user';
+        badge.textContent = '사용자';
+        badge.className   = 'user-role-badge role-user';
       }
       document.getElementById('userFooter').style.display = '';
 
