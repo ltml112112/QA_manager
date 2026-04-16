@@ -176,6 +176,43 @@
   color: var(--portal-text);
   border-color: var(--portal-text-muted);
 }
+/* ── 관리자 전용 — 게스트 뷰 토글 ───────────────────────────────── */
+.view-toggle-row {
+  padding: 0 14px 6px;
+}
+.view-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  border: 1px solid var(--portal-border);
+  background: transparent;
+  color: var(--portal-text-muted);
+}
+.view-toggle-btn:hover {
+  background: var(--portal-surface-2);
+  color: var(--portal-text);
+}
+.view-toggle-btn.guest-mode {
+  background: rgba(190, 0, 57, 0.07);
+  color: var(--portal-accent);
+  border-color: rgba(190, 0, 57, 0.35);
+}
+.view-toggle-btn.guest-mode:hover {
+  background: rgba(190, 0, 57, 0.13);
+}
+.user-role-badge.role-preview {
+  background: #f59e0b;
+  color: #fff;
+}
 </style>
 </head>
 <body>
@@ -208,6 +245,11 @@
       <div class="user-info-row">
         <span class="user-role-badge" id="userRoleBadge"></span>
         <span class="user-email-text" id="userEmailText"></span>
+      </div>
+      <div class="view-toggle-row" id="viewToggleRow" style="display:none;">
+        <button class="view-toggle-btn" id="viewToggleBtn">
+          <span id="viewToggleLabel">게스트 화면 미리보기</span>
+        </button>
       </div>
       <button class="logout-btn" id="logoutBtn">로그아웃</button>
     </div>
@@ -289,6 +331,9 @@
       badge.className   = 'user-role-badge role-user';
     }
     document.getElementById('userFooter').style.display = '';
+    if (role === 'admin') {
+      document.getElementById('viewToggleRow').style.display = '';
+    }
 
     removeGate();
     window.initPortal(role);
@@ -418,6 +463,31 @@
     auth.signOut().then(function () {
       window.location.replace('./login.html');
     });
+  });
+})();
+</script>
+
+<!-- 게스트 뷰 토글 핸들러 (관리자 전용) -->
+<script>
+(function () {
+  var _guestOn = false;
+  document.getElementById('viewToggleBtn').addEventListener('click', function () {
+    _guestOn = !_guestOn;
+    if (window.toggleGuestView) window.toggleGuestView(_guestOn);
+    var btn   = document.getElementById('viewToggleBtn');
+    var lbl   = document.getElementById('viewToggleLabel');
+    var badge = document.getElementById('userRoleBadge');
+    if (_guestOn) {
+      btn.classList.add('guest-mode');
+      lbl.textContent   = '관리자 화면으로 돌아가기';
+      badge.textContent = '미리보기';
+      badge.className   = 'user-role-badge role-preview';
+    } else {
+      btn.classList.remove('guest-mode');
+      lbl.textContent   = '게스트 화면 미리보기';
+      badge.textContent = '관리자';
+      badge.className   = 'user-role-badge role-admin';
+    }
   });
 })();
 </script>
