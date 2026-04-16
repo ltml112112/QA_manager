@@ -294,7 +294,15 @@
     window.initPortal(role);
   }
 
+  // Firebase Auth 초기화 중 null이 먼저 발화될 수 있으므로,
+  // 2초 내에 user 발화가 없으면 로그인 페이지로 이동
+  var _loginTimer = setTimeout(function () {
+    if (!_portalReady) { window.location.replace('./login.html'); }
+  }, 2000);
+
   auth.onAuthStateChanged(function (user) {
+    clearTimeout(_loginTimer); // 어떤 상태든 도착하면 타이머 취소
+
     /* ① 미로그인 — 포털이 아직 열리지 않은 경우만 로그인 페이지로 이동 */
     if (!user) {
       if (!_portalReady) {
