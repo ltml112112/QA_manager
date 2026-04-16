@@ -13,6 +13,12 @@ body { padding: 24px; }
 .placeholder-desc { color: var(--text-muted); line-height: 1.7; }
 .center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 320px; text-align: center; }
 </style>
+<!-- Auth Guard — 직접 URL 접근 차단 -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>window._AG_ADMIN_ONLY = true;</script>
+<script src="../../assets/js/auth_guard.js"></script>
 </head>
 <body>
 <div class="container">
