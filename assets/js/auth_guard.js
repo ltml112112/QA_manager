@@ -12,27 +12,11 @@
  *
  * Firebase SDK(firebase-app-compat + firebase-auth-compat)가
  * 이 파일보다 먼저 로드되어 있어야 합니다.
- *
- * ※ 프로덕션 도메인 외(브랜치 프리뷰·localhost)에서는 인증을 건너뜁니다.
- *   PROD_HOSTS 배열에 실제 운영 도메인만 등록하세요.
  */
 (function () {
   'use strict';
 
   var ADMIN_ONLY = !!window._AG_ADMIN_ONLY;
-
-  /* ── 프로덕션 도메인 목록 — 여기에 없으면 인증 없이 통과 ─────────────── */
-  var PROD_HOSTS = [
-    'qa-manager.pages.dev',
-  ];
-
-  var hostname = location.hostname;
-  var isProd = PROD_HOSTS.some(function (h) { return hostname === h; });
-
-  if (!isProd) {
-    // 브랜치 프리뷰 / localhost → 인증 없이 바로 통과
-    return;
-  }
 
   // 루트 상대경로 (apps/XX_xxx/index.html 기준 → ../../)
   var LOGIN_URL  = '../../login.html';

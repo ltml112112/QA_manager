@@ -237,16 +237,6 @@
   var ALLOWED_DOMAIN  = '@ltml.co.kr';
   var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr']; // 이 이메일로 첫 로그인 시 자동으로 admin 역할 부여
 
-  /* ── 프로덕션 도메인 외(브랜치 프리뷰·localhost)에서는 인증 없이 통과 ── */
-  var PROD_HOSTS = ['qa-manager.pages.dev'];
-  var _hostname  = location.hostname;
-  var _isProd    = PROD_HOSTS.some(function (h) { return _hostname === h; });
-  if (!_isProd) {
-    document.getElementById('auth-gate').remove();
-    window.initPortal('admin'); // 프리뷰에서는 admin 권한으로 전체 탭 표시
-    return;
-  }
-
   firebase.initializeApp(firebaseConfig);
   var auth = firebase.auth();
   var db   = firebase.database();
