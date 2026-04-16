@@ -106,6 +106,36 @@
 }
 @keyframes ag-spin { to { transform: rotate(360deg); } }
 
+/* ── 비밀번호 변경 카드 인풋 ──────────────────────────────────────── */
+#auth-gate .ag-pw-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-bg);
+  color: var(--portal-text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 8px;
+  display: block;
+}
+#auth-gate .ag-pw-input:focus {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-accent-glow);
+}
+#auth-gate .ag-pw-input.inp-error { border-color: var(--portal-danger); }
+#auth-gate .ag-pw-err {
+  font-size: 12px;
+  color: var(--portal-danger);
+  text-align: center;
+  min-height: 16px;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
 /* ── 사이드바 하단 사용자 영역 ───────────────────────────────────── */
 .sidebar-footer {
   flex-direction: column !important;
@@ -289,6 +319,87 @@
   // 여러 번 발화해도 renderApps가 중복 호출되지 않도록 방지
   var _portalReady = false;
 
+  /* 신규 계정 — 비밀번호 변경 강제 화면 */
+  function showPasswordChangeCard(user) {
+    var gate = document.getElementById('auth-gate');
+    if (!gate) return;
+    gate.innerHTML = '<div class="ag-card">'
+      + '<div class="ag-card-icon">🔑</div>'
+      + '<div class="ag-card-title">비밀번호를 변경해주세요</div>'
+      + '<div class="ag-card-msg">처음 접속하셨습니다.<br>관리자에게 받은 임시 비밀번호를<br>새 비밀번호로 변경해주세요.</div>'
+      + '<input type="password" id="agCurrPw" class="ag-pw-input" placeholder="임시 비밀번호">'
+      + '<input type="password" id="agNewPw"  class="ag-pw-input" placeholder="새 비밀번호 (8자 이상)">'
+      + '<input type="password" id="agConfPw" class="ag-pw-input" placeholder="새 비밀번호 확인">'
+      + '<div class="ag-pw-err" id="agPwErr"></div>'
+      + '<div class="ag-btn-row">'
+      + '<button class="ag-btn ag-btn-primary" id="agPwSubmit">비밀번호 변경 후 접속</button>'
+      + '<button class="ag-btn ag-btn-ghost"    id="agPwOut">로그아웃</button>'
+      + '</div></div>';
+
+    var ids = ['agCurrPw', 'agNewPw', 'agConfPw'];
+    function getEl(id) { return document.getElementById(id); }
+
+    function setErr(msg, errorId) {
+      getEl('agPwErr').textContent = msg;
+      if (errorId) { getEl(errorId).classList.add('inp-error'); getEl(errorId).focus(); }
+    }
+    function clearErr() {
+      getEl('agPwErr').textContent = '';
+      ids.forEach(function(id) { getEl(id).classList.remove('inp-error'); });
+    }
+
+    function doChange() {
+      clearErr();
+      var curr = getEl('agCurrPw').value;
+      var nw   = getEl('agNewPw').value;
+      var conf = getEl('agConfPw').value;
+      if (!curr)           { setErr('임시 비밀번호를 입력하세요.', 'agCurrPw'); return; }
+      if (!nw)             { setErr('새 비밀번호를 입력하세요.', 'agNewPw'); return; }
+      if (nw.length < 8)   { setErr('비밀번호는 8자 이상이어야 합니다.', 'agNewPw'); return; }
+      if (nw !== conf)     { setErr('새 비밀번호가 일치하지 않습니다.', 'agConfPw'); return; }
+      if (curr === nw)     { setErr('임시 비밀번호와 다른 비밀번호를 사용해주세요.', 'agNewPw'); return; }
+
+      var btn = getEl('agPwSubmit');
+      btn.disabled = true; btn.textContent = '변경 중...';
+
+      var cred = firebase.auth.EmailAuthProvider.credential(user.email, curr);
+      user.reauthenticateWithCredential(cred)
+        .then(function() { return user.updatePassword(nw); })
+        .then(function() {
+          var email = (user.email || '').toLowerCase();
+          var role  = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+          if (db) {
+            return db.ref('portal_users/' + user.uid)
+              .set({ role: role, email: user.email, createdAt: Date.now() })
+              .then(function() { return role; });
+          }
+          return Promise.resolve(role);
+        })
+        .then(function(role) { openPortal(role, user.email); })
+        .catch(function(err) {
+          btn.disabled = false; btn.textContent = '비밀번호 변경 후 접속';
+          if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            setErr('임시 비밀번호가 올바르지 않습니다.', 'agCurrPw');
+          } else if (err.code === 'auth/weak-password') {
+            setErr('비밀번호가 너무 단순합니다.', 'agNewPw');
+          } else {
+            setErr('변경에 실패했습니다. 다시 시도하세요.');
+          }
+        });
+    }
+
+    getEl('agPwSubmit').addEventListener('click', doChange);
+    getEl('agPwOut').addEventListener('click', function() {
+      auth.signOut().then(function() { window.location.replace('./login.html'); });
+    });
+    ids.forEach(function(id, i) {
+      getEl(id).addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { i < ids.length - 1 ? getEl(ids[i+1]).focus() : doChange(); }
+      });
+    });
+    getEl('agCurrPw').focus();
+  }
+
   /* 인증 게이트 → 안내 카드로 교체 */
   function showAuthCard(icon, title, msg, emailStr, noteLines, buttons) {
     var gate = document.getElementById('auth-gate');
@@ -407,8 +518,9 @@
       var role = data && data.role;
 
       if (!role) {
-        role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
-        userRef.set({ role: role, email: userEmail, createdAt: Date.now() });
+        // 신규 계정 → 비밀번호 변경 강제
+        showPasswordChangeCard(user);
+        return;
       }
 
       openPortal(role, userEmail);
