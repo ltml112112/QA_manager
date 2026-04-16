@@ -376,45 +376,7 @@
       return;
     }
 
-    /* ③ 이메일 인증 미완료 */
-    if (!user.emailVerified) {
-      showAuthCard(
-        '✉️', '이메일 인증이 필요합니다',
-        '가입 시 발송된 인증 메일의<br>링크를 클릭하면 자동으로 접근됩니다.',
-        user.email,
-        [
-          '· 스팸 메일함도 확인해 보세요',
-          '· 인증 후 이 페이지를 새로고침하세요',
-        ],
-        [
-          { id: 'agResend',  cls: 'ag-btn-primary', label: '인증 메일 재발송' },
-          { id: 'agRefresh', cls: 'ag-btn-ghost',   label: '새로고침 (인증 완료 후)' },
-          { id: 'agSignout', cls: 'ag-btn-ghost',   label: '로그아웃' },
-        ]
-      );
-      document.getElementById('agResend').addEventListener('click', function () {
-        var btn = document.getElementById('agResend');
-        btn.disabled    = true;
-        btn.textContent = '발송 중...';
-        user.sendEmailVerification().then(function () {
-          btn.textContent = '재발송 완료 ✓';
-          setTimeout(function () {
-            btn.disabled    = false;
-            btn.textContent = '인증 메일 재발송';
-          }, 5000);
-        }).catch(function () {
-          btn.disabled    = false;
-          btn.textContent = '재발송 실패 — 다시 시도';
-        });
-      });
-      document.getElementById('agRefresh').addEventListener('click', function () {
-        user.reload().then(function () { window.location.reload(); });
-      });
-      document.getElementById('agSignout').addEventListener('click', function () {
-        auth.signOut().then(function () { window.location.replace('./login.html'); });
-      });
-      return;
-    }
+    /* ③ 이메일 인증 체크 제거 — 관리자가 직접 계정 생성하는 방식으로 전환 */
 
     /* ④ 인증 완료 — 역할 조회 & 자동 배정 */
     var userEmail = user.email;

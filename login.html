@@ -238,20 +238,14 @@ body {
     <!-- ── 비밀번호 재설정 뷰 ─────────────────────────────────── -->
     <div id="forgotView" style="display:none;">
       <div class="login-card-title">비밀번호 재설정</div>
-      <p class="forgot-desc">가입하신 이메일로 재설정 링크를<br>보내드립니다.</p>
-      <div class="login-field">
-        <label for="forgotEmailInp">이메일</label>
-        <input type="email" id="forgotEmailInp" placeholder="name@ltml.co.kr" autocomplete="username">
-      </div>
-      <button class="login-btn" id="forgotSendBtn">재설정 메일 발송</button>
-      <div id="forgotMsg"></div>
+      <p class="forgot-desc">비밀번호 재설정은 관리자에게 문의해주세요.</p>
+      <a class="login-btn" href="mailto:jhbaik@ltml.co.kr?subject=비밀번호 재설정 요청"
+         style="display:block;text-align:center;text-decoration:none;line-height:1.4;padding:11px;">
+        관리자에게 메일 보내기
+      </a>
       <button class="back-link" id="backToLoginBtn" type="button">← 로그인으로 돌아가기</button>
     </div>
 
-  </div>
-  <div style="text-align:center;margin-top:18px;font-size:12px;color:var(--portal-text-muted);">
-    계정이 없으신가요?
-    <a href="./register.html" style="color:var(--portal-accent);text-decoration:none;font-weight:600;">회원가입</a>
   </div>
 </div>
 
@@ -380,80 +374,19 @@ body {
   });
 
   // ── 비밀번호 재설정 ────────────────────────────────────────────────────────
-  var loginView      = document.getElementById('loginView');
-  var forgotView     = document.getElementById('forgotView');
-  var forgotBtn      = document.getElementById('forgotBtn');
-  var forgotEmailInp = document.getElementById('forgotEmailInp');
-  var forgotSendBtn  = document.getElementById('forgotSendBtn');
-  var forgotMsg      = document.getElementById('forgotMsg');
-  var backToLoginBtn = document.getElementById('backToLoginBtn');
+  var loginView  = document.getElementById('loginView');
+  var forgotView = document.getElementById('forgotView');
+  var forgotBtn  = document.getElementById('forgotBtn');
 
   forgotBtn.addEventListener('click', function () {
-    forgotEmailInp.value = emailInp.value.trim();  // 이미 입력한 이메일 미리 채움
-    forgotMsg.textContent = '';
-    forgotMsg.className = '';
     loginView.style.display  = 'none';
     forgotView.style.display = '';
-    forgotEmailInp.focus();
   });
 
-  backToLoginBtn.addEventListener('click', function () {
+  document.getElementById('backToLoginBtn').addEventListener('click', function () {
     forgotView.style.display = 'none';
     loginView.style.display  = '';
     emailInp.focus();
-  });
-
-  function doForgotPassword() {
-    var email = forgotEmailInp.value.trim();
-    forgotMsg.textContent = '';
-    forgotMsg.className = '';
-
-    if (!email) {
-      forgotMsg.textContent = '이메일을 입력하세요.';
-      forgotMsg.className = 'login-err';
-      forgotEmailInp.focus();
-      return;
-    }
-
-    forgotSendBtn.disabled    = true;
-    forgotSendBtn.textContent = '발송 중...';
-
-    auth.sendPasswordResetEmail(email)
-      .then(function () {
-        forgotSendBtn.disabled    = false;
-        forgotSendBtn.textContent = '재설정 메일 발송';
-        forgotMsg.textContent = '재설정 링크를 발송했습니다. 이메일을 확인하세요. (스팸 메일함도 확인해 보세요)';
-        forgotMsg.className = 'login-ok';
-      })
-      .catch(function (err) {
-        forgotSendBtn.disabled    = false;
-        forgotSendBtn.textContent = '재설정 메일 발송';
-        var msg;
-        switch (err.code) {
-          case 'auth/user-not-found':
-            msg = '등록되지 않은 이메일입니다.';
-            break;
-          case 'auth/invalid-email':
-            msg = '올바른 이메일 형식이 아닙니다.';
-            break;
-          case 'auth/too-many-requests':
-            msg = '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
-            break;
-          default:
-            msg = '메일 발송에 실패했습니다. 다시 시도하세요.';
-        }
-        forgotMsg.textContent = msg;
-        forgotMsg.className = 'login-err';
-      });
-  }
-
-  forgotSendBtn.addEventListener('click', doForgotPassword);
-  forgotEmailInp.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') doForgotPassword();
-  });
-  forgotEmailInp.addEventListener('input', function () {
-    forgotMsg.textContent = '';
-    forgotMsg.className = '';
   });
 })();
 </script>
