@@ -186,20 +186,26 @@ function renderApps(role) {
   var lastGroup = null;
 
   apps.forEach(function (app) {
-    var hidden  = app.locked && !isAdmin;  // admin이면 locked 탭도 표시
-    var isFirst = firstVisible && !hidden;
-    if (isFirst) firstVisible = false;
+    var hidden = app.locked && !isAdmin;  // admin이면 locked 탭도 표시
 
     // ── 그룹 헤더 ──────────────────────────────────────────────────────────
     if (app.group && app.group !== lastGroup) {
       lastGroup = app.group;
-      var grpHdr = document.createElement('div');
-      grpHdr.className  = 'tab-group-header';
-      grpHdr.id         = 'grphdr-' + app.group;
-      grpHdr.textContent = app.group;
-      if (_isGroupHiddenForRole(app.group, isAdmin)) grpHdr.style.display = 'none';
-      nav.appendChild(grpHdr);
+      // 그룹 내 모든 앱이 숨겨지는 경우 헤더도 생성하지 않음
+      if (!_isGroupHiddenForRole(app.group, isAdmin)) {
+        var grpHdr = document.createElement('div');
+        grpHdr.className   = 'tab-group-header';
+        grpHdr.id          = 'grphdr-' + app.group;
+        grpHdr.textContent = app.group;
+        nav.appendChild(grpHdr);
+      }
     }
+
+    // hidden 앱은 DOM 생성 자체를 skip — F12로도 URL이 보이지 않음
+    if (hidden) return;
+
+    var isFirst = firstVisible;
+    if (isFirst) firstVisible = false;
 
     // ── 탭 버튼 ────────────────────────────────────────────────────────────
     var btn = document.createElement('button');
@@ -209,7 +215,6 @@ function renderApps(role) {
     btn.setAttribute('aria-selected', isFirst ? 'true' : 'false');
     btn.setAttribute('aria-controls', 'tab-' + app.id);
     btn.id = 'tabbtn-' + app.id;
-    if (hidden) btn.style.display = 'none';
 
     var iconSpan = document.createElement('span');
     iconSpan.setAttribute('aria-hidden', 'true');
@@ -239,7 +244,6 @@ function renderApps(role) {
     wrap.id        = 'tab-' + app.id;
     wrap.setAttribute('role', 'tabpanel');
     wrap.setAttribute('aria-labelledby', 'tabbtn-' + app.id);
-    if (hidden) wrap.style.display = 'none';
 
     var loader = document.createElement('div');
     loader.className = 'loader';
@@ -253,11 +257,7 @@ function renderApps(role) {
     iframe.title = app.label;
     if (app.sandbox) { iframe.setAttribute('sandbox', app.sandbox); }
     iframe.addEventListener('load', function () { hideLoader(app.id); });
-
-    if (!hidden) {
-      iframe.src = app.src;
-    }
-    iframe.dataset.src = app.src;
+    iframe.src = app.src;
 
     wrap.appendChild(loader);
     wrap.appendChild(iframe);
