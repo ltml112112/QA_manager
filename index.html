@@ -243,6 +243,94 @@
   background: #f59e0b;
   color: #fff;
 }
+/* ── 사용자 관리 모달 ─────────────────────────────────────────── */
+.usermgmt-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--portal-border);
+  background: transparent;
+  color: var(--portal-text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.usermgmt-btn:hover { background: var(--portal-surface-2); color: var(--portal-text); }
+.um-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+}
+.um-modal {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 16px;
+  width: min(500px, 100vw - 32px);
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+.um-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.um-title { font-size: 14px; font-weight: 700; color: var(--portal-text); }
+.um-close {
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  color: var(--portal-text-muted); padding: 0 4px; line-height: 1;
+}
+.um-close:hover { color: var(--portal-text); }
+.um-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.um-label {
+  font-size: 11px; font-weight: 600; color: var(--portal-text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px;
+}
+.um-textarea {
+  width: 100%; height: 110px; padding: 10px 12px;
+  border: 1px solid var(--portal-border); border-radius: 8px;
+  background: var(--portal-bg); color: var(--portal-text);
+  font-size: 13px; font-family: 'JetBrains Mono', monospace;
+  resize: vertical; outline: none; box-sizing: border-box; transition: border-color 0.15s;
+}
+.um-textarea:focus { border-color: var(--portal-accent); box-shadow: 0 0 0 3px var(--portal-accent-glow); }
+.um-row { display: flex; gap: 10px; }
+.um-input {
+  flex: 1; padding: 9px 12px;
+  border: 1px solid var(--portal-border); border-radius: 8px;
+  background: var(--portal-bg); color: var(--portal-text);
+  font-size: 13px; font-family: inherit; outline: none; box-sizing: border-box; transition: border-color 0.15s;
+}
+.um-input:focus { border-color: var(--portal-accent); box-shadow: 0 0 0 3px var(--portal-accent-glow); }
+.um-select {
+  padding: 9px 12px; border: 1px solid var(--portal-border); border-radius: 8px;
+  background: var(--portal-bg); color: var(--portal-text);
+  font-size: 13px; font-family: inherit; outline: none; cursor: pointer;
+}
+.um-btn {
+  width: 100%; padding: 10px; background: var(--portal-accent); color: #fff;
+  border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: background 0.15s;
+}
+.um-btn:hover:not(:disabled) { background: var(--portal-accent-hover); }
+.um-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.um-results { border: 1px solid var(--portal-border); border-radius: 8px; overflow: hidden; }
+.um-result-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--portal-border);
+}
+.um-result-item:last-child { border-bottom: none; }
+.um-result-ok  { color: #10b981; font-weight: 700; font-size: 13px; }
+.um-result-err { color: var(--portal-danger); font-weight: 700; font-size: 13px; }
+.um-result-email { flex: 1; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--portal-text); }
+.um-result-msg  { font-size: 11px; color: var(--portal-text-muted); }
 </style>
 </head>
 <body>
@@ -276,12 +364,50 @@
         <span class="user-role-badge" id="userRoleBadge"></span>
         <span class="user-email-text" id="userEmailText"></span>
       </div>
+      <div class="view-toggle-row" id="userMgmtRow" style="display:none;">
+        <button class="usermgmt-btn" id="userMgmtBtn">👥 사용자 관리</button>
+      </div>
       <div class="view-toggle-row" id="viewToggleRow" style="display:none;">
         <button class="view-toggle-btn" id="viewToggleBtn">
           <span id="viewToggleLabel">게스트 화면 미리보기</span>
         </button>
       </div>
       <button class="logout-btn" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+</div>
+
+<!-- 사용자 관리 모달 (관리자 전용) -->
+<div class="um-overlay" id="umOverlay" style="display:none;">
+  <div class="um-modal">
+    <div class="um-header">
+      <span class="um-title">👥 사용자 계정 생성</span>
+      <button class="um-close" id="umClose">✕</button>
+    </div>
+    <div class="um-body">
+      <div>
+        <label class="um-label">이메일 주소 (한 줄에 하나씩)</label>
+        <textarea class="um-textarea" id="umEmails" placeholder="kim@ltml.co.kr&#10;park@ltml.co.kr&#10;lee@ltml.co.kr"></textarea>
+      </div>
+      <div class="um-row">
+        <div style="flex:2;">
+          <label class="um-label">임시 비밀번호</label>
+          <input class="um-input" type="text" id="umPw" placeholder="Ltml1234!">
+        </div>
+        <div>
+          <label class="um-label">역할</label>
+          <select class="um-select" id="umRole">
+            <option value="user">사용자</option>
+            <option value="admin">관리자</option>
+          </select>
+        </div>
+      </div>
+      <div class="ag-card-note" style="margin:0;font-size:11px;">
+        · 첫 로그인 시 자동으로 비밀번호 변경 화면이 표시됩니다<br>
+        · 임시 비밀번호는 카카오톡 등으로 직접 전달하세요
+      </div>
+      <button class="um-btn" id="umCreateBtn">계정 생성</button>
+      <div id="umResults"></div>
     </div>
   </div>
 </div>
@@ -314,13 +440,17 @@
   // firebase-database-compat.js 로드 실패 등을 대비해 try-catch
   var db;
   try { db = firebase.database(); } catch (e) { db = null; }
+  // 사용자 관리 모달에서 사용할 수 있도록 전역 노출
+  window._portalFirebaseConfig = firebaseConfig;
+  window._portalDb = db;
 
   // 포털이 이미 초기화됐는지 추적 — 토큰 갱신 등으로 onAuthStateChanged가
   // 여러 번 발화해도 renderApps가 중복 호출되지 않도록 방지
   var _portalReady = false;
 
-  /* 신규 계정 — 비밀번호 변경 강제 화면 */
-  function showPasswordChangeCard(user) {
+  /* 신규 계정 — 비밀번호 변경 강제 화면
+     existingData: null = 완전 신규, {role, createdAt, ...} = mustChangePw 플래그 계정 */
+  function showPasswordChangeCard(user, existingData) {
     var gate = document.getElementById('auth-gate');
     if (!gate) return;
     gate.innerHTML = '<div class="ag-card">'
@@ -366,11 +496,12 @@
       user.reauthenticateWithCredential(cred)
         .then(function() { return user.updatePassword(nw); })
         .then(function() {
-          var email = (user.email || '').toLowerCase();
-          var role  = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+          var lEmail = (user.email || '').toLowerCase();
+          var role   = existingData ? existingData.role
+                     : (ADMIN_EMAILS.indexOf(lEmail) !== -1) ? 'admin' : 'user';
           if (db) {
             return db.ref('portal_users/' + user.uid)
-              .set({ role: role, email: user.email, createdAt: Date.now() })
+              .set({ role: role, email: user.email, createdAt: existingData ? (existingData.createdAt || Date.now()) : Date.now() })
               .then(function() { return role; });
           }
           return Promise.resolve(role);
@@ -444,6 +575,7 @@
     document.getElementById('userFooter').style.display = '';
     if (role === 'admin') {
       document.getElementById('viewToggleRow').style.display = '';
+      document.getElementById('userMgmtRow').style.display  = '';
     }
 
     removeGate();
@@ -518,8 +650,13 @@
       var role = data && data.role;
 
       if (!role) {
-        // 신규 계정 → 비밀번호 변경 강제
-        showPasswordChangeCard(user);
+        // 신규 계정 (DB 엔트리 없음) → 비밀번호 변경 강제
+        showPasswordChangeCard(user, null);
+        return;
+      }
+      if (data.mustChangePw) {
+        // 포털에서 생성된 계정 → 비밀번호 변경 강제
+        showPasswordChangeCard(user, data);
         return;
       }
 
@@ -537,6 +674,103 @@
     auth.signOut().then(function () {
       window.location.replace('./login.html');
     });
+  });
+})();
+</script>
+
+<!-- 사용자 관리 모달 핸들러 (관리자 전용) -->
+<script>
+(function () {
+  var overlay   = document.getElementById('umOverlay');
+  var createBtn = document.getElementById('umCreateBtn');
+  var resultsEl = document.getElementById('umResults');
+
+  document.getElementById('userMgmtBtn').addEventListener('click', function () {
+    resultsEl.innerHTML = '';
+    overlay.style.display = 'flex';
+    document.getElementById('umEmails').focus();
+  });
+  function closeModal() {
+    overlay.style.display = 'none';
+    resultsEl.innerHTML = '';
+  }
+  document.getElementById('umClose').addEventListener('click', closeModal);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+
+  createBtn.addEventListener('click', function () {
+    var raw  = document.getElementById('umEmails').value;
+    var pw   = document.getElementById('umPw').value.trim();
+    var role = document.getElementById('umRole').value;
+
+    var emails = raw.split('\n')
+      .map(function (s) { return s.trim().toLowerCase(); })
+      .filter(function (s) { return s.length > 0; });
+
+    if (!emails.length) { alert('이메일을 입력하세요.'); return; }
+    if (!pw)            { alert('임시 비밀번호를 입력하세요.'); return; }
+    if (pw.length < 6)  { alert('비밀번호는 6자 이상이어야 합니다.'); return; }
+
+    createBtn.disabled = true;
+    createBtn.textContent = '생성 중...';
+    resultsEl.innerHTML = '';
+
+    // Secondary Firebase app — 현재 관리자 세션에 영향 없이 계정 생성
+    var secApp;
+    try { secApp = firebase.app('PortalUserMgmt'); }
+    catch (e) { secApp = firebase.initializeApp(window._portalFirebaseConfig, 'PortalUserMgmt'); }
+    var secAuth = secApp.auth();
+
+    var results = [];
+    var idx = 0;
+
+    function next() {
+      if (idx >= emails.length) {
+        renderResults();
+        createBtn.disabled = false;
+        createBtn.textContent = '계정 생성';
+        return;
+      }
+      var email = emails[idx++];
+      secAuth.createUserWithEmailAndPassword(email, pw)
+        .then(function (cred) {
+          var uid = cred.user.uid;
+          secAuth.signOut();
+          var entry = { role: role, email: email, createdAt: Date.now(), mustChangePw: true };
+          if (window._portalDb) {
+            return window._portalDb.ref('portal_users/' + uid).set(entry)
+              .then(function () { results.push({ email: email, ok: true, uid: uid }); next(); });
+          }
+          results.push({ email: email, ok: true, uid: uid });
+          next();
+        })
+        .catch(function (err) {
+          try { secAuth.signOut(); } catch(e) {}
+          var msg;
+          switch (err.code) {
+            case 'auth/email-already-in-use': msg = '이미 존재하는 계정'; break;
+            case 'auth/invalid-email':        msg = '이메일 형식 오류'; break;
+            case 'auth/weak-password':        msg = '비밀번호가 너무 단순함'; break;
+            default: msg = err.code;
+          }
+          results.push({ email: email, ok: false, msg: msg });
+          next();
+        });
+    }
+    next();
+
+    function renderResults() {
+      if (!results.length) return;
+      var html = '<div class="um-results">';
+      results.forEach(function (r) {
+        html += '<div class="um-result-item">'
+          + '<span class="' + (r.ok ? 'um-result-ok' : 'um-result-err') + '">' + (r.ok ? '✓' : '✗') + '</span>'
+          + '<span class="um-result-email">' + r.email + '</span>'
+          + '<span class="um-result-msg">' + (r.ok ? 'UID: ' + r.uid.slice(0, 10) + '…' : r.msg) + '</span>'
+          + '</div>';
+      });
+      html += '</div>';
+      resultsEl.innerHTML = html;
+    }
   });
 })();
 </script>
