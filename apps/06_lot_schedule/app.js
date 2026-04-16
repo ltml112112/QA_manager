@@ -186,7 +186,12 @@ function loadResult(lotId) {
 
 function saveResult(lotId, resultData) {
   var today = getTodayStr();
-  var payload = { savedAt: today, ivl: resultData.ivl || null, lt: resultData.lt || null };
+  var payload = {
+    savedAt: today,
+    savedBy: _byInfo(),
+    ivl: resultData.ivl || null,
+    lt:  resultData.lt  || null,
+  };
   window._cachedResults[lotId] = payload;
   RESULT_REF.child(lotId).set(payload);
 }
@@ -1364,9 +1369,11 @@ function openResultDetail(lotId, item, result) {
 
   document.getElementById('resultDetailTitle').textContent =
     '📊 ' + [item.material, item.lot].filter(Boolean).join(' / ') + ' — 소자평가 결과';
-  document.getElementById('resultDetailDate').textContent =
-    (result.savedAt ? '저장일: ' + result.savedAt : '') +
-    (result.ivl && result.ivl.blockLabel ? '  |  블록: ' + result.ivl.blockLabel : '');
+  var detailMeta = [];
+  if (result.savedAt)  detailMeta.push('저장일: ' + result.savedAt);
+  if (result.savedBy && result.savedBy.email) detailMeta.push('저장: ' + result.savedBy.email);
+  if (result.ivl && result.ivl.blockLabel)    detailMeta.push('블록: ' + result.ivl.blockLabel);
+  document.getElementById('resultDetailDate').textContent = detailMeta.join('  |  ');
 
   // ── 유틸 ──
   function fv(v, d) { return (v != null && !isNaN(v)) ? parseFloat(v).toFixed(d) : '-'; }
