@@ -235,15 +235,20 @@
   };
 
   var ALLOWED_DOMAIN  = '@ltml.co.kr';
-  var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr']; // 이 이메일로 첫 로그인 시 자동으로 admin 역할 부여
+  var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr'];
 
   firebase.initializeApp(firebaseConfig);
   var auth = firebase.auth();
   var db   = firebase.database();
 
+  // 포털이 이미 초기화됐는지 추적 — 토큰 갱신 등으로 onAuthStateChanged가
+  // 여러 번 발화해도 renderApps가 중복 호출되지 않도록 방지
+  var _portalReady = false;
+
   /* 인증 게이트 → 안내 카드로 교체 */
   function showAuthCard(icon, title, msg, emailStr, noteLines, buttons) {
     var gate = document.getElementById('auth-gate');
+    if (!gate) return;
     var html = '<div class="ag-card">'
       + '<div class="ag-card-icon">' + icon + '</div>'
       + '<div class="ag-card-title">' + title + '</div>'
@@ -261,12 +266,43 @@
     gate.innerHTML = html;
   }
 
+  /* auth-gate 안전하게 제거 */
+  function removeGate() {
+    var gate = document.getElementById('auth-gate');
+    if (gate) gate.remove();
+  }
+
+  /* 인증 완료 후 포털 열기 (중복 방지) */
+  function openPortal(role, email) {
+    if (_portalReady) return;
+    _portalReady = true;
+
+    document.getElementById('userEmailText').textContent = email;
+    var badge = document.getElementById('userRoleBadge');
+    if (role === 'admin') {
+      badge.textContent = '관리자';
+      badge.className   = 'user-role-badge role-admin';
+    } else {
+      badge.textContent = '사용자';
+      badge.className   = 'user-role-badge role-user';
+    }
+    document.getElementById('userFooter').style.display = '';
+
+    removeGate();
+    window.initPortal(role);
+  }
+
   auth.onAuthStateChanged(function (user) {
-    /* ① 미로그인 */
+    /* ① 미로그인 — 포털이 아직 열리지 않은 경우만 로그인 페이지로 이동 */
     if (!user) {
-      window.location.replace('./login.html');
+      if (!_portalReady) {
+        window.location.replace('./login.html');
+      }
       return;
     }
+
+    /* 이미 포털 초기화 완료 → 토큰 갱신 등 재발화는 무시 */
+    if (_portalReady) return;
 
     var email = (user.email || '').toLowerCase();
 
@@ -326,32 +362,26 @@
     }
 
     /* ④ 인증 완료 — 역할 조회 & 자동 배정 */
-    var userRef = db.ref('portal_users/' + user.uid);
+    var userRef  = db.ref('portal_users/' + user.uid);
+    var userEmail = user.email;
+
     userRef.once('value').then(function (snap) {
+      if (_portalReady) return;  // DB 응답 오기 전 중복 발화 방어
+
       var data = snap.val();
       var role = data && data.role;
 
       if (!role) {
-        // 첫 로그인: 역할 자동 배정
         role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
-        userRef.set({ role: role, email: user.email, createdAt: Date.now() });
+        userRef.set({ role: role, email: userEmail, createdAt: Date.now() });
       }
 
-      // 사이드바 사용자 정보 표시
-      document.getElementById('userEmailText').textContent = user.email;
-      var badge = document.getElementById('userRoleBadge');
-      if (role === 'admin') {
-        badge.textContent = '관리자';
-        badge.className   = 'user-role-badge role-admin';
-      } else {
-        badge.textContent = '사용자';
-        badge.className   = 'user-role-badge role-user';
-      }
-      document.getElementById('userFooter').style.display = '';
-
-      // 인증 게이트 제거 → 포털 초기화
-      document.getElementById('auth-gate').remove();
-      window.initPortal(role);
+      openPortal(role, userEmail);
+    }).catch(function () {
+      // DB 조회 실패 시 기본 역할로 포털 열기 (스피너가 무한 대기하지 않도록)
+      if (_portalReady) return;
+      var role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
+      openPortal(role, userEmail);
     });
   });
 

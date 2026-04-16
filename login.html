@@ -213,13 +213,23 @@ body {
   var loginBtn = document.getElementById('loginBtn');
   var errEl    = document.getElementById('loginErr');
 
+  // onAuthStateChanged와 signInWithEmailAndPassword .then() 양쪽에서
+  // 모두 리다이렉트를 시도하므로 한 번만 실행되도록 방지
+  var _redirecting = false;
+
+  function goToPortal() {
+    if (_redirecting) return;
+    _redirecting = true;
+    window.location.replace('./index.html');
+  }
+
   // 인증 확인 중 상태 표시
   checking.style.display = 'block';
 
   // 이미 로그인된 경우 → 포털로 바로 이동
   auth.onAuthStateChanged(function (user) {
     if (user) {
-      window.location.replace('./index.html');
+      goToPortal();
       return;
     }
     checking.style.display = 'none';
@@ -256,7 +266,8 @@ body {
 
     auth.signInWithEmailAndPassword(email, pw)
       .then(function () {
-        window.location.replace('./index.html');
+        // onAuthStateChanged도 동시에 발화하므로 goToPortal()로 중복 방지
+        goToPortal();
       })
       .catch(function (err) {
         loginBtn.disabled    = false;
