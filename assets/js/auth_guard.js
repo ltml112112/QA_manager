@@ -93,10 +93,27 @@
   var _auth = _app.auth();
 
   /* ── 인증 상태 확인 ─────────────────────────────────────────────────── */
+  // Firebase 초기화 직후 null이 먼저 발화될 수 있으므로 즉시 리다이렉트 금지.
+  // onAuthStateChanged가 발화하면 타이머 취소 후 재확인.
+  var _loginRedirectTimer = setTimeout(function () {
+    // 1.5초 내 onAuthStateChanged 미발화 시 로그인 페이지로 이동
+    if (!_auth.currentUser) {
+      window.location.replace(LOGIN_URL);
+    }
+  }, 1500);
+
   _auth.onAuthStateChanged(function (user) {
+    clearTimeout(_loginRedirectTimer);
+
     // ① 미로그인 또는 이메일 인증 미완료
     if (!user || !user.emailVerified) {
-      window.location.replace(LOGIN_URL);
+      // 잠시 대기 후 재확인 — 일시적 null 발화 방어
+      setTimeout(function () {
+        var cu = _auth.currentUser;
+        if (!cu || !cu.emailVerified) {
+          window.location.replace(LOGIN_URL);
+        }
+      }, 1500);
       return;
     }
 
@@ -114,10 +131,14 @@
       return;
     }
 
-    // ④ 관리자 전용 앱 → 역할 확인
+    // ④ 관리자 전용 앱 → 역할 확인 (RTDB hanging 대비 5초 타임아웃)
     var _db = firebase.database(_app);
+    var _dbTimer = setTimeout(function () {
+      _blocked('권한 확인 시간 초과.');
+    }, 5000);
     _db.ref('portal_users/' + user.uid + '/role').once('value')
       .then(function (snap) {
+        clearTimeout(_dbTimer);
         if (snap.val() === 'admin') {
           _removeOverlay();
         } else {
@@ -125,6 +146,7 @@
         }
       })
       .catch(function () {
+        clearTimeout(_dbTimer);
         _blocked('권한 확인에 실패했습니다.');
       });
   });
