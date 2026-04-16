@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>로그인 — 품질경영팀 포털</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="./assets/css/global_style.css">
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--portal-bg);
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+.login-wrap {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.login-logo {
+  width: 72px;
+  height: auto;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 12px rgba(190,0,57,0.12);
+}
+.login-brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--portal-text);
+  margin-bottom: 3px;
+}
+.login-brand-sub {
+  font-size: 12px;
+  color: var(--portal-text-muted);
+}
+
+/* 인증 확인 중 상태 */
+.login-checking {
+  display: none;
+  text-align: center;
+  padding: 40px 0;
+}
+.login-checking .chk-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--portal-border);
+  border-top-color: var(--portal-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+.login-checking .chk-text {
+  font-size: 13px;
+  color: var(--portal-text-muted);
+}
+
+/* 로그인 카드 */
+.login-card {
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+}
+
+.login-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--portal-text);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.login-field {
+  margin-bottom: 14px;
+}
+.login-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--portal-text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.login-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-bg);
+  color: var(--portal-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.login-field input:focus {
+  border-color: var(--portal-accent);
+  box-shadow: 0 0 0 3px var(--portal-accent-glow);
+}
+.login-field input.inp-error {
+  border-color: var(--portal-danger);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 11px;
+  background: var(--portal-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.login-btn:hover:not(:disabled) {
+  background: var(--portal-accent-hover);
+}
+.login-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.login-err {
+  font-size: 12px;
+  color: var(--portal-danger);
+  text-align: center;
+  min-height: 20px;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <!-- 브랜드 -->
+  <div class="login-brand">
+    <img class="login-logo" src="./assets/img/lt_logo.jpg" alt="LT Materials">
+    <div class="login-brand-name">품질경영팀 포털</div>
+    <div class="login-brand-sub">전자재료사업부</div>
+  </div>
+
+  <!-- 인증 확인 중 -->
+  <div class="login-checking" id="loginChecking">
+    <div class="chk-spinner"></div>
+    <div class="chk-text">인증 확인 중...</div>
+  </div>
+
+  <!-- 로그인 카드 -->
+  <div class="login-card" id="loginCard" style="display:none;">
+    <div class="login-card-title">계정 로그인</div>
+    <div class="login-field">
+      <label for="emailInp">이메일</label>
+      <input type="email" id="emailInp" placeholder="name@ltml.co.kr" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label for="pwInp">비밀번호</label>
+      <input type="password" id="pwInp" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="loginBtn">로그인</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
+    authDomain:        'qa-manager-9c145.firebaseapp.com',
+    databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId:         'qa-manager-9c145',
+    storageBucket:     'qa-manager-9c145.firebasestorage.app',
+    messagingSenderId: '1037146076792',
+    appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
+  };
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+
+  var checking = document.getElementById('loginChecking');
+  var card     = document.getElementById('loginCard');
+  var emailInp = document.getElementById('emailInp');
+  var pwInp    = document.getElementById('pwInp');
+  var loginBtn = document.getElementById('loginBtn');
+  var errEl    = document.getElementById('loginErr');
+
+  // 인증 확인 중 상태 표시
+  checking.style.display = 'block';
+
+  // 이미 로그인된 경우 → 포털로 바로 이동
+  auth.onAuthStateChanged(function (user) {
+    if (user) {
+      window.location.replace('./index.html');
+      return;
+    }
+    checking.style.display = 'none';
+    card.style.display = 'block';
+    emailInp.focus();
+  });
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    emailInp.classList.remove('inp-error');
+    pwInp.classList.remove('inp-error');
+  }
+
+  function doLogin() {
+    var email = emailInp.value.trim();
+    var pw    = pwInp.value;
+    errEl.textContent = '';
+
+    if (!email) {
+      showErr('이메일을 입력하세요.');
+      emailInp.classList.add('inp-error');
+      emailInp.focus();
+      return;
+    }
+    if (!pw) {
+      showErr('비밀번호를 입력하세요.');
+      pwInp.classList.add('inp-error');
+      pwInp.focus();
+      return;
+    }
+
+    loginBtn.disabled     = true;
+    loginBtn.textContent  = '로그인 중...';
+
+    auth.signInWithEmailAndPassword(email, pw)
+      .then(function () {
+        window.location.replace('./index.html');
+      })
+      .catch(function (err) {
+        loginBtn.disabled    = false;
+        loginBtn.textContent = '로그인';
+
+        var msg;
+        switch (err.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            msg = '이메일 또는 비밀번호가 올바르지 않습니다.';
+            emailInp.classList.add('inp-error');
+            pwInp.classList.add('inp-error');
+            break;
+          case 'auth/invalid-email':
+            msg = '올바른 이메일 형식이 아닙니다.';
+            emailInp.classList.add('inp-error');
+            break;
+          case 'auth/too-many-requests':
+            msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.';
+            break;
+          case 'auth/user-disabled':
+            msg = '비활성화된 계정입니다. 관리자에게 문의하세요.';
+            break;
+          default:
+            msg = '로그인에 실패했습니다. 다시 시도하세요.';
+        }
+        errEl.textContent = msg;
+      });
+  }
+
+  loginBtn.addEventListener('click', doLogin);
+  pwInp.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') doLogin();
+  });
+  emailInp.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); pwInp.focus(); }
+  });
+  // 입력 시 에러 스타일 초기화
+  [emailInp, pwInp].forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      inp.classList.remove('inp-error');
+      errEl.textContent = '';
+    });
+  });
+})();
+</script>
+</body>
+</html>

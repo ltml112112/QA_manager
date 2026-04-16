@@ -8,8 +8,112 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="./assets/css/global_style.css">
+<style>
+/* ── 인증 게이트 오버레이 ─────────────────────────────────────────── */
+#auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--portal-bg);
+  gap: 14px;
+}
+#auth-gate .ag-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--portal-border);
+  border-top-color: var(--portal-accent);
+  border-radius: 50%;
+  animation: ag-spin 0.8s linear infinite;
+}
+#auth-gate .ag-text {
+  font-size: 12px;
+  color: var(--portal-text-muted);
+}
+@keyframes ag-spin { to { transform: rotate(360deg); } }
+
+/* ── 사이드바 하단 사용자 영역 ───────────────────────────────────── */
+.sidebar-footer {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 0 !important;
+}
+.footer-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 8px;
+}
+.user-footer {
+  border-top: 1px solid var(--portal-border);
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.user-info-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.user-role-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+.user-role-badge.role-admin {
+  background: var(--portal-accent);
+  color: #fff;
+}
+.user-role-badge.role-user {
+  background: var(--portal-surface-2);
+  color: var(--portal-text-muted);
+  border: 1px solid var(--portal-border);
+}
+.user-email-text {
+  font-size: 11px;
+  color: var(--portal-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.logout-btn {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--portal-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--portal-text-muted);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  text-align: center;
+}
+.logout-btn:hover {
+  background: var(--portal-surface-2);
+  color: var(--portal-text);
+  border-color: var(--portal-text-muted);
+}
+</style>
 </head>
 <body>
+
+<!-- 인증 게이트 — Firebase Auth 확인 전까지 콘텐츠를 가림 -->
+<div id="auth-gate">
+  <div class="ag-spinner"></div>
+  <div class="ag-text">인증 확인 중...</div>
+</div>
 
 <div class="sidebar">
   <div class="sidebar-header">
@@ -26,7 +130,16 @@
     <!-- main.js가 동적으로 탭 버튼을 삽입합니다 -->
   </nav>
   <div class="sidebar-footer">
-    <div class="status"><div class="status-dot"></div>가동 중</div>
+    <div class="footer-status-row">
+      <div class="status"><div class="status-dot"></div>가동 중</div>
+    </div>
+    <div class="user-footer" id="userFooter" style="display:none;">
+      <div class="user-info-row">
+        <span class="user-role-badge" id="userRoleBadge"></span>
+        <span class="user-email-text" id="userEmailText"></span>
+      </div>
+      <button class="logout-btn" id="logoutBtn">로그아웃</button>
+    </div>
   </div>
 </div>
 
@@ -34,6 +147,64 @@
   <!-- main.js가 동적으로 frame-wrap + iframe을 삽입합니다 -->
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
+    authDomain:        'qa-manager-9c145.firebaseapp.com',
+    databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId:         'qa-manager-9c145',
+    storageBucket:     'qa-manager-9c145.firebasestorage.app',
+    messagingSenderId: '1037146076792',
+    appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db   = firebase.database();
+
+  auth.onAuthStateChanged(function (user) {
+    if (!user) {
+      // 미로그인 → 로그인 페이지로
+      window.location.replace('./login.html');
+      return;
+    }
+
+    // 역할(role) 조회
+    db.ref('portal_users/' + user.uid + '/role').once('value').then(function (snap) {
+      var role = snap.val() || 'user';
+
+      // 사이드바 사용자 정보 표시
+      document.getElementById('userEmailText').textContent = user.email;
+      var badge = document.getElementById('userRoleBadge');
+      if (role === 'admin') {
+        badge.textContent  = '관리자';
+        badge.className    = 'user-role-badge role-admin';
+      } else {
+        badge.textContent  = '사용자';
+        badge.className    = 'user-role-badge role-user';
+      }
+      document.getElementById('userFooter').style.display = '';
+
+      // 인증 게이트 제거 → 포털 초기화
+      document.getElementById('auth-gate').remove();
+      window.initPortal(role);
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    auth.signOut().then(function () {
+      window.location.replace('./login.html');
+    });
+  });
+})();
+</script>
+
+<!-- 포털 렌더러 (initPortal 함수 정의) -->
 <script src="./assets/js/main.js"></script>
 </body>
 </html>
