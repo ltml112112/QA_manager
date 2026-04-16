@@ -197,6 +197,10 @@ function renderApps(role) {
         grpHdr.className   = 'tab-group-header';
         grpHdr.id          = 'grphdr-' + app.group;
         grpHdr.textContent = app.group;
+        // 그룹 내 모든 앱이 locked인 경우 게스트 뷰 토글 시 헤더도 숨김
+        if (apps.filter(function(a){return a.group===app.group;}).every(function(a){return !!a.locked;})) {
+          grpHdr.dataset.allLocked = 'true';
+        }
         nav.appendChild(grpHdr);
       }
     }
@@ -211,6 +215,7 @@ function renderApps(role) {
     var btn = document.createElement('button');
     btn.className = 'tab-btn' + (isFirst ? ' active' : '') + (app.wip ? ' tab-wip' : '');
     btn.dataset.appId = app.id;
+    if (isAdmin && app.locked) btn.dataset.locked = 'true';  // 게스트 뷰 토글용
     btn.setAttribute('role', 'tab');
     btn.setAttribute('aria-selected', isFirst ? 'true' : 'false');
     btn.setAttribute('aria-controls', 'tab-' + app.id);
@@ -242,6 +247,7 @@ function renderApps(role) {
     var wrap = document.createElement('div');
     wrap.className = 'frame-wrap' + (isFirst ? ' active' : '');
     wrap.id        = 'tab-' + app.id;
+    if (isAdmin && app.locked) wrap.dataset.locked = 'true';  // 게스트 뷰 토글용
     wrap.setAttribute('role', 'tabpanel');
     wrap.setAttribute('aria-labelledby', 'tabbtn-' + app.id);
 
@@ -284,6 +290,30 @@ function hideLoader(id) {
   var el = document.getElementById('loader-' + id);
   if (el) el.classList.add('hidden');
 }
+
+// ── 게스트 뷰 토글 (관리자 전용) ─────────────────────────────────────────────
+window.toggleGuestView = function (guestOn) {
+  // locked 탭 버튼 표시/숨김
+  document.querySelectorAll('.tab-btn[data-locked="true"]').forEach(function (b) {
+    b.style.display = guestOn ? 'none' : '';
+  });
+  // locked iframe 래퍼 표시/숨김
+  document.querySelectorAll('.frame-wrap[data-locked="true"]').forEach(function (w) {
+    w.style.display = guestOn ? 'none' : '';
+  });
+  // 그룹 내 전체가 locked인 그룹 헤더 표시/숨김
+  document.querySelectorAll('.tab-group-header[data-all-locked="true"]').forEach(function (h) {
+    h.style.display = guestOn ? 'none' : '';
+  });
+  // 현재 활성 탭이 locked이면 첫 번째 비잠금 탭으로 전환
+  if (guestOn) {
+    var activeBtn = document.querySelector('.tab-btn.active');
+    if (activeBtn && activeBtn.dataset.locked === 'true') {
+      var first = document.querySelector('.tab-btn:not([data-locked="true"])');
+      if (first) first.click();
+    }
+  }
+};
 
 // ── 포털 초기화 — index.html의 Firebase Auth 콜백이 역할 확인 후 호출 ────────
 window.initPortal = function (role) {
