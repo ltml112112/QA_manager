@@ -23,7 +23,6 @@
 | **제품·소재 관리** | `spec_ctq` | 제품 Spec & CTQ/CTP | 개발 예정 (locked) |
 | | `iqc` | 원자재 입고검사 (IQC) | 개발 예정 (locked) |
 | **문서 관리** | `sys_docs` | 시스템 문서 & SOP | 개발 예정 (locked) |
-| | `calibration` | 측정기기 교정 일정 | 개발 예정 (locked) |
 
 **호스팅**: Cloudflare Pages 정적 호스팅 — 상대경로 직접 참조 방식 사용
 
@@ -70,10 +69,8 @@ QA_manager/
     │   └── index.html                # 제품 Spec & CTQ/CTP (개발 예정) [제품·소재 관리]
     ├── 13_iqc/
     │   └── index.html                # 원자재 입고검사 IQC (개발 예정) [제품·소재 관리]
-    ├── 14_sys_docs/
-    │   └── index.html                # 시스템 문서 & SOP (개발 예정) [문서 관리]
-    └── 15_calibration/
-        └── index.html                # 측정기기 교정 일정 (개발 예정) [문서 관리]
+    └── 14_sys_docs/
+        └── index.html                # 시스템 문서 & SOP (개발 예정) [문서 관리]
 ```
 
 ---
@@ -379,7 +376,7 @@ const apps = [
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
-- [ ] `id`가 기존 앱들과 겹치지 않는가? (사용 중: `oled`, `lotschedule`, `hplc`, `lgd`, `sdc`, `coa_dev`, `coa_prod`, `ext_code`, `cpl`, `dashboard`, `complaint`, `spec_ctq`, `iqc`, `sys_docs`, `calibration`)
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (사용 중: `oled`, `lotschedule`, `hplc`, `lgd`, `sdc`, `coa_dev`, `coa_prod`, `ext_code`, `cpl`, `dashboard`, `complaint`, `spec_ctq`, `iqc`, `sys_docs`)
 - [ ] GAS 외부 URL 앱이라면 `sandbox` 필드를 추가했는가?
 
 ---
@@ -839,7 +836,7 @@ var DB_REF = db.ref('hplc_reports');    // 03번 앱
 #### 결과 저장 구조
 
 ```javascript
-// Firebase: lot_schedule_results/{lotId}
+// Firebase: oled_results/{lotId}
 {
   savedAt: 'YYYY-MM-DD',
   ivl: {
@@ -858,7 +855,7 @@ var DB_REF = db.ref('hplc_reports');    // 03번 앱
 }
 ```
 
-> 저장 경로: `firebase.database().ref('lot_schedule_results')` (별도 경로, lot_schedule와 분리)  
+> 저장 경로: `firebase.database().ref('oled_results')` (별도 경로, lot_schedule와 분리)  
 > 구 포맷(level/refHr/sampleHr/pct 단일값)도 backward compat으로 지원
 
 #### 팝업 흐름
@@ -1001,7 +998,7 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | 함수 | 역할 |
 |------|------|
 | `loadItems()` / `saveItems(items)` | Firebase 캐시 반환 / Firebase 저장 (전체 덮어쓰기) |
-| `loadResult(lotId)` / `saveResult(lotId, data)` | OLED 결과 로드 / Firebase 저장 (`lot_schedule_results/`) |
+| `loadResult(lotId)` / `saveResult(lotId, data)` | OLED 결과 로드 / Firebase 저장 (`oled_results/`) |
 | `deleteResult(lotId)` | OLED 결과 삭제 |
 | `openResultPopup(lotId, item)` | OLED 결과 입력 팝업 (iframe `?embed=1`) |
 | `closeResultPopup()` | 결과 입력 팝업 닫기 + iframe src 초기화 |
@@ -1089,7 +1086,6 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 | 12 | `12_spec_ctq/` | 제품·소재 관리 | 제품 Spec & CTQ/CTP. 소재별 규격 + 핵심 품질/공정 파라미터 등록 |
 | 13 | `13_iqc/` | 제품·소재 관리 | 원자재 입고검사(IQC). 입고 검사 결과 등록·이력 관리 |
 | 14 | `14_sys_docs/` | 문서 관리 | 시스템 문서 & SOP. 품질·환경·안전·보건 문서 + 작업 SOP 통합 관리 |
-| 15 | `15_calibration/` | 문서 관리 | 측정기기 교정 일정. 기기별 교정 주기·이력·만료 알림 |
 
 ### 플레이스홀더 공통 구조
 
