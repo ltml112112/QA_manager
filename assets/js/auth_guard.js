@@ -16,6 +16,21 @@
 (function () {
   'use strict';
 
+  /* ── 포털 iframe 내부이면 guard 비활성화 ─────────────────────────────
+     포털(index.html)이 이미 Firebase Auth로 인증 처리함.
+     iframe 13개가 각자 SDK를 중복 로드하면 네트워크 포화 + 타이머 초과로
+     로그인 페이지 재귀 로드 발생 → 같은 origin iframe이면 즉시 탈출.
+     직접 URL 접근(window.top === window.self)일 때만 guard 동작.
+  ──────────────────────────────────────────────────────────────────── */
+  try {
+    if (window.top !== window.self &&
+        window.top.location.origin === window.self.location.origin) {
+      return;  // 포털이 인증 완료한 상태 — 여기서는 아무것도 하지 않음
+    }
+  } catch (e) {
+    // cross-origin iframe(외부 사이트가 우리 앱을 iframe화) → guard 실행해서 차단
+  }
+
   var ADMIN_ONLY  = !!window._AG_ADMIN_ONLY;
   var LOGIN_URL   = '../../login.html';
   var PORTAL_URL  = '../../index.html';
