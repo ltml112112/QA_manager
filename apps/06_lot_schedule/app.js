@@ -1649,9 +1649,24 @@ var mailParsedRows = null; // 파싱된 결과 저장
 /* ── 날짜 정규화 ─────────────────────────────────────────────────────── */
 function normDate(s) {
   if (!s) return '';
-  var d = s.trim().replace(/\./g, '-').replace(/\//g, '-');
+  var raw = s.trim();
+
+  // "YYYY년 MM월 DD일" 또는 "YYYY년MM월DD일"
+  var mKo = raw.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (mKo) {
+    return mKo[1] + '-' + mKo[2].padStart(2,'0') + '-' + mKo[3].padStart(2,'0');
+  }
+
+  // "MM월 DD일" (연도 없음 → 현재 연도)
+  var mKoNoY = raw.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if (mKoNoY) {
+    var yr = new Date().getFullYear().toString();
+    return yr + '-' + mKoNoY[1].padStart(2,'0') + '-' + mKoNoY[2].padStart(2,'0');
+  }
+
+  var d = raw.replace(/\./g, '-').replace(/\//g, '-');
   var m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!m) return s.trim();
+  if (!m) return raw;
   return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
 }
 
