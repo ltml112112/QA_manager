@@ -238,8 +238,17 @@ html, body {
   color: var(--portal-text-muted);
 }
 
-.brand-email {
+.brand-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 1px;
+}
+.brand-contact-row {
   font-size: 11px;
+  color: var(--portal-text-muted);
+}
+.brand-email {
   color: var(--portal-accent);
   text-decoration: none;
 }
