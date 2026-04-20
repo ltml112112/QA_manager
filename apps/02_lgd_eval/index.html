@@ -552,7 +552,7 @@ function downloadAll() {
         });
     })
     .withFailureHandler(function(err) {
-      log('err', '서버 호출 실패: ' + err.message);
+      log('err', '서버 호출 실패: ' + ((err && err.message) || '알 수 없는 오류'));
       setProgress(100, '실패');
       btn.disabled = false;
     })
@@ -568,8 +568,17 @@ function setProgress(pct, text) {
 function log(type, msg) {
   var area = $('logArea');
   var t = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-  area.innerHTML += '<div class="log-line"><span class="log-time">' + t +
-    '</span><span class="log-' + type + '">' + msg + '</span></div>';
+  var line = document.createElement('div');
+  line.className = 'log-line';
+  var timeSpan = document.createElement('span');
+  timeSpan.className = 'log-time';
+  timeSpan.textContent = t;
+  var msgSpan = document.createElement('span');
+  msgSpan.className = 'log-' + type;
+  msgSpan.textContent = msg;
+  line.appendChild(timeSpan);
+  line.appendChild(msgSpan);
+  area.appendChild(line);
   area.scrollTop = area.scrollHeight;
 }
 

@@ -138,7 +138,10 @@ function removeItem(id) {
 }
 
 /* ── 실시간 동기화 ───────────────────────────────────────────────────── */
+var _syncStarted = false;
 function setupRealtimeSync() {
+  if (_syncStarted) return;
+  _syncStarted = true;
   DB_REF.once('value', function (snap) {
     var data = snap.val();
 
@@ -1528,6 +1531,7 @@ document.getElementById('resultPopupOverlay').addEventListener('click', function
 
 // 01번 앱(iframe)에서 분석 결과를 postMessage로 전달받음
 window.addEventListener('message', function(e) {
+  if (e.origin !== window.location.origin) return;
   if (!e.data || e.data.type !== 'oledResult') return;
   if (!_resultPopupItemId) return;
 
