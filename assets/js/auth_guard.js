@@ -166,12 +166,11 @@
     _auth.onAuthStateChanged(function (user) {
       clearTimeout(_loginRedirectTimer);
 
-      // ① 미로그인 또는 이메일 인증 미완료
-      if (!user || !user.emailVerified) {
+      // ① 미로그인 확인 (관리자가 계정 생성하므로 emailVerified 미강제)
+      if (!user) {
         // 일시적 null 발화 방어 — 잠시 후 재확인
         setTimeout(function () {
-          var cu = _auth.currentUser;
-          if (!cu || !cu.emailVerified) {
+          if (!_auth.currentUser) {
             window.location.replace(LOGIN_URL);
           }
         }, 1500);

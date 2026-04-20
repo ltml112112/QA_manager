@@ -42,6 +42,7 @@ function testConnection() {
  */
 function generateAllFiles(data) {
   let tempFile = null;
+  let xlsxCopies = [];
   try {
     const count = data['상품명3'] ? 3 : data['상품명2'] ? 2 : 1;
     tempFile = copyTemplate_(data);
@@ -71,7 +72,15 @@ function generateAllFiles(data) {
       pdfMeta.push({ name: entry.name });
     }
     if (pdfRequests.length > 0) {
-      const pdfResponses = UrlFetchApp.fetchAll(pdfRequests);
+      let pdfResponses;
+      try {
+        pdfResponses = UrlFetchApp.fetchAll(pdfRequests);
+      } catch (fetchErr) {
+        pdfMeta.forEach(function(m) {
+          results.push({ ok: false, label: m.name + ' (PDF)', error: '네트워크 오류: ' + fetchErr.message });
+        });
+        pdfResponses = [];
+      }
       for (let i = 0; i < pdfResponses.length; i++) {
         const resp = pdfResponses[i];
         const name = pdfMeta[i].name;
@@ -89,7 +98,6 @@ function generateAllFiles(data) {
     }
 
     // ── XLSX 생성 ──
-    const xlsxCopies = [];
     const xlsxMeta = [];
 
     // XLSX 단일시트들
@@ -132,13 +140,21 @@ function generateAllFiles(data) {
         headers: { Authorization: 'Bearer ' + token },
         muteHttpExceptions: true,
       }));
-      const xlsxResponses = UrlFetchApp.fetchAll(xlsxRequests);
+      let xlsxResponses;
+      try {
+        xlsxResponses = UrlFetchApp.fetchAll(xlsxRequests);
+      } catch (fetchErr) {
+        xlsxMeta.forEach(function(m) {
+          results.push({ ok: false, label: m.name + ' (엑셀)', error: '네트워크 오류: ' + fetchErr.message });
+        });
+        xlsxResponses = [];
+      }
       for (let i = 0; i < xlsxResponses.length; i++) {
         const resp = xlsxResponses[i];
         const meta = xlsxMeta[i];
         if (resp.getResponseCode() === 200) {
           const fileName = meta.type === 'bundle'
-            ? buildFileName_(data, '비공개물질 Checksheet', 'xlsx')  // ← LT소재_ 제거 (클라이언트에서 처리)
+            ? buildFileName_(data, '비공개물질 Checksheet', 'xlsx')
             : buildFileName_(data, meta.name, 'xlsx');
           results.push({
             ok: true,
@@ -151,10 +167,6 @@ function generateAllFiles(data) {
           results.push({ ok: false, label: meta.name + ' (엑셀)', error: 'HTTP ' + resp.getResponseCode() });
         }
       }
-      // 임시 복사본 삭제
-      for (const copy of xlsxCopies) {
-        try { DriveApp.getFileById(copy.getId()).setTrashed(true); } catch (_) {}
-      }
     }
 
     return { ok: true, files: results };
@@ -163,6 +175,9 @@ function generateAllFiles(data) {
   } finally {
     if (tempFile) {
       try { DriveApp.getFileById(tempFile.getId()).setTrashed(true); } catch (_) {}
+    }
+    for (const copy of xlsxCopies) {
+      try { DriveApp.getFileById(copy.getId()).setTrashed(true); } catch (_) {}
     }
   }
 }
