@@ -84,15 +84,57 @@ function save() {
   }, 1000);
 }
 
+var _firstLoad = true;
+var SEED_VER = 3; // 올리면 구 시드 삭제 후 새 시드 자동 생성
+
 function load() {
-  DB.once('value', function(snap) {
-    STATE.docs = snap.val() || {};
-    if(!Object.keys(STATE.docs).length) {
-      var doc = buildSeed();
-      STATE.docs[doc.id] = doc;
-      DB.child(doc.id).set(doc);
+  DB.on('value', function(snap) {
+    var incoming = snap.val() || {};
+
+    if (_firstLoad) {
+      _firstLoad = false;
+      STATE.docs = incoming;
+
+      // 시드 버전 체크 — 구버전 시드 삭제 후 새 시드 삽입
+      var seedDocs = Object.values(STATE.docs).filter(function(d){ return d._seed; });
+      var hasCurrentSeed = seedDocs.some(function(d){ return d._seed === SEED_VER; });
+
+      if (!hasCurrentSeed) {
+        seedDocs.forEach(function(d) {
+          delete STATE.docs[d.id];
+          DB.child(d.id).remove();
+        });
+        var doc = buildSeed();
+        doc._seed = SEED_VER;
+        STATE.docs[doc.id] = doc;
+        DB.child(doc.id).set(doc);
+      }
+
+      showList();
+      return;
     }
-    showList();
+
+    /* ── 실시간 업데이트 (편집 중 문서는 로컬 우선) ── */
+    Object.keys(incoming).forEach(function(id) {
+      if (id !== STATE.currentId || !STATE.editKey) {
+        STATE.docs[id] = incoming[id];
+      }
+    });
+    // 다른 세션에서 삭제된 문서 반영
+    Object.keys(STATE.docs).forEach(function(id) {
+      if (!incoming[id]) delete STATE.docs[id];
+    });
+    // 현재 보던 문서가 삭제됐으면 목록으로
+    if (STATE.currentId && !STATE.docs[STATE.currentId]) {
+      STATE.currentId = null;
+      STATE.editKey = null;
+    }
+
+    if (!STATE.currentId) {
+      renderList();
+    } else if (!STATE.editKey) {
+      render();
+    }
   });
 }
 
@@ -355,116 +397,137 @@ function renderEditPanel(st, l) {
 }
 
 /* ── 시드 데이터 ────────────────────────────────── */
+function S(type,detail,tag,location){ return {id:uid(),type:type,detail:detail||'',tag:tag||null,location:location||''}; }
+
 function buildSeed() {
-  function psteps() { return [{type:'react',detail:''},{type:'wet',detail:'(Si pass)'},{type:'wet',detail:'(Si pass2)'},{type:'wet',detail:''},{type:'wet',detail:''}]; }
+  function pLot(name, sub) {
+    return Object.assign(mkLot(name, sub||''), {steps:[
+      S('react',''),
+      S('wet','(Si pass)'),
+      S('wet','(Si pass2)'),
+      S('wet',''),
+      S('wet','')
+    ]});
+  }
+
   var ps = mkSec('P');
-  ps.lots = [mkLot('P-MI18-TOL','(L25I-305-108-TOL)'),mkLot('P-ND01-Tol3'),mkLot('P-ND06-Tol3')];
-  ps.lots.forEach(l=>l.steps=psteps().map(s=>({...s,id:uid()})));
+  ps.lots = [
+    pLot('P-MI18-TOL','(L25I-305-108-TOL)'),
+    pLot('P-ND01-Tol3'),
+    pLot('P-ND06-Tol3')
+  ];
 
   var ns = mkSec('N');
   ns.lots = [
-    Object.assign(mkLot('L26D-202-109-Si-R'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후',tag:null,location:''},
-      {id:uid(),type:'solid',detail:'MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(column_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex) 재결정',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(소자평가 fail)',tag:'fail',location:'충주'},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(6,7-zone 불순물 제거작업)\n(4,5-zone 수득, 소자fail)',tag:'fail',location:'용인'},
-      {id:uid(),type:'wet',detail:'(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결졍화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(pass)',tag:'pass',location:'충주'}
+    Object.assign(mkLot('L26D-202-109-Si-R'), {steps:[
+      S('react','(DMA)후'),
+      S('solid','MeOH/H2O  고체화'),
+      S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(column_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex  재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex  재결정)'),
+      S('wet','(DCB/Act/Hex) 재결정'),
+      S('subl','(소자평가 fail)','fail','충주'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('subl','(6,7-zone 불순물 제거작업)\n(4,5-zone 수득, 소자fail)','fail','용인'),
+      S('wet','(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결졍화)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('subl','(pass)','pass','충주')
     ]}),
-    Object.assign(mkLot('P-ND14-COL-TOLAHX'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후 MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_DCB, CF 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Column_DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(fail)',tag:'fail',location:''},
-      {id:uid(),type:'wet',detail:'',tag:'pending',location:''}
+    Object.assign(mkLot('P-ND14-COL-TOLAHX'), {steps:[
+      S('react','(DMA)후 MeOH/H2O  고체화'),
+      S('wet','(Si pass_DCB, CF 후 Act/Hex 결정화)'),
+      S('wet','(Column_DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('subl','(fail)','fail',''),
+      S('wet','','pending','')
     ]}),
-    Object.assign(mkLot('P-67zmix-TOLACHX'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후',tag:null,location:''},
-      {id:uid(),type:'solid',detail:'MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(column_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hx) 재결정',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(소자평가 fail)',tag:'fail',location:'충주'},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(6,7-zone 불순물 제거작업)\n(4,5-zone 수득, 소자fail)',tag:'fail',location:'용인'},
-      {id:uid(),type:'subl',detail:'(6,7-zone 취합 후 추가 승화정제, 4,5-zone 회수)',tag:null,location:'용인'},
-      {id:uid(),type:'wet',detail:'(고운 si pass_DCB, MC/Hx 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'',tag:null,location:'충주'}
+    Object.assign(mkLot('P-67zmix-TOLACHX'), {steps:[
+      S('react','(DMA)후'),
+      S('solid','MeOH/H2O  고체화'),
+      S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(column_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex  재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex  재결정)'),
+      S('wet','(DCB/Act/Hx) 재결정'),
+      S('subl','(소자평가 fail)','fail','충주'),
+      S('wet','(DCB/Act/Hx 재결정)'),
+      S('subl','(6,7-zone 불순물 제거작업)\n(4,5-zone 수득, 소자fail)','fail','용인'),
+      S('subl','(6,7-zone 취합 후 추가 승화정제, 4,5-zone 회수)','','용인'),
+      S('wet','(고운 si pass_DCB, MC/Hx 후 Act/Hex 결정화)'),
+      S('wet','(DCB/Act/Hx 재결정)'),
+      S('wet','(Tol/Act/Hx 재결정)'),
+      S('subl','','','충주')
     ]}),
-    Object.assign(mkLot('L26B-202-101(4,5,6)'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후',tag:null,location:''},
-      {id:uid(),type:'solid',detail:'MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Column_DCB, MC/Hex 후 EA/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(fail)',tag:'fail',location:''},
-      {id:uid(),type:'wet',detail:'(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(pass)',tag:'pass',location:''}
+    Object.assign(mkLot('L26B-202-101(4,5,6)'), {steps:[
+      S('react','(DMA)후'),
+      S('solid','MeOH/H2O  고체화'),
+      S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(Column_DCB, MC/Hex 후 EA/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('subl','(fail)','fail',''),
+      S('wet','(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('subl','(pass)','pass','')
     ]}),
-    Object.assign(mkLot('L26C-202-114(4,5,6)'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후',tag:null,location:''},
-      {id:uid(),type:'solid',detail:'MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Column_DCB, MC/Hex 후 EA/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(fail)',tag:'fail',location:''},
-      {id:uid(),type:'wet',detail:'(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'L26B-202-101 7,8,9차 재결정 여액 취합 후 Si pass 후 Act/Hex 결정화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(TolAct/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(pass)',tag:'pass',location:''}
+    Object.assign(mkLot('L26C-202-114(4,5,6)'), {steps:[
+      S('react','(DMA)후'),
+      S('solid','MeOH/H2O  고체화'),
+      S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','(Column_DCB, MC/Hex 후 EA/Hex 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('subl','(fail)','fail',''),
+      S('wet','(고운 Si pass_DCB, MC/Hex 후 Act/Hex 결정화)'),
+      S('wet','L26B-202-101 7,8,9차 재결정 여액 취합 후  Si pass 후 Act/Hex 결정화'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('wet','(TolAct/Hex 재결정)'),
+      S('subl','(pass)','pass','')
     ]}),
-    Object.assign(mkLot('P-ND02-COL-BOTTOM'),{steps:[
-      {id:uid(),type:'collect',detail:'본품 재결정 여액 취합',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(6,7-zone 불순물 제거작업)',tag:null,location:'용인'},
-      {id:uid(),type:'subl',detail:'(6,7-zone 불순물 제거작업)',tag:null,location:'용인'},
-      {id:uid(),type:'wet',detail:'(Column_DCB, MC/Hx 후 Act/Hx 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'',tag:null,location:'용인'}
+    Object.assign(mkLot('P-ND02-COL-BOTTOM'), {steps:[
+      S('collect','본품 재결정 여액 취합'),
+      S('subl','(6,7-zone  불순물 제거작업)','','용인'),
+      S('subl','(6,7-zone  불순물 제거작업)','','용인'),
+      S('wet','(Colimn_DCB, MC/Hx  후 Act/Hx 결정화)'),
+      S('wet','(DCB/Act/Hex 재결정)'),
+      S('subl','','','용인')
     ]}),
-    Object.assign(mkLot('P-ND08-TOLACHX3'),{steps:[
-      {id:uid(),type:'react',detail:'(DMA)후 MeOH/H2O 고체화',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Si pass_DCB, MC/Hx 후 Act/Hx 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Column_DCB, MC/Hex 후 Act/Hx 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hex 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(6,7-zone 불순물 제거작업)\n(4,5-zone 수득, 소자 fail)',tag:'fail',location:'용인'},
-      {id:uid(),type:'wet',detail:'(column_DCB, MC/Hx 후 Act/Hx 결정화)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(DCB/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'wet',detail:'(Tol/Act/Hx 재결정)',tag:null,location:''},
-      {id:uid(),type:'subl',detail:'(pass)',tag:'pass',location:'용인'}
+    Object.assign(mkLot('P-ND08-TOLACHX3'), {steps:[
+      S('react','(DMA)후 MeOH/H2O  고체화'),
+      S('wet','(Si pass_DCB, MC/Hx 후 Act/Hx 결정화)'),
+      S('wet','(Column_DCB, MC/Hex 후 Act/Hx 결정화)'),
+      S('wet','(Tol/Act/Hx 재결정)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('wet','(Tol/Act/Hex 재결정)'),
+      S('subl','(6,7-zone  불순물 제거작업)\n(4,5-zone 수득, 소자 fail)','fail','용인'),
+      S('wet','(column_DCB, MC/Hx 후 Act/Hx 결정화)'),
+      S('wet','(DCB/Act/Hx 재결정)'),
+      S('wet','(Tol/Act/Hx 재결정)'),
+      S('subl','(pass)','pass','용인')
     ]})
   ];
-  return mkDoc({title:'P/N Type 재료 공정 Flow 정리',material:'LT-PHM295',author:'백지홍',date:'2026-04-21',sections:[ps,ns]});
+
+  return mkDoc({
+    title: 'P/N Type 재료 공정 Flow 정리',
+    material: 'LT-PHM295',
+    author: '백지홍',
+    date: '2026-04-21',
+    sections: [ps, ns]
+  });
 }
 
 /* ── 초기화 ────────────────────────────────────── */
