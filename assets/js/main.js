@@ -126,6 +126,18 @@ var apps = [
     wip:         true,
   },
 
+  // ── 공정 이력 관리 ─────────────────────────────────────────────────────────
+  {
+    id:          'pn_flow',
+    group:       '공정 이력 관리',
+    label:       'P/N 공정 Flow 관리',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/15_pn_flow/index.html',
+    loaderText:  'P/N 공정 Flow 관리 로딩 중...',
+    locked:      true,
+  },
+
   // ── 제품·소재 관리 ─────────────────────────────────────────────────────────
   {
     id:          'spec_ctq',
