@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<link rel="stylesheet" href="./style.css">
+<title>P/N 공정 Flow 관리</title>
+</head>
+<body>
+
+<!-- ── LIST VIEW ─────────────────────────────────────────────── -->
+<div id="v-list">
+  <header class="pf-topbar">
+    <h1 class="pf-app-title">P/N 공정 Flow 관리</h1>
+    <button class="btn btn-primary" onclick="APP.newDoc()">+ 새 문서</button>
+  </header>
+  <div id="doc-grid" class="pf-doc-grid"></div>
+  <div id="list-empty" class="pf-empty pf-hidden">저장된 문서가 없습니다. <strong>+ 새 문서</strong>를 눌러 시작하세요.</div>
+</div>
+
+<!-- ── DOCUMENT EDITOR VIEW ──────────────────────────────────── -->
+<div id="v-doc" class="pf-hidden">
+  <header class="pf-doc-topbar">
+    <button class="pf-back-btn" onclick="APP.showList()">← 목록</button>
+    <div class="pf-meta-row">
+      <input id="inp-title"    class="pf-inp pf-inp-title" placeholder="문서 제목"              oninput="APP.onMetaChange()">
+      <input id="inp-material" class="pf-inp pf-inp-sm"    placeholder="소재코드 (예: LT-PHM295)" oninput="APP.onMetaChange()">
+      <input id="inp-author"   class="pf-inp pf-inp-sm"    placeholder="작성자"                  oninput="APP.onMetaChange()">
+      <input id="inp-date"     class="pf-inp pf-inp-sm"    type="date"                           oninput="APP.onMetaChange()">
+    </div>
+    <button class="btn pf-print-btn" onclick="window.print()">🖨 인쇄</button>
+  </header>
+
+  <div class="pf-legend">
+    <span class="pf-leg react">반응</span>
+    <span class="pf-leg solid">고체화</span>
+    <span class="pf-leg wet">Wet 정제</span>
+    <span class="pf-leg subl">승화정제</span>
+    <span class="pf-leg collect">여액취합</span>
+    <span class="pf-leg-sep"></span>
+    <span class="pf-leg tag-pass">PASS</span>
+    <span class="pf-leg tag-fail">FAIL</span>
+    <span class="pf-leg tag-pending">예정</span>
+  </div>
+
+  <div id="doc-body" class="pf-doc-body"></div>
+
+  <div class="pf-add-sec-bar">
+    <button class="btn btn-secondary" onclick="APP.addSection('P')">+ P Type 섹션</button>
+    <button class="btn btn-secondary pf-n-sec" onclick="APP.addSection('N')">+ N Type 섹션</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="../../assets/js/auth_guard.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

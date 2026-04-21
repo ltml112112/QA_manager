@@ -1,0 +1,331 @@
+/* ── BASE ──────────────────────────────────────────────────────── */
+body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
+
+.pf-hidden { display: none !important; }
+
+/* ── LIST VIEW ─────────────────────────────────────────────────── */
+#v-list { padding: 24px; }
+
+.pf-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px;
+}
+.pf-app-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
+
+.pf-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.pf-doc-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 18px 14px;
+  cursor: pointer; position: relative; transition: box-shadow .15s, border-color .15s;
+}
+.pf-doc-card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.pf-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.pf-card-meta  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pf-card-chip  {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 20px;
+  background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border);
+}
+.pf-card-chip.mat  { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.pf-card-chip.date { background: var(--surface-2); color: var(--text-muted); }
+.pf-card-stats { font-size: 12px; color: var(--text-muted); }
+.pf-card-del {
+  position: absolute; top: 12px; right: 12px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.pf-card-del:hover { background: var(--danger); color: #fff; }
+
+.pf-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+
+/* ── DOCUMENT TOPBAR ───────────────────────────────────────────── */
+.pf-doc-topbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 20;
+}
+.pf-back-btn {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); padding: 6px 12px; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.pf-back-btn:hover { background: var(--surface-2); }
+.pf-meta-row { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+.pf-inp {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); padding: 6px 10px;
+  font-size: 13px; font-family: inherit; outline: none;
+}
+.pf-inp:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+.pf-inp-title { flex: 2; min-width: 180px; font-weight: 600; }
+.pf-inp-sm    { flex: 1; min-width: 100px; }
+.pf-print-btn { white-space: nowrap; flex-shrink: 0; }
+
+/* ── LEGEND ────────────────────────────────────────────────────── */
+.pf-legend {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  padding: 8px 20px; background: var(--surface);
+  border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.pf-leg {
+  padding: 2px 10px; border-radius: 4px; border: 1px solid;
+  font-weight: 600; font-size: 11.5px;
+}
+.pf-leg.react   { background: #dbe7ff; border-color: #3f6bd9; color: #1d4ed8; }
+.pf-leg.solid   { background: #e4f1fa; border-color: #2e8ac7; color: #1a6a9f; }
+.pf-leg.wet     { background: #e0f5e6; border-color: #2f9e52; color: #166534; }
+.pf-leg.subl    { background: #efe4fb; border-color: #7a4cc7; color: #5b21b6; }
+.pf-leg.collect { background: #fff6db; border-color: #c79a2c; color: #92400e; }
+.pf-leg.tag-pass    { background: #1f8f3e; color: #fff; border-color: #166534; }
+.pf-leg.tag-fail    { background: #c0312c; color: #fff; border-color: #991b1b; }
+.pf-leg.tag-pending { background: #fff; border: 1.5px dashed #8a94a6; color: #6b7280; }
+.pf-leg-sep { flex: 1; }
+
+/* ── DOC BODY ──────────────────────────────────────────────────── */
+.pf-doc-body {
+  padding: 20px; overflow-y: auto;
+  height: calc(100vh - 130px);
+}
+.pf-no-section { color: var(--text-muted); text-align: center; padding: 40px; font-size: 14px; }
+
+/* ── SECTION ───────────────────────────────────────────────────── */
+.pf-section { margin-bottom: 28px; }
+
+.pf-sec-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 8px 8px 0 0;
+  border: 2px solid; border-bottom: none;
+}
+.pf-sec-header.pf-sec-p { background: #e8f0ff; border-color: #3f6bd9; }
+.pf-sec-header.pf-sec-n { background: #f0e8ff; border-color: #7a4cc7; }
+
+.pf-sec-type-badge {
+  font-weight: 700; font-size: 13.5px; letter-spacing: .3px;
+}
+.pf-sec-header.pf-sec-p .pf-sec-type-badge { color: #1d3a8a; }
+.pf-sec-header.pf-sec-n .pf-sec-type-badge { color: #4c1d95; }
+
+.pf-sec-lot-count { font-size: 12px; color: #6b7280; }
+
+.pf-sec-ctrl { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.pf-sec-tog {
+  background: #fff; border: 1px solid #d1d5db; border-radius: 4px;
+  padding: 2px 10px; font-size: 12px; font-weight: 600; cursor: pointer; color: #374151;
+}
+.pf-sec-header.pf-sec-p .pf-sec-tog.active { background: #3f6bd9; color: #fff; border-color: #3f6bd9; }
+.pf-sec-header.pf-sec-n .pf-sec-tog.active { background: #7a4cc7; color: #fff; border-color: #7a4cc7; }
+.pf-sec-del {
+  background: none; border: 1px solid #e5e7eb; border-radius: 4px;
+  padding: 2px 10px; font-size: 12px; cursor: pointer; color: #6b7280;
+}
+.pf-sec-del:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+/* ── LOT ROW (horizontal scroll) ───────────────────────────────── */
+.pf-lot-row {
+  display: flex; gap: 14px; align-items: flex-start;
+  overflow-x: auto; padding: 14px;
+  background: #f8faff; border: 2px solid #3f6bd9; border-top: none; border-radius: 0 0 8px 8px;
+}
+.pf-section:has(.pf-sec-n) .pf-lot-row {
+  background: #faf8ff; border-color: #7a4cc7;
+}
+
+/* ── LOT COLUMN ────────────────────────────────────────────────── */
+.pf-lot-col {
+  min-width: 210px; max-width: 240px; flex-shrink: 0;
+  background: #fff; border: 1px solid #dde3ef;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15,26,46,.05);
+}
+.pf-lot-header {
+  padding: 10px 10px 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.pf-lot-header.pf-lot-p { background: linear-gradient(135deg, #1f2d4e, #3f6bd9); }
+.pf-lot-header.pf-lot-n { background: linear-gradient(135deg, #3a1e66, #7a4cc7); }
+
+.pf-lot-name-inp, .pf-lot-sub-inp {
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px; color: #fff; padding: 4px 7px;
+  font-size: 12.5px; font-weight: 700; font-family: inherit;
+  width: 100%; outline: none; box-sizing: border-box;
+}
+.pf-lot-name-inp::placeholder, .pf-lot-sub-inp::placeholder { color: rgba(255,255,255,.5); }
+.pf-lot-name-inp:focus, .pf-lot-sub-inp:focus {
+  background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6);
+}
+.pf-lot-sub-inp { font-size: 11px; font-weight: 400; opacity: .85; }
+.pf-lot-del-btn {
+  align-self: flex-end; background: rgba(255,255,255,.1);
+  border: none; border-radius: 4px; color: rgba(255,255,255,.7);
+  font-size: 11px; padding: 1px 6px; cursor: pointer; margin-top: -4px;
+}
+.pf-lot-del-btn:hover { background: rgba(239,68,68,.7); color: #fff; }
+
+.pf-steps-list { padding: 8px; display: flex; flex-direction: column; gap: 0; }
+
+/* ── ADD STEP BAR ──────────────────────────────────────────────── */
+.pf-add-step-bar {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 8px; border-top: 1px solid #e5e7eb; background: #fafafa;
+}
+.pf-qadd {
+  flex: 1; min-width: 0; padding: 4px 6px; font-size: 11px; font-weight: 600;
+  border: 1px solid; border-radius: 5px; cursor: pointer;
+  white-space: nowrap; text-align: center;
+  transition: filter .12s;
+}
+.pf-qadd:hover { filter: brightness(.92); }
+.pf-qadd.react   { background: #dbe7ff; border-color: #3f6bd9; color: #1d4ed8; }
+.pf-qadd.solid   { background: #e4f1fa; border-color: #2e8ac7; color: #1a6a9f; }
+.pf-qadd.wet     { background: #e0f5e6; border-color: #2f9e52; color: #166534; }
+.pf-qadd.subl    { background: #efe4fb; border-color: #7a4cc7; color: #5b21b6; }
+.pf-qadd.collect { background: #fff6db; border-color: #c79a2c; color: #92400e; }
+
+/* ── ADD LOT COLUMN ────────────────────────────────────────────── */
+.pf-add-lot-col {
+  min-width: 80px; display: flex; align-items: flex-start; padding-top: 20px;
+}
+.pf-add-lot-btn {
+  background: rgba(0,0,0,.04); border: 2px dashed #cbd5e1;
+  border-radius: 8px; color: #6b7280; font-size: 12px; font-weight: 600;
+  padding: 10px 12px; cursor: pointer; white-space: nowrap; transition: .15s;
+}
+.pf-add-lot-btn:hover { background: #eff6ff; border-color: #3f6bd9; color: #3f6bd9; }
+
+/* ── ADD SECTION BAR ───────────────────────────────────────────── */
+.pf-add-sec-bar {
+  display: flex; gap: 10px; padding: 0 20px 24px;
+}
+.pf-n-sec { border-color: #7a4cc7; color: #5b21b6; }
+.pf-n-sec:hover { background: #f0e8ff; border-color: #7a4cc7; }
+
+/* ── STEP CARD ─────────────────────────────────────────────────── */
+.pf-step {
+  position: relative;
+  padding: 7px 8px; margin-bottom: 4px;
+  border-radius: 6px; border: 1.5px solid;
+  font-size: 12px; cursor: pointer;
+  transition: box-shadow .12s;
+}
+.pf-step + .pf-step::before {
+  content: "";
+  display: block;
+  width: 2px; height: 4px;
+  background: #9ca3af;
+  margin: -4px auto 4px;
+}
+.pf-step.react   { background: #dbe7ff; border-color: #3f6bd9; }
+.pf-step.solid   { background: #e4f1fa; border-color: #2e8ac7; }
+.pf-step.wet     { background: #e0f5e6; border-color: #2f9e52; }
+.pf-step.subl    { background: #efe4fb; border-color: #7a4cc7; }
+.pf-step.collect { background: #fff6db; border-color: #c79a2c; }
+.pf-step.pf-pending {
+  background: #fff !important; border-style: dashed !important;
+  border-color: #9ca3af !important; color: #6b7280;
+}
+.pf-step:hover { box-shadow: 0 0 0 2px rgba(63,107,217,.25); }
+.pf-step.pf-step-editing { box-shadow: 0 0 0 3px #3f6bd9 !important; z-index: 2; }
+
+.pf-step-hd {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 4px;
+}
+.pf-step-lbl { font-weight: 600; font-size: 12px; color: #1d2433; flex: 1; line-height: 1.35; }
+.pf-step-btns {
+  display: none; align-items: center; gap: 2px; flex-shrink: 0;
+}
+.pf-step:hover .pf-step-btns,
+.pf-step.pf-step-editing .pf-step-btns { display: flex; }
+
+.pf-sb {
+  background: rgba(0,0,0,.07); border: none; border-radius: 3px;
+  color: #374151; font-size: 10px; padding: 1px 5px; cursor: pointer; line-height: 1.5;
+}
+.pf-sb:hover { background: rgba(0,0,0,.15); }
+.pf-sb.pf-sb-del:hover { background: #ef4444; color: #fff; }
+
+.pf-step-detail {
+  font-size: 11px; color: #374151; margin-top: 4px;
+  white-space: pre-wrap; line-height: 1.45;
+}
+
+/* ── TAGS ──────────────────────────────────────────────────────── */
+.pf-tag {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 1px 5px; border-radius: 3px; margin-left: 5px; vertical-align: middle;
+}
+.pf-tag-pass    { background: #1f8f3e; color: #fff; }
+.pf-tag-fail    { background: #c0312c; color: #fff; }
+.pf-tag-pending { background: #9ca3af; color: #fff; }
+
+/* ── EDIT PANEL ─────────────────────────────────────────────────── */
+.pf-edit-panel {
+  background: #fff; border: 2px solid #3f6bd9;
+  border-radius: 0 0 8px 8px; padding: 10px;
+  margin-bottom: 6px; margin-top: -4px;
+  box-shadow: 0 4px 16px rgba(63,107,217,.15);
+  position: relative; z-index: 3;
+}
+
+.ep-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.ep-lbl { font-size: 11px; font-weight: 700; color: #6b7280; min-width: 44px; }
+
+.ep-type-btn, .ep-tog {
+  padding: 3px 8px; font-size: 11px; font-weight: 600; border-radius: 4px;
+  border: 1.5px solid; cursor: pointer; transition: .1s;
+}
+.ep-type-btn.react   { background: #dbe7ff; border-color: #3f6bd9; color: #1d4ed8; }
+.ep-type-btn.solid   { background: #e4f1fa; border-color: #2e8ac7; color: #1a6a9f; }
+.ep-type-btn.wet     { background: #e0f5e6; border-color: #2f9e52; color: #166534; }
+.ep-type-btn.subl    { background: #efe4fb; border-color: #7a4cc7; color: #5b21b6; }
+.ep-type-btn.collect { background: #fff6db; border-color: #c79a2c; color: #92400e; }
+.ep-type-btn.ep-on, .ep-tog.ep-on {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor;
+  font-weight: 700;
+}
+
+.ep-tog { background: #f9fafb; border-color: #e5e7eb; color: #374151; }
+.ep-tog:hover { background: #f3f4f6; }
+.ep-tog.ep-pass.ep-on { background: #1f8f3e; color: #fff; border-color: #166534; box-shadow: none; }
+.ep-tog.ep-fail.ep-on { background: #c0312c; color: #fff; border-color: #991b1b; box-shadow: none; }
+.ep-tog.ep-pend.ep-on { background: #9ca3af; color: #fff; border-color: #6b7280; box-shadow: none; }
+
+.ep-detail-wrap { margin-top: 6px; }
+.ep-ta {
+  width: 100%; box-sizing: border-box;
+  background: #f8faff; border: 1.5px solid #dde5f5;
+  border-radius: 6px; color: #1d2433; padding: 7px 9px;
+  font-size: 12px; font-family: inherit; resize: vertical; outline: none;
+  line-height: 1.5;
+}
+.ep-ta:focus { border-color: #3f6bd9; background: #fff; box-shadow: 0 0 0 2px rgba(63,107,217,.12); }
+
+.ep-chips {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px;
+}
+.pf-chip {
+  padding: 3px 9px; font-size: 11px; font-weight: 500;
+  background: #f0f4ff; border: 1px solid #c7d7fb;
+  border-radius: 20px; cursor: pointer; color: #1d4ed8;
+  transition: .1s;
+}
+.pf-chip:hover { background: #3f6bd9; color: #fff; border-color: #3f6bd9; }
+
+/* ── PRINT ──────────────────────────────────────────────────────── */
+@media print {
+  .pf-doc-topbar, .pf-legend, .pf-add-sec-bar,
+  .pf-add-lot-col, .pf-add-step-bar, .pf-edit-panel,
+  .pf-step-btns, .pf-sec-ctrl, .pf-lot-del-btn,
+  .pf-lot-sub-inp:placeholder-shown { display: none !important; }
+  .pf-doc-body { height: auto; overflow: visible; padding: 0; }
+  .pf-lot-row  { overflow: visible; flex-wrap: wrap; }
+  .pf-lot-col  { break-inside: avoid; }
+  body         { background: #fff; }
+  .pf-lot-name-inp { background: none; border: none; color: #000; padding: 0; font-size: 13px; }
+  .pf-lot-sub-inp  { background: none; border: none; color: #555; padding: 0; font-size: 11px; }
+  .pf-lot-header   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pf-step         { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
