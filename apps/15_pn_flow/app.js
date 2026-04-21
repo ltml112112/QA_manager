@@ -62,7 +62,7 @@ function findLotSec(lid) {
 function stepNum(steps, idx, type) { var n=0; for(var i=0;i<=idx;i++) if(steps[i].type===type) n++; return n; }
 function stepLbl(s, n) {
   if(s.type==='wet') return n+'차 Wet 정제';
-  if(s.type==='subl') return n+'차 '+（s.location||'')+' 승화정제';
+  if(s.type==='subl') return n+'차 '+(s.location ? s.location+' ' : '')+'승화정제';
   if(s.type==='react') return '반응';
   if(s.type==='solid') return '고체화';
   if(s.type==='collect') return '여액 취합';
@@ -149,9 +149,13 @@ window.APP = {
     var l = findLot(lid); if(!l) return;
     var st = mkStep(type);
     l.steps.push(st);
+    STATE.editKey = st.id;
     save();
-    setTimeout(function() { APP.openEdit(st.id); }, 30);
     render();
+    setTimeout(function() {
+      var ta = document.getElementById('ep-ta-'+st.id);
+      if(ta) ta.focus();
+    }, 30);
   },
   deleteStep: function(sid) {
     var l = findStepLot(sid); if(!l) return;
@@ -224,6 +228,10 @@ window.APP = {
     closeEdit();
     STATE.editKey = sid;
     render();
+    setTimeout(function() {
+      var ta = document.getElementById('ep-ta-'+sid);
+      if(ta) ta.focus();
+    }, 30);
   },
   closeEdit: function() {
     closeEdit();
@@ -291,13 +299,12 @@ function renderSec(s) {
 function renderLot(l, s) {
   var tc = s.type==='N'?'pf-lot-n':'pf-lot-p';
   var sh = (l.steps||[]).map((st,i)=>renderStep(st,l,i)).join('');
-  var ep = STATE.editKey && findStepLot(STATE.editKey)===l ? renderEditPanel(findStep(STATE.editKey),l) : '';
   return '<div class="pf-lot-col" data-lot-id="'+l.id+'">'+
     '<div class="pf-lot-header '+tc+'">'+
     '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" onchange="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" onchange="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '<button class="pf-lot-del-btn" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
-    '</div><div class="pf-steps-list">'+sh+ep+'</div>'+
+    '</div><div class="pf-steps-list">'+sh+'</div>'+
     '<div class="pf-add-step-bar">'+
     '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
     '<button class="pf-qadd solid" onclick="APP.addStep(\''+l.id+'\',\'solid\',event)">+고체화</button>'+
@@ -313,15 +320,17 @@ function renderStep(st, l, i) {
   var pending = st.tag==='pending'?'pf-pending':'';
   var editing = STATE.editKey===st.id?'pf-step-editing':'';
   var tagHtml = st.tag&&st.tag!=='pending'?'<span class="pf-tag pf-tag-'+st.tag+'">'+st.tag.toUpperCase()+'</span>':'';
-  return '<div class="pf-step '+st.type+' '+pending+' '+editing+'" data-step-id="'+st.id+'" onclick="APP.onStepClick(\''+st.id+'\',event);event.stopPropagation()">'+
+  var stepHtml = '<div class="pf-step '+st.type+' '+pending+' '+editing+'" data-step-id="'+st.id+'" onclick="APP.onStepClick(\''+st.id+'\');event.stopPropagation()">'+
     '<div class="pf-step-hd"><span class="pf-step-lbl">'+esc(lbl)+tagHtml+'</span>'+
     '<span class="pf-step-btns">'+
-    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'up\',event);event.stopPropagation()">↑</button>'+
-    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'down\',event);event.stopPropagation()">↓</button>'+
-    '<button class="pf-sb pf-sb-del" onclick="APP.deleteStep(\''+st.id+'\',event);event.stopPropagation()">✕</button>'+
+    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'up\');event.stopPropagation()">↑</button>'+
+    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'down\');event.stopPropagation()">↓</button>'+
+    '<button class="pf-sb pf-sb-del" onclick="APP.deleteStep(\''+st.id+'\');event.stopPropagation()">✕</button>'+
     '</span></div>'+
     (st.detail?'<div class="pf-step-detail">'+esc(st.detail)+'</div>':'')+
     '</div>';
+  var epHtml = (STATE.editKey===st.id) ? renderEditPanel(st, l) : '';
+  return stepHtml + epHtml;
 }
 
 function renderEditPanel(st, l) {
