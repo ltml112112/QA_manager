@@ -85,7 +85,8 @@ function save() {
 }
 
 var _firstLoad = true;
-var SEED_VER = 3; // 올리면 구 시드 삭제 후 새 시드 자동 생성
+var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
+var SEED_VER = 3;
 
 function load() {
   DB.on('value', function(snap) {
@@ -95,19 +96,14 @@ function load() {
       _firstLoad = false;
       STATE.docs = incoming;
 
-      // 시드 버전 체크 — 구버전 시드 삭제 후 새 시드 삽입
-      var seedDocs = Object.values(STATE.docs).filter(function(d){ return d._seed; });
-      var hasCurrentSeed = seedDocs.some(function(d){ return d._seed === SEED_VER; });
-
-      if (!hasCurrentSeed) {
-        seedDocs.forEach(function(d) {
-          delete STATE.docs[d.id];
-          DB.child(d.id).remove();
-        });
+      // 고정 ID로 예시 문서 유무·버전 확인 → 없거나 구버전이면 (재)생성
+      var ex = STATE.docs[SEED_ID];
+      if (!ex || ex._seed !== SEED_VER) {
         var doc = buildSeed();
+        doc.id   = SEED_ID;
         doc._seed = SEED_VER;
-        STATE.docs[doc.id] = doc;
-        DB.child(doc.id).set(doc);
+        STATE.docs[SEED_ID] = doc;
+        DB.child(SEED_ID).set(doc);
       }
 
       showList();
@@ -293,19 +289,30 @@ function render() {
 function renderList() {
   document.getElementById('v-list').classList.remove('pf-hidden');
   document.getElementById('v-doc').classList.add('pf-hidden');
-  var docs = Object.values(STATE.docs).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  var docs = Object.values(STATE.docs).sort(function(a,b){
+    // 예시 문서 항상 맨 앞
+    if(a.id===SEED_ID) return -1;
+    if(b.id===SEED_ID) return 1;
+    return (b.date||'').localeCompare(a.date||'');
+  });
   var html = docs.map(function(d) {
-    var lc = d.sections.reduce((sum,s)=>sum+s.lots.length,0);
-    return '<div class="pf-doc-card" onclick="APP.openDoc(\''+d.id+'\')">'+
+    var secs = Array.isArray(d.sections) ? d.sections : Object.values(d.sections||{});
+    var lc = secs.reduce(function(sum,s){
+      var lots = Array.isArray(s.lots) ? s.lots : Object.values(s.lots||{});
+      return sum + lots.length;
+    }, 0);
+    var isExample = d.id === SEED_ID;
+    return '<div class="pf-doc-card'+(isExample?' pf-doc-example':'')+'" onclick="APP.openDoc(\''+d.id+'\')">'+
+      (isExample?'<div class="pf-example-badge">예시</div>':'')+
       '<div class="pf-card-title">'+esc(d.title||'제목 없음')+'</div>'+
       '<div class="pf-card-meta">'+
       (d.material?'<span class="pf-card-chip mat">'+esc(d.material)+'</span>':'')+
       (d.author?'<span class="pf-card-chip">'+esc(d.author)+'</span>':'')+
       (d.date?'<span class="pf-card-chip date">'+esc(d.date)+'</span>':'')+
-      '</div><div class="pf-card-stats">'+d.sections.length+'섹션 · '+lc+'Lot</div>'+
+      '</div><div class="pf-card-stats">'+secs.length+'섹션 · '+lc+' Lot</div>'+
       '<button class="pf-card-del" onclick="APP.deleteDoc(\''+d.id+'\');event.stopPropagation()">삭제</button></div>';
   }).join('');
-  document.getElementById('doc-grid').innerHTML = html;
+  document.getElementById('doc-grid').innerHTML = html || '';
   document.getElementById('list-empty').classList.toggle('pf-hidden', !!docs.length);
 }
 

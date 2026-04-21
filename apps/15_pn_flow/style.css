@@ -41,6 +41,14 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 
 .pf-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
 
+.pf-doc-example { border-color: var(--accent); border-style: dashed; }
+.pf-doc-example:hover { box-shadow: 0 0 0 3px var(--accent-glow); }
+.pf-example-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: var(--accent); background: var(--accent-glow); border: 1px solid var(--accent);
+  border-radius: 4px; padding: 1px 6px; margin-bottom: 6px;
+}
+
 /* ── DOCUMENT TOPBAR ───────────────────────────────────────────── */
 .pf-doc-topbar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
