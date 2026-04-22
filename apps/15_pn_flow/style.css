@@ -74,6 +74,27 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 .pf-xlsx-btn  { white-space: nowrap; flex-shrink: 0; background: #1f8f3e; color: #fff; border: 1px solid #166534; }
 .pf-xlsx-btn:hover { background: #166534; }
 
+/* ── SAVE STATUS BADGE ─────────────────────────────────────────── */
+.pf-save-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 600;
+  border: 1px solid; flex-shrink: 0;
+  cursor: help; user-select: none;
+}
+.pf-ss-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.pf-ss-idle    { background: #f3f4f6; border-color: #d1d5db; color: #6b7280; }
+.pf-ss-idle    .pf-ss-dot { background: #9ca3af; }
+.pf-ss-saving  { background: #fff7e0; border-color: #f59e0b; color: #92400e; }
+.pf-ss-saving  .pf-ss-dot { background: #f59e0b; animation: pf-pulse 1s ease-in-out infinite; }
+.pf-ss-saved   { background: #e7f6ec; border-color: #1f8f3e; color: #166534; }
+.pf-ss-saved   .pf-ss-dot { background: #1f8f3e; }
+.pf-ss-error   { background: #fde7e6; border-color: #c0312c; color: #991b1b; }
+.pf-ss-error   .pf-ss-dot { background: #c0312c; animation: pf-pulse 1s ease-in-out infinite; }
+.pf-ss-offline { background: #f3f4f6; border-color: #6b7280; color: #374151; }
+.pf-ss-offline .pf-ss-dot { background: #6b7280; }
+@keyframes pf-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
 /* ── SUMMARY STRIP ─────────────────────────────────────────────── */
 .pf-summary {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;

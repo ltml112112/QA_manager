@@ -94,17 +94,51 @@ function lotStatus(lot) {
   return 'progress';
 }
 
+/* ── 저장 상태 표시 ─────────────────────────────── */
+var _connected = true; // .info/connected 구독 전까지 가정
+function setSaveStatus(state, msg) {
+  var el = document.getElementById('pf-save-status'); if(!el) return;
+  el.classList.remove('pf-ss-idle','pf-ss-saving','pf-ss-saved','pf-ss-error','pf-ss-offline');
+  el.classList.add('pf-ss-'+state);
+  var labels = { idle:'대기', saving:'저장 중...', saved:'저장됨', error:'저장 실패', offline:'오프라인' };
+  var txt = el.querySelector('.pf-ss-txt'); if(txt) txt.textContent = labels[state] || state;
+  el.title = msg || labels[state] || '';
+}
+
 /* ── Firebase 저장 ─────────────────────────────── */
+var _pendingSave = false;
+function flushSave() {
+  if (!_pendingSave) return;
+  clearTimeout(STATE.timer);
+  _pendingSave = false;
+  performSave();
+}
+function performSave() {
+  var d = getDoc(); if(!d) return;
+  d.updatedAt = Date.now();
+  d.updatedBy = (_currentUser && _currentUser.email) || '';
+  if (!_connected) { setSaveStatus('offline', '네트워크 연결을 확인하세요.'); return; }
+  setSaveStatus('saving');
+  DB.child(d.id).set(d)
+    .then(function() {
+      setSaveStatus('saved', '저장됨 ' + new Date().toLocaleTimeString());
+      renderUpdatedInfo();
+    })
+    .catch(function(err) {
+      console.error('[pn_flow] Firebase set 실패:', err && err.code, err && err.message, err);
+      setSaveStatus('error', '저장 실패: ' + (err && (err.code || err.message) || '알 수 없는 오류'));
+    });
+}
 function save() {
   clearTimeout(STATE.timer);
+  _pendingSave = true;
+  setSaveStatus('saving');
   STATE.timer = setTimeout(function() {
-    var d = getDoc(); if(!d) return;
-    d.updatedAt = Date.now();
-    d.updatedBy = (_currentUser && _currentUser.email) || '';
-    DB.child(d.id).set(d);
-    renderUpdatedInfo();
+    _pendingSave = false;
+    performSave();
   }, 1000);
 }
+window.addEventListener('beforeunload', flushSave);
 
 var _firstLoad = true;
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
@@ -489,8 +523,8 @@ function renderLot(l, s) {
       '<button class="pf-lot-ctl-btn" title="Lot 복제" onclick="APP.cloneLot(\''+l.id+'\',event)">⎘</button>'+
       '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div>'+
-    '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" onchange="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
-    '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" onchange="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
+    '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
+    '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" oninput="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '</div><div class="pf-steps-list">'+sh+'</div>'+
     '<div class="pf-add-step-bar">'+
     '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
@@ -684,6 +718,22 @@ function buildSeed() {
     sections: [ps, ns]
   });
 }
+
+/* ── 연결 상태 구독 ─────────────────────────────── */
+firebase.database().ref('.info/connected').on('value', function(snap) {
+  _connected = snap.val() === true;
+  if (!_connected) {
+    setSaveStatus('offline', '네트워크 연결을 확인하세요.');
+  } else {
+    // 연결 복구 시 현재 상태가 error/offline이면 대기로 전환
+    var el = document.getElementById('pf-save-status');
+    if (el && (el.classList.contains('pf-ss-offline') || el.classList.contains('pf-ss-error'))) {
+      setSaveStatus('idle');
+    }
+    // 오프라인 중에 쌓인 pending 저장 flush
+    if (_pendingSave) flushSave();
+  }
+});
 
 /* ── 초기화 ────────────────────────────────────── */
 load();
