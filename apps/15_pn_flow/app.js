@@ -24,6 +24,10 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var DB = firebase.database().ref('pn_flow_docs');
 
+/* ── 현재 사용자 ────────────────────────────────── */
+var _currentUser = null;
+firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
+
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
   wet: ['Si pass', 'Column', 'DCB', 'CF', 'MC/Hex', 'Act/Hex', 'EA/Hex', 'Tol/Act/Hex', 'DCB/Act/Hex', '결정화', '재결정', '고운'],
@@ -32,6 +36,9 @@ var CHIP_MAP = {
   solid: ['MeOH/H2O', '고체화'],
   collect: []
 };
+
+var TYPE_LABEL = { react:'반응', solid:'고체화', wet:'Wet', subl:'승화', collect:'여액' };
+var SEC_LABEL  = { P:'P Type', N:'N Type', S:'Single' };
 
 /* ── 상태 ───────────────────────────────────────── */
 var STATE = { docs: {}, currentId: null, editKey: null, timer: null };
@@ -73,14 +80,29 @@ function stepLbl(s, n) {
 function mkDoc(o) { return Object.assign({id:uid(),title:'새 Flow',material:'',author:'',date:todayStr(),sections:[]},o); }
 function mkSec(t) { return {id:uid(),type:t||'P',lots:[]}; }
 function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[]}; }
-function mkStep(t,o) { return Object.assign({id:uid(),type:t||'wet',detail:'',tag:null,location:''},o); }
+function mkStep(t,o) { return Object.assign({id:uid(),type:t||'wet',detail:'',tag:null,location:'',date:'',operator:''},o); }
+
+/* ── Lot 최종상태 ───────────────────────────────── */
+/* 마지막 "비-예정" 스텝의 tag로 판정. 없으면 'progress' */
+function lotStatus(lot) {
+  var steps = lot.steps || [];
+  for (var i = steps.length - 1; i >= 0; i--) {
+    var t = steps[i].tag;
+    if (t === 'pass') return 'pass';
+    if (t === 'fail') return 'fail';
+  }
+  return 'progress';
+}
 
 /* ── Firebase 저장 ─────────────────────────────── */
 function save() {
   clearTimeout(STATE.timer);
   STATE.timer = setTimeout(function() {
     var d = getDoc(); if(!d) return;
+    d.updatedAt = Date.now();
+    d.updatedBy = (_currentUser && _currentUser.email) || '';
     DB.child(d.id).set(d);
+    renderUpdatedInfo();
   }, 1000);
 }
 
@@ -183,6 +205,24 @@ window.APP = {
     save();
     render();
   },
+  cloneLot: function(lid, ev) {
+    if(ev) ev.stopPropagation();
+    var d = getDoc(); if(!d) return;
+    var src = findLot(lid); var sec = findLotSec(lid);
+    if(!src || !sec) return;
+    var copy = {
+      id: uid(),
+      name: (src.name || '') + ' (복제)',
+      subName: src.subName || '',
+      steps: (src.steps || []).map(function(st) {
+        return Object.assign({}, st, { id: uid() });
+      })
+    };
+    var idx = sec.lots.findIndex(l=>l.id===lid);
+    sec.lots.splice(idx+1, 0, copy);
+    save();
+    render();
+  },
   addStep: function(lid, type) {
     var l = findLot(lid); if(!l) return;
     var st = mkStep(type);
@@ -273,6 +313,59 @@ window.APP = {
   },
   closeEdit: function() {
     closeEdit();
+  },
+  exportXlsx: function() {
+    var d = getDoc(); if(!d) { alert('문서가 선택되지 않았습니다.'); return; }
+    if (typeof XLSX === 'undefined') { alert('XLSX 라이브러리를 불러오지 못했습니다.'); return; }
+
+    var meta = [
+      ['제목',     d.title || ''],
+      ['소재코드', d.material || ''],
+      ['작성자',   d.author || ''],
+      ['작성일',   d.date || ''],
+      ['최근 수정', d.updatedAt ? new Date(d.updatedAt).toISOString().slice(0,16).replace('T',' ') : ''],
+      ['수정자',   d.updatedBy || '']
+    ];
+
+    var rows = [
+      ['Type', 'Lot 이름', 'Lot 별칭', 'Lot 상태', '순번', '공정', '위치', '결과', '진행일', '담당자', '상세']
+    ];
+    (d.sections || []).forEach(function(s) {
+      var typeLabel = SEC_LABEL[s.type] || s.type;
+      (s.lots || []).forEach(function(l) {
+        var stLabel = {pass:'PASS', fail:'FAIL', progress:'진행 중'}[lotStatus(l)];
+        var steps = l.steps || [];
+        if (!steps.length) {
+          rows.push([typeLabel, l.name || '', l.subName || '', stLabel, '', '', '', '', '', '', '']);
+          return;
+        }
+        steps.forEach(function(st, i) {
+          var n = stepNum(steps, i, st.type);
+          var lbl = stepLbl(st, n);
+          var resultLbl = st.tag === 'pass' ? 'PASS' : st.tag === 'fail' ? 'FAIL' : st.tag === 'pending' ? '예정' : '';
+          rows.push([
+            typeLabel, l.name || '', l.subName || '', stLabel,
+            i + 1, lbl, st.location || '', resultLbl, st.date || '', st.operator || '', st.detail || ''
+          ]);
+        });
+      });
+    });
+
+    var wb = XLSX.utils.book_new();
+    var wsMeta = XLSX.utils.aoa_to_sheet(meta);
+    wsMeta['!cols'] = [{wch:14},{wch:60}];
+    XLSX.utils.book_append_sheet(wb, wsMeta, '문서정보');
+
+    var wsData = XLSX.utils.aoa_to_sheet(rows);
+    wsData['!cols'] = [
+      {wch:8}, {wch:22}, {wch:22}, {wch:8},
+      {wch:5}, {wch:16}, {wch:6}, {wch:6},
+      {wch:11}, {wch:8}, {wch:60}
+    ];
+    XLSX.utils.book_append_sheet(wb, wsData, '공정이력');
+
+    var fname = (d.material || d.title || 'PN_Flow').replace(/[\\/:*?"<>|]/g,'_') + '_' + (d.date || todayStr()) + '.xlsx';
+    XLSX.writeFile(wb, fname);
   }
 };
 
@@ -324,20 +417,59 @@ function renderDoc() {
   document.getElementById('inp-material').value = d.material||'';
   document.getElementById('inp-author').value = d.author||'';
   document.getElementById('inp-date').value = d.date||'';
+  renderSummary();
   var html = (d.sections||[]).map(renderSec).join('') || '<p class="pf-no-section">섹션을 추가하세요.</p>';
   document.getElementById('doc-body').innerHTML = html;
+  renderUpdatedInfo();
+}
+
+/* ── 요약 스트립 ───────────────────────────────── */
+function renderSummary() {
+  var d = getDoc(); if(!d) return;
+  var counts = { P:0, N:0, S:0, lots:0, pass:0, fail:0, progress:0 };
+  (d.sections||[]).forEach(function(s) {
+    if (s.type === 'P' || s.type === 'N' || s.type === 'S') counts[s.type] += (s.lots||[]).length;
+    (s.lots||[]).forEach(function(l) {
+      counts.lots++;
+      counts[lotStatus(l)]++;
+    });
+  });
+  var el = document.getElementById('doc-summary');
+  if (!el) return;
+  el.innerHTML =
+    '<span class="pf-sum-chip pf-sum-p">P Type <b>'+counts.P+'</b></span>'+
+    '<span class="pf-sum-chip pf-sum-n">N Type <b>'+counts.N+'</b></span>'+
+    '<span class="pf-sum-chip pf-sum-s">Single <b>'+counts.S+'</b></span>'+
+    '<span class="pf-sum-sep"></span>'+
+    '<span class="pf-sum-chip">전체 Lot <b>'+counts.lots+'</b></span>'+
+    '<span class="pf-sum-chip pf-sum-pass">PASS <b>'+counts.pass+'</b></span>'+
+    '<span class="pf-sum-chip pf-sum-fail">FAIL <b>'+counts.fail+'</b></span>'+
+    '<span class="pf-sum-chip pf-sum-prog">진행 중 <b>'+counts.progress+'</b></span>';
+}
+
+/* ── 변경 이력 표시 ─────────────────────────────── */
+function renderUpdatedInfo() {
+  var d = getDoc(); var el = document.getElementById('pf-updated-info');
+  if (!el) return;
+  if (!d || !d.updatedAt) { el.textContent = ''; return; }
+  var dt = new Date(d.updatedAt);
+  var y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), day = String(dt.getDate()).padStart(2,'0');
+  var hh = String(dt.getHours()).padStart(2,'0'), mm = String(dt.getMinutes()).padStart(2,'0');
+  var by = d.updatedBy ? ' · '+d.updatedBy : '';
+  el.textContent = '최근 수정 '+y+'-'+m+'-'+day+' '+hh+':'+mm+by;
 }
 
 function renderSec(s) {
-  var tc = s.type==='N'?'pf-sec-n':'pf-sec-p';
+  var tc = s.type==='N'?'pf-sec-n':(s.type==='S'?'pf-sec-s':'pf-sec-p');
   var lh = (s.lots||[]).map(l=>renderLot(l,s)).join('');
   return '<div class="pf-section" data-sec-id="'+s.id+'">'+
     '<div class="pf-sec-header '+tc+'">'+
-    '<span class="pf-sec-type-badge">'+s.type+' Type</span>'+
+    '<span class="pf-sec-type-badge">'+SEC_LABEL[s.type]+'</span>'+
     '<span class="pf-sec-lot-count">'+s.lots.length+' Lot</span>'+
     '<div class="pf-sec-ctrl">'+
     '<button class="pf-sec-tog'+(s.type==='P'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'P\',event)">P</button>'+
     '<button class="pf-sec-tog'+(s.type==='N'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'N\',event)">N</button>'+
+    '<button class="pf-sec-tog'+(s.type==='S'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'S\',event)">S</button>'+
     '<button class="pf-sec-del" onclick="APP.deleteSection(\''+s.id+'\',event)">✕ 섹션 삭제</button>'+
     '</div></div>'+
     '<div class="pf-lot-row">'+lh+
@@ -346,13 +478,19 @@ function renderSec(s) {
 }
 
 function renderLot(l, s) {
-  var tc = s.type==='N'?'pf-lot-n':'pf-lot-p';
+  var tc = s.type==='N'?'pf-lot-n':(s.type==='S'?'pf-lot-s':'pf-lot-p');
+  var status = lotStatus(l);
+  var statusLbl = {pass:'PASS', fail:'FAIL', progress:'진행 중'}[status];
   var sh = (l.steps||[]).map((st,i)=>renderStep(st,l,i)).join('');
-  return '<div class="pf-lot-col" data-lot-id="'+l.id+'">'+
+  return '<div class="pf-lot-col pf-lot-st-'+status+'" data-lot-id="'+l.id+'">'+
     '<div class="pf-lot-header '+tc+'">'+
+    '<div class="pf-lot-head-top">'+
+      '<span class="pf-lot-status pf-st-'+status+'">'+statusLbl+'</span>'+
+      '<button class="pf-lot-ctl-btn" title="Lot 복제" onclick="APP.cloneLot(\''+l.id+'\',event)">⎘</button>'+
+      '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
+    '</div>'+
     '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" onchange="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" onchange="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
-    '<button class="pf-lot-del-btn" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div><div class="pf-steps-list">'+sh+'</div>'+
     '<div class="pf-add-step-bar">'+
     '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
@@ -369,6 +507,10 @@ function renderStep(st, l, i) {
   var pending = st.tag==='pending'?'pf-pending':'';
   var editing = STATE.editKey===st.id?'pf-step-editing':'';
   var tagHtml = st.tag&&st.tag!=='pending'?'<span class="pf-tag pf-tag-'+st.tag+'">'+st.tag.toUpperCase()+'</span>':'';
+  var metaParts = [];
+  if (st.date)     metaParts.push('<span class="pf-step-date">📅 '+esc(st.date)+'</span>');
+  if (st.operator) metaParts.push('<span class="pf-step-op">👤 '+esc(st.operator)+'</span>');
+  var metaHtml = metaParts.length ? '<div class="pf-step-meta">'+metaParts.join('')+'</div>' : '';
   var stepHtml = '<div class="pf-step '+st.type+' '+pending+' '+editing+'" data-step-id="'+st.id+'" onclick="APP.onStepClick(\''+st.id+'\');event.stopPropagation()">'+
     '<div class="pf-step-hd"><span class="pf-step-lbl">'+esc(lbl)+tagHtml+'</span>'+
     '<span class="pf-step-btns">'+
@@ -377,6 +519,7 @@ function renderStep(st, l, i) {
     '<button class="pf-sb pf-sb-del" onclick="APP.deleteStep(\''+st.id+'\');event.stopPropagation()">✕</button>'+
     '</span></div>'+
     (st.detail?'<div class="pf-step-detail">'+esc(st.detail)+'</div>':'')+
+    metaHtml+
     '</div>';
   var epHtml = (STATE.editKey===st.id) ? renderEditPanel(st, l) : '';
   return stepHtml + epHtml;
@@ -394,11 +537,16 @@ function renderEditPanel(st, l) {
     '<button class="ep-tog ep-fail'+(st.tag==='fail'?' ep-on':'')+'" onclick="APP.setStepField(\''+st.id+'\',\'tag\',\'fail\')">FAIL</button>'+
     '<button class="ep-tog ep-pend'+(st.tag==='pending'?' ep-on':'')+'" onclick="APP.setStepField(\''+st.id+'\',\'tag\',\'pending\')">예정</button>'+
     '<button class="ep-tog'+(!st.tag?' ep-on':'')+'" onclick="APP.setStepField(\''+st.id+'\',\'tag\',null)">없음</button></div>';
+  var metaHtml = '<div class="ep-row ep-row-meta">'+
+    '<span class="ep-lbl">진행</span>'+
+    '<input type="date" class="ep-inp ep-inp-date" value="'+esc(st.date||'')+'" oninput="APP.setStepField(\''+st.id+'\',\'date\',this.value)">'+
+    '<input type="text" class="ep-inp ep-inp-op" placeholder="담당자" value="'+esc(st.operator||'')+'" oninput="APP.setStepField(\''+st.id+'\',\'operator\',this.value)">'+
+    '</div>';
   return '<div class="pf-edit-panel" id="ep-'+st.id+'" onclick="event.stopPropagation()">'+
     '<div class="ep-row ep-row-type"><span class="ep-lbl">유형</span>'+
     ['react','solid','wet','subl','collect'].map(t=>'<button class="ep-type-btn '+t+(st.type===t?' ep-on':'')+'" onclick="APP.setStepType(\''+st.id+'\',\''+t+'\')">'+
     ({react:'반응',solid:'고체화',wet:'Wet',subl:'승화',collect:'여액'}[t])+'</button>').join('')+
-    '</div>'+locHtml+tagHtml+
+    '</div>'+locHtml+tagHtml+metaHtml+
     '<div class="ep-detail-wrap"><textarea class="ep-ta" id="ep-ta-'+st.id+'" placeholder="상세 내용" oninput="APP.onDetailInput(\''+st.id+'\',this.value)" rows="3">'+
     esc(st.detail||'')+'</textarea><div class="ep-chips">'+chips+'</div></div></div>';
 }
