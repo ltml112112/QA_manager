@@ -71,6 +71,28 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 .pf-inp-title { flex: 2; min-width: 180px; font-weight: 600; }
 .pf-inp-sm    { flex: 1; min-width: 100px; }
 .pf-print-btn { white-space: nowrap; flex-shrink: 0; }
+.pf-xlsx-btn  { white-space: nowrap; flex-shrink: 0; background: #1f8f3e; color: #fff; border: 1px solid #166534; }
+.pf-xlsx-btn:hover { background: #166534; }
+
+/* ── SUMMARY STRIP ─────────────────────────────────────────────── */
+.pf-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 8px 20px; background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.pf-sum-chip {
+  padding: 3px 10px; border-radius: 20px;
+  background: #fff; border: 1px solid var(--border); color: var(--text-muted);
+}
+.pf-sum-chip b { color: var(--text); margin-left: 4px; font-weight: 700; }
+.pf-sum-chip.pf-sum-p    { background: #e8f0ff; border-color: #3f6bd9; color: #1d3a8a; }
+.pf-sum-chip.pf-sum-n    { background: #f0e8ff; border-color: #7a4cc7; color: #4c1d95; }
+.pf-sum-chip.pf-sum-s    { background: #fff1e0; border-color: #d97706; color: #92400e; }
+.pf-sum-chip.pf-sum-pass { background: #e7f6ec; border-color: #1f8f3e; color: #166534; }
+.pf-sum-chip.pf-sum-fail { background: #fde7e6; border-color: #c0312c; color: #991b1b; }
+.pf-sum-chip.pf-sum-prog { background: #fff; border-color: #9ca3af; color: #374151; }
+.pf-sum-sep  { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
 
 /* ── LEGEND ────────────────────────────────────────────────────── */
 .pf-legend {
@@ -109,12 +131,14 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 }
 .pf-sec-header.pf-sec-p { background: #e8f0ff; border-color: #3f6bd9; }
 .pf-sec-header.pf-sec-n { background: #f0e8ff; border-color: #7a4cc7; }
+.pf-sec-header.pf-sec-s { background: #fff1e0; border-color: #d97706; }
 
 .pf-sec-type-badge {
   font-weight: 700; font-size: 13.5px; letter-spacing: .3px;
 }
 .pf-sec-header.pf-sec-p .pf-sec-type-badge { color: #1d3a8a; }
 .pf-sec-header.pf-sec-n .pf-sec-type-badge { color: #4c1d95; }
+.pf-sec-header.pf-sec-s .pf-sec-type-badge { color: #92400e; }
 
 .pf-sec-lot-count { font-size: 12px; color: #6b7280; }
 
@@ -125,6 +149,7 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 }
 .pf-sec-header.pf-sec-p .pf-sec-tog.active { background: #3f6bd9; color: #fff; border-color: #3f6bd9; }
 .pf-sec-header.pf-sec-n .pf-sec-tog.active { background: #7a4cc7; color: #fff; border-color: #7a4cc7; }
+.pf-sec-header.pf-sec-s .pf-sec-tog.active { background: #d97706; color: #fff; border-color: #d97706; }
 .pf-sec-del {
   background: none; border: 1px solid #e5e7eb; border-radius: 4px;
   padding: 2px 10px; font-size: 12px; cursor: pointer; color: #6b7280;
@@ -140,6 +165,9 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 .pf-section:has(.pf-sec-n) .pf-lot-row {
   background: #faf8ff; border-color: #7a4cc7;
 }
+.pf-section:has(.pf-sec-s) .pf-lot-row {
+  background: #fffaf2; border-color: #d97706;
+}
 
 /* ── LOT COLUMN ────────────────────────────────────────────────── */
 .pf-lot-col {
@@ -149,11 +177,36 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
   box-shadow: 0 1px 3px rgba(15,26,46,.05);
 }
 .pf-lot-header {
-  padding: 10px 10px 8px;
+  padding: 8px 10px 8px;
   display: flex; flex-direction: column; gap: 4px;
 }
 .pf-lot-header.pf-lot-p { background: linear-gradient(135deg, #1f2d4e, #3f6bd9); }
 .pf-lot-header.pf-lot-n { background: linear-gradient(135deg, #3a1e66, #7a4cc7); }
+.pf-lot-header.pf-lot-s { background: linear-gradient(135deg, #5b3008, #d97706); }
+
+.pf-lot-head-top {
+  display: flex; align-items: center; gap: 4px;
+}
+.pf-lot-status {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+  letter-spacing: .3px; line-height: 1.5;
+}
+.pf-lot-status.pf-st-pass     { background: #1f8f3e; color: #fff; }
+.pf-lot-status.pf-st-fail     { background: #c0312c; color: #fff; }
+.pf-lot-status.pf-st-progress { background: rgba(255,255,255,.22); color: #fff; border: 1px solid rgba(255,255,255,.35); }
+
+.pf-lot-ctl-btn {
+  margin-left: auto;
+  background: rgba(255,255,255,.1); border: none; border-radius: 4px;
+  color: rgba(255,255,255,.8); font-size: 12px;
+  padding: 1px 7px; cursor: pointer; line-height: 1.4;
+}
+.pf-lot-ctl-btn + .pf-lot-ctl-btn { margin-left: 2px; }
+.pf-lot-ctl-btn:hover { background: rgba(255,255,255,.25); color: #fff; }
+.pf-lot-del-btn:hover { background: rgba(239,68,68,.8); color: #fff; }
+
+.pf-lot-col.pf-lot-st-pass { box-shadow: 0 0 0 2px #1f8f3e, 0 1px 3px rgba(15,26,46,.05); }
+.pf-lot-col.pf-lot-st-fail { box-shadow: 0 0 0 2px #c0312c, 0 1px 3px rgba(15,26,46,.05); }
 
 .pf-lot-name-inp, .pf-lot-sub-inp {
   background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
@@ -166,12 +219,6 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
   background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6);
 }
 .pf-lot-sub-inp { font-size: 11px; font-weight: 400; opacity: .85; }
-.pf-lot-del-btn {
-  align-self: flex-end; background: rgba(255,255,255,.1);
-  border: none; border-radius: 4px; color: rgba(255,255,255,.7);
-  font-size: 11px; padding: 1px 6px; cursor: pointer; margin-top: -4px;
-}
-.pf-lot-del-btn:hover { background: rgba(239,68,68,.7); color: #fff; }
 
 .pf-steps-list { padding: 8px; display: flex; flex-direction: column; gap: 0; }
 
@@ -206,10 +253,19 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 
 /* ── ADD SECTION BAR ───────────────────────────────────────────── */
 .pf-add-sec-bar {
-  display: flex; gap: 10px; padding: 0 20px 24px;
+  display: flex; gap: 10px; padding: 0 20px 24px; align-items: center;
 }
+.pf-p-sec { border-color: #3f6bd9; color: #1d4ed8; }
+.pf-p-sec:hover { background: #e8f0ff; border-color: #3f6bd9; }
 .pf-n-sec { border-color: #7a4cc7; color: #5b21b6; }
 .pf-n-sec:hover { background: #f0e8ff; border-color: #7a4cc7; }
+.pf-s-sec { border-color: #d97706; color: #92400e; }
+.pf-s-sec:hover { background: #fff1e0; border-color: #d97706; }
+
+.pf-updated-info {
+  margin-left: auto;
+  font-size: 11.5px; color: var(--text-muted); font-style: italic;
+}
 
 /* ── STEP CARD ─────────────────────────────────────────────────── */
 .pf-step {
@@ -260,6 +316,16 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
   white-space: pre-wrap; line-height: 1.45;
 }
 
+.pf-step-meta {
+  display: flex; flex-wrap: wrap; gap: 4px 8px;
+  margin-top: 5px; padding-top: 4px;
+  border-top: 1px dashed rgba(0,0,0,.12);
+  font-size: 10.5px; color: #6b7280;
+}
+.pf-step-date, .pf-step-op {
+  display: inline-flex; align-items: center; gap: 2px;
+}
+
 /* ── TAGS ──────────────────────────────────────────────────────── */
 .pf-tag {
   display: inline-block; font-size: 10px; font-weight: 700;
@@ -301,6 +367,15 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 .ep-tog.ep-fail.ep-on { background: #c0312c; color: #fff; border-color: #991b1b; box-shadow: none; }
 .ep-tog.ep-pend.ep-on { background: #9ca3af; color: #fff; border-color: #6b7280; box-shadow: none; }
 
+.ep-inp {
+  background: #f8faff; border: 1.5px solid #dde5f5;
+  border-radius: 5px; color: #1d2433; padding: 3px 7px;
+  font-size: 11.5px; font-family: inherit; outline: none;
+}
+.ep-inp:focus { border-color: #3f6bd9; background: #fff; box-shadow: 0 0 0 2px rgba(63,107,217,.12); }
+.ep-inp-date { width: 130px; }
+.ep-inp-op   { flex: 1; min-width: 80px; }
+
 .ep-detail-wrap { margin-top: 6px; }
 .ep-ta {
   width: 100%; box-sizing: border-box;
@@ -326,7 +401,7 @@ body { background: var(--bg); min-height: 100vh; padding: 0; margin: 0; }
 @media print {
   .pf-doc-topbar, .pf-legend, .pf-add-sec-bar,
   .pf-add-lot-col, .pf-add-step-bar, .pf-edit-panel,
-  .pf-step-btns, .pf-sec-ctrl, .pf-lot-del-btn,
+  .pf-step-btns, .pf-sec-ctrl, .pf-lot-ctl-btn,
   .pf-lot-sub-inp:placeholder-shown { display: none !important; }
   .pf-doc-body { height: auto; overflow: visible; padding: 0; }
   .pf-lot-row  { overflow: visible; flex-wrap: wrap; }

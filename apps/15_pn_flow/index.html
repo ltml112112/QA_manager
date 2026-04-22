@@ -32,8 +32,11 @@
       <input id="inp-author"   class="pf-inp pf-inp-sm"    placeholder="작성자"                  oninput="APP.onMetaChange()">
       <input id="inp-date"     class="pf-inp pf-inp-sm"    type="date"                           oninput="APP.onMetaChange()">
     </div>
+    <button class="btn pf-xlsx-btn" onclick="APP.exportXlsx()">⇣ Excel</button>
     <button class="btn pf-print-btn" onclick="window.print()">🖨 인쇄</button>
   </header>
+
+  <div id="doc-summary" class="pf-summary"></div>
 
   <div class="pf-legend">
     <span class="pf-leg react">반응</span>
@@ -50,14 +53,17 @@
   <div id="doc-body" class="pf-doc-body"></div>
 
   <div class="pf-add-sec-bar">
-    <button class="btn btn-secondary" onclick="APP.addSection('P')">+ P Type 섹션</button>
+    <button class="btn btn-secondary pf-p-sec" onclick="APP.addSection('P')">+ P Type 섹션</button>
     <button class="btn btn-secondary pf-n-sec" onclick="APP.addSection('N')">+ N Type 섹션</button>
+    <button class="btn btn-secondary pf-s-sec" onclick="APP.addSection('S')">+ Single 섹션</button>
+    <div class="pf-updated-info" id="pf-updated-info"></div>
   </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>window._AG_ADMIN_ONLY = true;</script>
 <script src="../../assets/js/auth_guard.js"></script>
 <script src="./app.js"></script>
