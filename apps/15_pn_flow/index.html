@@ -32,6 +32,7 @@
       <input id="inp-author"   class="pf-inp pf-inp-sm"    placeholder="작성자"                  oninput="APP.onMetaChange()">
       <input id="inp-date"     class="pf-inp pf-inp-sm"    type="date"                           oninput="APP.onMetaChange()">
     </div>
+    <div id="pf-save-status" class="pf-save-status pf-ss-idle" title="저장 상태"><span class="pf-ss-dot"></span><span class="pf-ss-txt">대기</span></div>
     <button class="btn pf-xlsx-btn" onclick="APP.exportXlsx()">⇣ Excel</button>
     <button class="btn pf-print-btn" onclick="window.print()">🖨 인쇄</button>
   </header>
@@ -50,7 +51,16 @@
     <span class="pf-leg tag-pending">예정</span>
   </div>
 
-  <div id="doc-body" class="pf-doc-body"></div>
+  <div class="pf-doc-layout">
+    <div id="doc-body" class="pf-doc-body"></div>
+    <aside id="pf-drawer" class="pf-drawer">
+      <div class="pf-drawer-hd">
+        <span id="pf-drawer-lbl" class="pf-drawer-title">공정 편집</span>
+        <button class="pf-drawer-close" onclick="APP.closeEdit()">✕ 닫기</button>
+      </div>
+      <div id="pf-drawer-body" class="pf-drawer-body"></div>
+    </aside>
+  </div>
 
   <div class="pf-add-sec-bar">
     <button class="btn btn-secondary pf-p-sec" onclick="APP.addSection('P')">+ P Type 섹션</button>
