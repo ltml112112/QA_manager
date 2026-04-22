@@ -51,7 +51,16 @@
     <span class="pf-leg tag-pending">예정</span>
   </div>
 
-  <div id="doc-body" class="pf-doc-body"></div>
+  <div class="pf-doc-layout">
+    <div id="doc-body" class="pf-doc-body"></div>
+    <aside id="pf-drawer" class="pf-drawer">
+      <div class="pf-drawer-hd">
+        <span id="pf-drawer-lbl" class="pf-drawer-title">공정 편집</span>
+        <button class="pf-drawer-close" onclick="APP.closeEdit()">✕ 닫기</button>
+      </div>
+      <div id="pf-drawer-body" class="pf-drawer-body"></div>
+    </aside>
+  </div>
 
   <div class="pf-add-sec-bar">
     <button class="btn btn-secondary pf-p-sec" onclick="APP.addSection('P')">+ P Type 섹션</button>

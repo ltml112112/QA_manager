@@ -41,7 +41,23 @@ var TYPE_LABEL = { react:'반응', solid:'고체화', wet:'Wet', subl:'승화', 
 var SEC_LABEL  = { P:'P Type', N:'N Type', S:'Single' };
 
 /* ── 상태 ───────────────────────────────────────── */
-var STATE = { docs: {}, currentId: null, editKey: null, timer: null };
+var STATE = {
+  docs: {}, currentId: null, editKey: null, timer: null,
+  collapsedSecs: new Set(), collapsedLots: new Set()
+};
+
+/* ── 상대 시간 ─────────────────────────────────── */
+function timeAgo(ts) {
+  if (!ts) return '';
+  var diff = Date.now() - ts;
+  var min = Math.floor(diff / 60000);
+  if (min < 1)  return '방금';
+  if (min < 60) return min + '분 전';
+  var hr = Math.floor(min / 60);
+  if (hr < 24)  return hr + '시간 전';
+  var d = Math.floor(hr / 24);
+  return d < 7 ? d + '일 전' : new Date(ts).toLocaleDateString('ko-KR');
+}
 
 /* ── 헬퍼 함수 ──────────────────────────────────── */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -226,6 +242,27 @@ window.APP = {
     save();
     render();
   },
+  toggleSec: function(sid, ev) {
+    if(ev) ev.stopPropagation();
+    if(STATE.collapsedSecs.has(sid)) STATE.collapsedSecs.delete(sid);
+    else STATE.collapsedSecs.add(sid);
+    render();
+  },
+  moveSec: function(sid, dir, ev) {
+    if(ev) ev.stopPropagation();
+    var d = getDoc(); if(!d) return;
+    var i = d.sections.findIndex(s=>s.id===sid); if(i<0) return;
+    var j = dir==='up'?i-1:i+1;
+    if(j<0||j>=d.sections.length) return;
+    var t=d.sections[i]; d.sections[i]=d.sections[j]; d.sections[j]=t;
+    save(); render();
+  },
+  toggleLot: function(lid, ev) {
+    if(ev) ev.stopPropagation();
+    if(STATE.collapsedLots.has(lid)) STATE.collapsedLots.delete(lid);
+    else STATE.collapsedLots.add(lid);
+    render();
+  },
   addLot: function(sid) {
     var d = getDoc(); if(!d) return;
     var s = d.sections.find(x=>x.id===sid); if(!s) return;
@@ -310,7 +347,8 @@ window.APP = {
   setStepField: function(sid, field, val) {
     var st = findStep(sid); if(st) st[field]=val;
     save();
-    render();
+    // date/operator는 드로어 내부 입력이라 full render 불필요
+    if (field === 'tag' || field === 'type' || field === 'location') render();
   },
   setStepType: function(sid, type) {
     var st = findStep(sid); if(st) st.type=type;
@@ -337,16 +375,16 @@ window.APP = {
     APP.openEdit(sid);
   },
   openEdit: function(sid) {
-    closeEdit();
+    var prev = STATE.editKey;
     STATE.editKey = sid;
-    render();
-    setTimeout(function() {
-      var ta = document.getElementById('ep-ta-'+sid);
-      if(ta) ta.focus();
-    }, 30);
+    // 스텝 카드 선택 표시 갱신 (editing class) + 드로어 열기
+    if (prev !== sid) renderDoc();
+    renderDrawer();
   },
   closeEdit: function() {
     closeEdit();
+    renderDoc();
+    renderDrawer();
   },
   exportXlsx: function() {
     var d = getDoc(); if(!d) { alert('문서가 선택되지 않았습니다.'); return; }
@@ -407,10 +445,15 @@ function closeEdit() {
   STATE.editKey = null;
 }
 
+/* ── Esc 로 드로어 닫기 ──────────────────────────── */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && STATE.editKey) { closeEdit(); renderDoc(); renderDrawer(); }
+});
+
 /* ── 렌더링 ────────────────────────────────────── */
 function render() {
   if(!STATE.currentId) renderList();
-  else renderDoc();
+  else { renderDoc(); renderDrawer(); }
 }
 
 function renderList() {
@@ -429,6 +472,9 @@ function renderList() {
       return sum + lots.length;
     }, 0);
     var isExample = d.id === SEED_ID;
+    var updInfo = d.updatedAt
+      ? '<span class="pf-card-upd"> · '+timeAgo(d.updatedAt)+(d.updatedBy?' · '+esc(d.updatedBy.split('@')[0]):'')+'</span>'
+      : '';
     return '<div class="pf-doc-card'+(isExample?' pf-doc-example':'')+'" onclick="APP.openDoc(\''+d.id+'\')">'+
       (isExample?'<div class="pf-example-badge">예시</div>':'')+
       '<div class="pf-card-title">'+esc(d.title||'제목 없음')+'</div>'+
@@ -436,7 +482,7 @@ function renderList() {
       (d.material?'<span class="pf-card-chip mat">'+esc(d.material)+'</span>':'')+
       (d.author?'<span class="pf-card-chip">'+esc(d.author)+'</span>':'')+
       (d.date?'<span class="pf-card-chip date">'+esc(d.date)+'</span>':'')+
-      '</div><div class="pf-card-stats">'+secs.length+'섹션 · '+lc+' Lot</div>'+
+      '</div><div class="pf-card-stats">'+secs.length+'섹션 · '+lc+' Lot'+updInfo+'</div>'+
       '<button class="pf-card-del" onclick="APP.deleteDoc(\''+d.id+'\');event.stopPropagation()">삭제</button></div>';
   }).join('');
   document.getElementById('doc-grid').innerHTML = html || '';
@@ -452,7 +498,8 @@ function renderDoc() {
   document.getElementById('inp-author').value = d.author||'';
   document.getElementById('inp-date').value = d.date||'';
   renderSummary();
-  var html = (d.sections||[]).map(renderSec).join('') || '<p class="pf-no-section">섹션을 추가하세요.</p>';
+  var secs = d.sections||[];
+  var html = secs.length === 0 ? renderEmptyDoc() : secs.map(renderSec).join('');
   document.getElementById('doc-body').innerHTML = html;
   renderUpdatedInfo();
 }
@@ -495,44 +542,81 @@ function renderUpdatedInfo() {
 
 function renderSec(s) {
   var tc = s.type==='N'?'pf-sec-n':(s.type==='S'?'pf-sec-s':'pf-sec-p');
-  var lh = (s.lots||[]).map(l=>renderLot(l,s)).join('');
+  var isCollapsed = STATE.collapsedSecs.has(s.id);
+  var d = getDoc();
+  var secIdx = d ? d.sections.indexOf(s) : -1;
+  var canUp   = secIdx > 0;
+  var canDown = d ? secIdx < d.sections.length - 1 : false;
+  var bodyHtml = isCollapsed
+    ? (function() {
+        var counts = {pass:0,fail:0,progress:0};
+        (s.lots||[]).forEach(function(l){ counts[lotStatus(l)]++; });
+        return '<div class="pf-sec-collapsed-bar '+tc+'">'
+          +'<span>'+s.lots.length+' Lot</span>'
+          +'<span>✅ PASS '+counts.pass+'</span>'
+          +'<span>❌ FAIL '+counts.fail+'</span>'
+          +'<span>🔄 진행 중 '+counts.progress+'</span>'
+          +'<button class="pf-sec-collapse" onclick="APP.toggleSec(\''+s.id+'\',event)">▶ 펼치기</button>'
+          +'</div>';
+      })()
+    : '<div class="pf-lot-row">'+
+      (s.lots||[]).map(l=>renderLot(l,s)).join('')+
+      '<div class="pf-add-lot-col"><button class="pf-add-lot-btn" onclick="APP.addLot(\''+s.id+'\',event)">+ Lot 추가</button></div>'+
+      '</div>';
   return '<div class="pf-section" data-sec-id="'+s.id+'">'+
     '<div class="pf-sec-header '+tc+'">'+
+    '<button class="pf-sec-collapse" onclick="APP.toggleSec(\''+s.id+'\',event)">'+(isCollapsed?'▶':'▼')+'</button>'+
     '<span class="pf-sec-type-badge">'+SEC_LABEL[s.type]+'</span>'+
     '<span class="pf-sec-lot-count">'+s.lots.length+' Lot</span>'+
     '<div class="pf-sec-ctrl">'+
     '<button class="pf-sec-tog'+(s.type==='P'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'P\',event)">P</button>'+
     '<button class="pf-sec-tog'+(s.type==='N'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'N\',event)">N</button>'+
     '<button class="pf-sec-tog'+(s.type==='S'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'S\',event)">S</button>'+
+    (canUp?'<button class="pf-sec-collapse" onclick="APP.moveSec(\''+s.id+'\',\'up\',event)" title="위로">↑</button>':'')+
+    (canDown?'<button class="pf-sec-collapse" onclick="APP.moveSec(\''+s.id+'\',\'down\',event)" title="아래로">↓</button>':'')+
     '<button class="pf-sec-del" onclick="APP.deleteSection(\''+s.id+'\',event)">✕ 섹션 삭제</button>'+
     '</div></div>'+
-    '<div class="pf-lot-row">'+lh+
-    '<div class="pf-add-lot-col"><button class="pf-add-lot-btn" onclick="APP.addLot(\''+s.id+'\',event)">+ Lot 추가</button></div>'+
-    '</div></div>';
+    bodyHtml+'</div>';
 }
 
 function renderLot(l, s) {
   var tc = s.type==='N'?'pf-lot-n':(s.type==='S'?'pf-lot-s':'pf-lot-p');
   var status = lotStatus(l);
   var statusLbl = {pass:'PASS', fail:'FAIL', progress:'진행 중'}[status];
-  var sh = (l.steps||[]).map((st,i)=>renderStep(st,l,i)).join('');
+  var isCollapsed = STATE.collapsedLots.has(l.id);
+  var lastStep = (l.steps||[]).filter(st=>st.tag&&st.tag!=='pending').slice(-1)[0];
+  var lastInfo = lastStep
+    ? (stepLbl(lastStep, stepNum(l.steps, l.steps.indexOf(lastStep), lastStep.type))
+       + (lastStep.date?' · '+lastStep.date:'')
+       + (lastStep.operator?' · '+lastStep.operator:''))
+    : (l.steps&&l.steps.length ? l.steps.length+'스텝' : '스텝 없음');
+  var bodyHtml = isCollapsed
+    ? '<div class="pf-lot-collapsed-body">'+
+        '<span>총 '+(l.steps||[]).length+'스텝</span>'+
+        (lastInfo?'<span>마지막: '+esc(lastInfo)+'</span>':'')+
+        '<button class="pf-add-lot-btn" style="margin-top:4px" onclick="APP.toggleLot(\''+l.id+'\',event)">▶ 펼치기</button>'+
+      '</div>'
+    : '<div class="pf-steps-list">'+
+        (l.steps||[]).map((st,i)=>renderStep(st,l,i)).join('')+
+      '</div>'+
+      '<div class="pf-add-step-bar">'+
+      '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
+      '<button class="pf-qadd solid" onclick="APP.addStep(\''+l.id+'\',\'solid\',event)">+고체화</button>'+
+      '<button class="pf-qadd wet" onclick="APP.addStep(\''+l.id+'\',\'wet\',event)">+Wet</button>'+
+      '<button class="pf-qadd subl" onclick="APP.addStep(\''+l.id+'\',\'subl\',event)">+승화</button>'+
+      '<button class="pf-qadd collect" onclick="APP.addStep(\''+l.id+'\',\'collect\',event)">+여액</button>'+
+      '</div>';
   return '<div class="pf-lot-col pf-lot-st-'+status+'" data-lot-id="'+l.id+'">'+
     '<div class="pf-lot-header '+tc+'">'+
     '<div class="pf-lot-head-top">'+
       '<span class="pf-lot-status pf-st-'+status+'">'+statusLbl+'</span>'+
+      '<button class="pf-lot-collapse-btn" title="접기/펼치기" onclick="APP.toggleLot(\''+l.id+'\',event)">'+(isCollapsed?'▶':'▼')+'</button>'+
       '<button class="pf-lot-ctl-btn" title="Lot 복제" onclick="APP.cloneLot(\''+l.id+'\',event)">⎘</button>'+
       '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div>'+
     '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" oninput="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
-    '</div><div class="pf-steps-list">'+sh+'</div>'+
-    '<div class="pf-add-step-bar">'+
-    '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
-    '<button class="pf-qadd solid" onclick="APP.addStep(\''+l.id+'\',\'solid\',event)">+고체화</button>'+
-    '<button class="pf-qadd wet" onclick="APP.addStep(\''+l.id+'\',\'wet\',event)">+Wet</button>'+
-    '<button class="pf-qadd subl" onclick="APP.addStep(\''+l.id+'\',\'subl\',event)">+승화</button>'+
-    '<button class="pf-qadd collect" onclick="APP.addStep(\''+l.id+'\',\'collect\',event)">+여액</button>'+
-    '</div></div>';
+    '</div>'+bodyHtml+'</div>';
 }
 
 function renderStep(st, l, i) {
@@ -555,11 +639,11 @@ function renderStep(st, l, i) {
     (st.detail?'<div class="pf-step-detail">'+esc(st.detail)+'</div>':'')+
     metaHtml+
     '</div>';
-  var epHtml = (STATE.editKey===st.id) ? renderEditPanel(st, l) : '';
-  return stepHtml + epHtml;
+  return stepHtml;
 }
 
-function renderEditPanel(st, l) {
+/* 드로어 안에 렌더되는 편집 내용 (래퍼 없이 내용만) */
+function renderEditPanelInner(st) {
   var chips = (CHIP_MAP[st.type]||[]).map(c=>'<button class="pf-chip" onclick="APP.insertChip(\''+st.id+'\',\''+c.replace(/'/g,"\\'")+'\')" data-chip="'+c+'">'+esc(c)+'</button>').join('');
   var locHtml = st.type==='subl'?
     '<div class="ep-row ep-row-loc"><span class="ep-lbl">위치</span>'+
@@ -576,13 +660,53 @@ function renderEditPanel(st, l) {
     '<input type="date" class="ep-inp ep-inp-date" value="'+esc(st.date||'')+'" oninput="APP.setStepField(\''+st.id+'\',\'date\',this.value)">'+
     '<input type="text" class="ep-inp ep-inp-op" placeholder="담당자" value="'+esc(st.operator||'')+'" oninput="APP.setStepField(\''+st.id+'\',\'operator\',this.value)">'+
     '</div>';
-  return '<div class="pf-edit-panel" id="ep-'+st.id+'" onclick="event.stopPropagation()">'+
-    '<div class="ep-row ep-row-type"><span class="ep-lbl">유형</span>'+
+  return '<div class="ep-row ep-row-type"><span class="ep-lbl">유형</span>'+
     ['react','solid','wet','subl','collect'].map(t=>'<button class="ep-type-btn '+t+(st.type===t?' ep-on':'')+'" onclick="APP.setStepType(\''+st.id+'\',\''+t+'\')">'+
     ({react:'반응',solid:'고체화',wet:'Wet',subl:'승화',collect:'여액'}[t])+'</button>').join('')+
     '</div>'+locHtml+tagHtml+metaHtml+
-    '<div class="ep-detail-wrap"><textarea class="ep-ta" id="ep-ta-'+st.id+'" placeholder="상세 내용" oninput="APP.onDetailInput(\''+st.id+'\',this.value)" rows="3">'+
-    esc(st.detail||'')+'</textarea><div class="ep-chips">'+chips+'</div></div></div>';
+    '<div class="ep-detail-wrap"><textarea class="ep-ta" id="ep-ta-'+st.id+'" placeholder="상세 내용" oninput="APP.onDetailInput(\''+st.id+'\',this.value)" rows="6">'+
+    esc(st.detail||'')+'</textarea><div class="ep-chips">'+chips+'</div></div>';
+}
+
+/* ── 드로어 렌더 ─────────────────────────────────── */
+function renderDrawer() {
+  var drawer = document.getElementById('pf-drawer');
+  var body   = document.getElementById('pf-drawer-body');
+  var lbl    = document.getElementById('pf-drawer-lbl');
+  if (!drawer || !body) return;
+  if (!STATE.editKey) { drawer.classList.remove('pf-drawer-open'); return; }
+  var st = findStep(STATE.editKey);
+  var l  = findStepLot(STATE.editKey);
+  if (!st || !l) { drawer.classList.remove('pf-drawer-open'); return; }
+  drawer.classList.add('pf-drawer-open');
+  var i = l.steps.findIndex(s=>s.id===STATE.editKey);
+  var n = stepNum(l.steps, i, st.type);
+  if (lbl) lbl.textContent = stepLbl(st,n) + '  ·  ' + (l.name||'');
+  // 커서 보존
+  var ta = document.getElementById('ep-ta-'+st.id);
+  var hadFocus = ta && document.activeElement === ta;
+  var sel = ta ? [ta.selectionStart, ta.selectionEnd] : [0,0];
+  body.innerHTML = renderEditPanelInner(st);
+  var newTa = document.getElementById('ep-ta-'+st.id);
+  if (newTa) {
+    if (hadFocus) { newTa.focus(); try { newTa.setSelectionRange(sel[0],sel[1]); } catch(e){} }
+    else newTa.focus();
+  }
+}
+
+/* ── 빈 문서 CTA ─────────────────────────────────── */
+function renderEmptyDoc() {
+  return '<div class="pf-empty-doc">'+
+    '<div class="pf-empty-doc-title">첫 섹션을 추가해 시작하세요</div>'+
+    '<div class="pf-empty-doc-sub">소재의 Type에 맞는 섹션을 선택하세요</div>'+
+    '<div class="pf-empty-doc-btns">'+
+    '<button class="pf-empty-btn pf-empty-p" onclick="APP.addSection(\'P\')">'+
+    '<span class="pf-empty-btn-type">P</span><span>P Type 섹션</span></button>'+
+    '<button class="pf-empty-btn pf-empty-n" onclick="APP.addSection(\'N\')">'+
+    '<span class="pf-empty-btn-type">N</span><span>N Type 섹션</span></button>'+
+    '<button class="pf-empty-btn pf-empty-s" onclick="APP.addSection(\'S\')">'+
+    '<span class="pf-empty-btn-type">S</span><span>Single 섹션</span></button>'+
+    '</div></div>';
 }
 
 /* ── 시드 데이터 ────────────────────────────────── */
