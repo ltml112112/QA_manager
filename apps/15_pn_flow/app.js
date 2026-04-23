@@ -24,9 +24,19 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var DB = firebase.database().ref('pn_flow_docs');
 
-/* ── 현재 사용자 ────────────────────────────────── */
+/* ── 현재 사용자 & 초기 로드 ─────────────────────── */
 var _currentUser = null;
-firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
+var _loadStarted = false;
+firebase.auth().onAuthStateChanged(function(u) {
+  _currentUser = u;
+  // DB 리스너는 첫 auth 콜백 이후 1회만 붙임
+  // — auth 미해결 상태에서 on('value')를 붙이면 PERMISSION_DENIED로 리스너가
+  //   취소되거나 빈 스냅샷이 _firstLoad를 소모해 실제 데이터가 늦게 반영됨
+  if (!_loadStarted) {
+    _loadStarted = true;
+    load();
+  }
+});
 
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
@@ -878,8 +888,5 @@ firebase.database().ref('.info/connected').on('value', function(snap) {
     if (_pendingSave) flushSave();
   }
 });
-
-/* ── 초기화 ────────────────────────────────────── */
-load();
 
 })();
