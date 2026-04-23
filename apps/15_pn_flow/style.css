@@ -322,7 +322,7 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   padding: 8px; border-top: 1px solid #e5e7eb; background: #fafafa;
 }
 .pf-qadd {
-  flex: 1 0 auto; padding: 4px 8px; font-size: 11px; font-weight: 600;
+  flex: 0 0 auto; padding: 4px 8px; font-size: 11px; font-weight: 600;
   border: 1px solid; border-radius: 5px; cursor: pointer;
   white-space: nowrap; text-align: center;
   transition: filter .12s;
