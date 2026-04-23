@@ -192,11 +192,14 @@ function load() {
       return;
     }
 
-    /* ── 실시간 업데이트 (편집 중 문서는 로컬 우선) ── */
+    /* ── 실시간 업데이트 ───────────────────────────────
+       현재 보고 있는 문서는 편집 중(editKey) 또는 저장 대기(_pendingSave) 이면
+       로컬을 우선. 그렇지 않은 경우에만 원격 상태를 덮어씀.
+       ── 이렇게 하지 않으면 "+ Lot 추가" 처럼 editKey 없이 debounce save를
+          시작한 직후 원격 스냅샷이 도착해 로컬 변경을 덮어쓰는 race가 발생. */
     Object.keys(incoming).forEach(function(id) {
-      if (id !== STATE.currentId || !STATE.editKey) {
-        STATE.docs[id] = incoming[id];
-      }
+      if (id === STATE.currentId && (STATE.editKey || _pendingSave)) return;
+      STATE.docs[id] = incoming[id];
     });
     // 다른 세션에서 삭제된 문서 반영
     Object.keys(STATE.docs).forEach(function(id) {
