@@ -24,9 +24,19 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var DB = firebase.database().ref('pn_flow_docs');
 
-/* ── 현재 사용자 ────────────────────────────────── */
+/* ── 현재 사용자 & 초기 로드 ─────────────────────── */
 var _currentUser = null;
-firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
+var _loadStarted = false;
+firebase.auth().onAuthStateChanged(function(u) {
+  _currentUser = u;
+  // DB 리스너는 첫 auth 콜백 이후 1회만 붙임
+  // — auth 미해결 상태에서 on('value')를 붙이면 PERMISSION_DENIED로 리스너가
+  //   취소되거나 빈 스냅샷이 _firstLoad를 소모해 실제 데이터가 늦게 반영됨
+  if (!_loadStarted) {
+    _loadStarted = true;
+    load();
+  }
+});
 
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
@@ -158,7 +168,7 @@ window.addEventListener('beforeunload', flushSave);
 
 var _firstLoad = true;
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
-var SEED_VER = 3;
+var SEED_VER = 4;
 
 function load() {
   DB.on('value', function(snap) {
@@ -713,21 +723,41 @@ function renderEmptyDoc() {
 function S(type,detail,tag,location){ return {id:uid(),type:type,detail:detail||'',tag:tag||null,location:location||''}; }
 
 function buildSeed() {
-  function pLot(name, sub) {
-    return Object.assign(mkLot(name, sub||''), {steps:[
-      S('react',''),
-      S('wet','(Si pass)'),
-      S('wet','(Si pass2)'),
-      S('wet',''),
-      S('wet','')
-    ]});
-  }
-
   var ps = mkSec('P');
   ps.lots = [
-    pLot('P-MI18-TOL','(L25I-305-108-TOL)'),
-    pLot('P-ND01-Tol3'),
-    pLot('P-ND06-Tol3')
+    Object.assign(mkLot('P-MI18-TOL (1,704g)', '(L25I-305-108-TOL)'), {steps:[
+      S('react','(Xylene) 후 농축/결정화(ACT)'),
+      S('wet',  '(Si pass, DCB, MC/Hex)'),
+      S('solid','농축/결정화(ACT)'),
+      S('wet',  '(H2O slurry)'),
+      S('wet',  '(재결정, DCB/MC)'),
+      S('wet',  '(Slurry, Toluene)'),
+      S('subl', '후 재처리'),
+      S('wet',  '재결정(DCB/MC)'),
+      S('wet',  '슬러리(Toluene)')
+    ]}),
+    Object.assign(mkLot('P-ND01-Tol3 (538g)'), {steps:[
+      S('react','(Xylene) 후 농축/결정화(ACT)'),
+      S('wet',  '(Si pass, DCB, MC/Hex)'),
+      S('solid','농축/결정화(ACT)'),
+      S('wet',  '(Si pass, DCB, MC/Hex, 고운실리카)'),
+      S('solid','농축/결정화(ACT)'),
+      S('wet',  '(Slurry, Toluene)'),
+      S('wet',  '(재결정, DCB/MC)'),
+      S('wet',  '(Slurry, Toluene)'),
+      S('wet',  '(Slurry, Toluene)')
+    ]}),
+    Object.assign(mkLot('P-ND06-Tol3 (815g)'), {steps:[
+      S('react','(Xylene) 후 농축/결정화(ACT)'),
+      S('wet',  '(Si pass, DCB, MC/Hex)'),
+      S('solid','농축/결정화(ACT)'),
+      S('wet',  '(Si pass, DCB, MC/Hex, 고운실리카)'),
+      S('solid','농축/결정화(ACT)'),
+      S('wet',  '(Slurry, Toluene)'),
+      S('wet',  '(재결정, DCB/MC)'),
+      S('wet',  '(Slurry, Toluene)'),
+      S('wet',  '(Slurry, Toluene)')
+    ]})
   ];
 
   var ns = mkSec('N');
@@ -858,8 +888,5 @@ firebase.database().ref('.info/connected').on('value', function(snap) {
     if (_pendingSave) flushSave();
   }
 });
-
-/* ── 초기화 ────────────────────────────────────── */
-load();
 
 })();
