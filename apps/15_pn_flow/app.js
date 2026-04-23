@@ -42,12 +42,12 @@ firebase.auth().onAuthStateChanged(function(u) {
 var CHIP_MAP = {
   wet: ['Si pass', 'Column', 'DCB', 'CF', 'MC/Hex', 'Act/Hex', 'EA/Hex', 'Tol/Act/Hex', 'DCB/Act/Hex', '결정화', '재결정', '고운'],
   subl: ['충주', '용인', '4,5-zone 수득', '6,7-zone 불순물 제거작업', '6,7-zone 취합', '소자평가 fail'],
-  react: ['DMA', 'MeOH/H2O', '고체화'],
-  solid: ['MeOH/H2O', '고체화'],
+  react: ['DMA', 'MeOH/H2O', '결정화'],
+  solid: ['MeOH/H2O', '결정화'],
   collect: []
 };
 
-var TYPE_LABEL = { react:'반응', solid:'고체화', wet:'Wet', subl:'승화', collect:'여액' };
+var TYPE_LABEL = { react:'반응', solid:'결정화', wet:'Wet', subl:'승화', collect:'여액' };
 var SEC_LABEL  = { P:'P Type', N:'N Type', S:'Single' };
 
 /* ── 상태 ───────────────────────────────────────── */
@@ -97,7 +97,7 @@ function stepLbl(s, n) {
   if(s.type==='wet') return n+'차 Wet 정제';
   if(s.type==='subl') return n+'차 '+(s.location ? s.location+' ' : '')+'승화정제';
   if(s.type==='react') return '반응';
-  if(s.type==='solid') return '고체화';
+  if(s.type==='solid') return '결정화';
   if(s.type==='collect') return '여액 취합';
   return '';
 }
@@ -168,7 +168,7 @@ window.addEventListener('beforeunload', flushSave);
 
 var _firstLoad = true;
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
-var SEED_VER = 4;
+var SEED_VER = 5;
 
 /* ── Firebase 배열 정규화 ─────────────────────────
    Firebase RTDB는 배열을 {"0":..,"1":..} 객체로 저장.
@@ -636,7 +636,7 @@ function renderLot(l, s) {
       '</div>'+
       '<div class="pf-add-step-bar">'+
       '<button class="pf-qadd react" onclick="APP.addStep(\''+l.id+'\',\'react\',event)">+반응</button>'+
-      '<button class="pf-qadd solid" onclick="APP.addStep(\''+l.id+'\',\'solid\',event)">+고체화</button>'+
+      '<button class="pf-qadd solid" onclick="APP.addStep(\''+l.id+'\',\'solid\',event)">+결정화</button>'+
       '<button class="pf-qadd wet" onclick="APP.addStep(\''+l.id+'\',\'wet\',event)">+Wet</button>'+
       '<button class="pf-qadd subl" onclick="APP.addStep(\''+l.id+'\',\'subl\',event)">+승화</button>'+
       '<button class="pf-qadd collect" onclick="APP.addStep(\''+l.id+'\',\'collect\',event)">+여액</button>'+
@@ -697,7 +697,7 @@ function renderEditPanelInner(st) {
     '</div>';
   return '<div class="ep-row ep-row-type"><span class="ep-lbl">유형</span>'+
     ['react','solid','wet','subl','collect'].map(t=>'<button class="ep-type-btn '+t+(st.type===t?' ep-on':'')+'" onclick="APP.setStepType(\''+st.id+'\',\''+t+'\')">'+
-    ({react:'반응',solid:'고체화',wet:'Wet',subl:'승화',collect:'여액'}[t])+'</button>').join('')+
+    ({react:'반응',solid:'결정화',wet:'Wet',subl:'승화',collect:'여액'}[t])+'</button>').join('')+
     '</div>'+locHtml+tagHtml+metaHtml+
     '<div class="ep-detail-wrap"><textarea class="ep-ta" id="ep-ta-'+st.id+'" placeholder="상세 내용" oninput="APP.onDetailInput(\''+st.id+'\',this.value)" rows="6">'+
     esc(st.detail||'')+'</textarea><div class="ep-chips">'+chips+'</div></div>';
@@ -789,7 +789,7 @@ function buildSeed() {
   ns.lots = [
     Object.assign(mkLot('L26D-202-109-Si-R'), {steps:[
       S('react','(DMA)후'),
-      S('solid','MeOH/H2O  고체화'),
+      S('solid','MeOH/H2O  결정화'),
       S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(column_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(DCB/Act/Hex 재결정)'),
@@ -806,7 +806,7 @@ function buildSeed() {
       S('subl','(pass)','pass','충주')
     ]}),
     Object.assign(mkLot('P-ND14-COL-TOLAHX'), {steps:[
-      S('react','(DMA)후 MeOH/H2O  고체화'),
+      S('react','(DMA)후 MeOH/H2O  결정화'),
       S('wet','(Si pass_DCB, CF 후 Act/Hex 결정화)'),
       S('wet','(Column_DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(DCB/Act/Hex 재결정)'),
@@ -818,7 +818,7 @@ function buildSeed() {
     ]}),
     Object.assign(mkLot('P-67zmix-TOLACHX'), {steps:[
       S('react','(DMA)후'),
-      S('solid','MeOH/H2O  고체화'),
+      S('solid','MeOH/H2O  결정화'),
       S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(column_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(DCB/Act/Hex 재결정)'),
@@ -838,7 +838,7 @@ function buildSeed() {
     ]}),
     Object.assign(mkLot('L26B-202-101(4,5,6)'), {steps:[
       S('react','(DMA)후'),
-      S('solid','MeOH/H2O  고체화'),
+      S('solid','MeOH/H2O  결정화'),
       S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(Column_DCB, MC/Hex 후 EA/Hex 결정화)'),
       S('wet','(DCB/Act/Hex 재결정)'),
@@ -853,7 +853,7 @@ function buildSeed() {
     ]}),
     Object.assign(mkLot('L26C-202-114(4,5,6)'), {steps:[
       S('react','(DMA)후'),
-      S('solid','MeOH/H2O  고체화'),
+      S('solid','MeOH/H2O  결정화'),
       S('wet','(Si pass_ DCB, MC/Hex 후 Act/Hex 결정화)'),
       S('wet','(Column_DCB, MC/Hex 후 EA/Hex 결정화)'),
       S('wet','(DCB/Act/Hex 재결정)'),
@@ -875,7 +875,7 @@ function buildSeed() {
       S('subl','','','용인')
     ]}),
     Object.assign(mkLot('P-ND08-TOLACHX3'), {steps:[
-      S('react','(DMA)후 MeOH/H2O  고체화'),
+      S('react','(DMA)후 MeOH/H2O  결정화'),
       S('wet','(Si pass_DCB, MC/Hx 후 Act/Hx 결정화)'),
       S('wet','(Column_DCB, MC/Hex 후 Act/Hx 결정화)'),
       S('wet','(Tol/Act/Hx 재결정)'),
