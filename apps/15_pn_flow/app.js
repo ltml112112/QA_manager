@@ -170,6 +170,23 @@ var _firstLoad = true;
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
 var SEED_VER = 4;
 
+/* ── Firebase 배열 정규화 ─────────────────────────
+   Firebase RTDB는 배열을 {"0":..,"1":..} 객체로 저장.
+   읽어올 때 sequential key이면 자동 복원하지만
+   삭제·null 항목 등으로 키가 비면 객체로 반환됨.
+   모든 sections/lots/steps를 반드시 JS 배열로 보장. */
+function normDoc(d) {
+  if (!d) return d;
+  if (!Array.isArray(d.sections)) d.sections = d.sections ? Object.values(d.sections) : [];
+  d.sections.forEach(function(s) {
+    if (!Array.isArray(s.lots)) s.lots = s.lots ? Object.values(s.lots) : [];
+    s.lots.forEach(function(l) {
+      if (!Array.isArray(l.steps)) l.steps = l.steps ? Object.values(l.steps) : [];
+    });
+  });
+  return d;
+}
+
 function load() {
   DB.on('value', function(snap) {
     var incoming = snap.val() || {};
@@ -177,13 +194,10 @@ function load() {
     if (_firstLoad) {
       _firstLoad = false;
 
-      // incoming 병합 — 단, 로컬에서 막 생성한 문서(아직 저장 전)나
-      // 편집 중인 문서는 보존. STATE.docs를 통째 교체하면
-      // load() 콜백 직전에 newDoc()로 만든 문서가 사라져
-      // getDoc()이 undefined가 되고 모든 뮤테이터가 no-op이 됨.
+      // incoming 병합 — 로컬에서 막 생성한 문서(아직 저장 전)나 편집 중인 문서는 보존
       Object.keys(incoming).forEach(function(id) {
         if (id === STATE.currentId && (STATE.editKey || _pendingSave)) return;
-        STATE.docs[id] = incoming[id];
+        STATE.docs[id] = normDoc(incoming[id]);
       });
 
       // 고정 ID로 예시 문서 유무·버전 확인 → 없거나 구버전이면 (재)생성
@@ -196,23 +210,22 @@ function load() {
         DB.child(SEED_ID).set(doc);
       }
 
-      // currentId가 이미 있으면 문서 편집 뷰, 없으면 목록 뷰 렌더
       render();
       return;
     }
 
-    /* ── 실시간 업데이트 ───────────────────────────────
-       현재 보고 있는 문서는 편집 중(editKey) 또는 저장 대기(_pendingSave) 이면
-       로컬을 우선. 그렇지 않은 경우에만 원격 상태를 덮어씀.
-       ── 이렇게 하지 않으면 "+ Lot 추가" 처럼 editKey 없이 debounce save를
-          시작한 직후 원격 스냅샷이 도착해 로컬 변경을 덮어쓰는 race가 발생. */
+    /* ── 실시간 업데이트 ────────────────────────────── */
     Object.keys(incoming).forEach(function(id) {
       if (id === STATE.currentId && (STATE.editKey || _pendingSave)) return;
-      STATE.docs[id] = incoming[id];
+      STATE.docs[id] = normDoc(incoming[id]);
     });
     // 다른 세션에서 삭제된 문서 반영
+    // — 단, 로컬 편집/저장 대기 중인 문서는 삭제 제외
+    //   (아직 Firebase에 없는 신규 문서가 삭제되면 currentId가 null로 리셋되고
+    //    이후 save debounce가 터졌을 때 getDoc()이 undefined → save 포기가 됨)
     Object.keys(STATE.docs).forEach(function(id) {
-      if (!incoming[id]) delete STATE.docs[id];
+      var isActive = id === STATE.currentId && (STATE.editKey || _pendingSave);
+      if (!incoming[id] && !isActive) delete STATE.docs[id];
     });
     // 현재 보던 문서가 삭제됐으면 목록으로
     if (STATE.currentId && !STATE.docs[STATE.currentId]) {
