@@ -425,6 +425,13 @@ window.APP = {
     var d = getDoc(); if(!d) { alert('문서가 선택되지 않았습니다.'); return; }
     if (typeof XLSX === 'undefined') { alert('XLSX 라이브러리를 불러오지 못했습니다.'); return; }
 
+    /* ── Step type 색상 ─────────────────────────────── */
+    var FILL = { react:'DBE7FF', solid:'E4F1FA', wet:'E0F5E6', subl:'EFE4FB', collect:'FFF6DB' };
+    var FONT = { react:'1D4ED8', solid:'1A6A9F', wet:'166534', subl:'5B21B6', collect:'92400E' };
+
+    var wb = XLSX.utils.book_new();
+
+    /* ── Sheet 1: 문서정보 ───────────────────────────── */
     var meta = [
       ['제목',     d.title || ''],
       ['소재코드', d.material || ''],
@@ -433,43 +440,122 @@ window.APP = {
       ['최근 수정', d.updatedAt ? new Date(d.updatedAt).toISOString().slice(0,16).replace('T',' ') : ''],
       ['수정자',   d.updatedBy || '']
     ];
-
-    var rows = [
-      ['Type', 'Lot 이름', 'Lot 별칭', 'Lot 상태', '순번', '공정', '위치', '결과', '진행일', '담당자', '상세']
-    ];
-    (d.sections || []).forEach(function(s) {
-      var typeLabel = SEC_LABEL[s.type] || s.type;
-      (s.lots || []).forEach(function(l) {
-        var stLabel = {pass:'PASS', fail:'FAIL', progress:'진행 중'}[lotStatus(l)];
-        var steps = l.steps || [];
-        if (!steps.length) {
-          rows.push([typeLabel, l.name || '', l.subName || '', stLabel, '', '', '', '', '', '', '']);
-          return;
-        }
-        steps.forEach(function(st, i) {
-          var n = stepNum(steps, i, st.type);
-          var lbl = stepLbl(st, n);
-          var resultLbl = st.tag === 'pass' ? 'PASS' : st.tag === 'fail' ? 'FAIL' : st.tag === 'pending' ? '예정' : '';
-          rows.push([
-            typeLabel, l.name || '', l.subName || '', stLabel,
-            i + 1, lbl, st.location || '', resultLbl, st.date || '', st.operator || '', st.detail || ''
-          ]);
-        });
-      });
-    });
-
-    var wb = XLSX.utils.book_new();
     var wsMeta = XLSX.utils.aoa_to_sheet(meta);
     wsMeta['!cols'] = [{wch:14},{wch:60}];
     XLSX.utils.book_append_sheet(wb, wsMeta, '문서정보');
 
-    var wsData = XLSX.utils.aoa_to_sheet(rows);
-    wsData['!cols'] = [
-      {wch:8}, {wch:22}, {wch:22}, {wch:8},
-      {wch:5}, {wch:16}, {wch:6}, {wch:6},
-      {wch:11}, {wch:8}, {wch:60}
-    ];
-    XLSX.utils.book_append_sheet(wb, wsData, '공정이력');
+    /* ── Sheet 2: 공정도 (Lot별 열 레이아웃) ─────────── */
+    var ws = {};
+    var merges = [];
+    var rowHeights = [];
+
+    var sections = d.sections || [];
+    var maxLots = 1;
+    sections.forEach(function(s) { maxLots = Math.max(maxLots, (s.lots||[]).length); });
+
+    function sc(r, c, v, s) {
+      var addr = XLSX.utils.encode_cell({r:r, c:c});
+      ws[addr] = { v: v, t: (typeof v === 'number') ? 'n' : 's', s: s || {} };
+    }
+
+    var curRow = 0;
+
+    /* 문서 제목 행 */
+    var titleVal = (d.title || 'P/N 공정 Flow') + (d.material ? '  (' + d.material + ')' : '');
+    sc(curRow, 0, titleVal, {
+      font: { bold:true, sz:13, color:{rgb:'111827'} },
+      fill: { fgColor:{rgb:'F3F4F6'} },
+      alignment: { horizontal:'center', vertical:'center' }
+    });
+    for (var fc = 1; fc < maxLots; fc++) sc(curRow, fc, '', { fill:{fgColor:{rgb:'F3F4F6'}} });
+    if (maxLots > 1) merges.push({s:{r:curRow,c:0}, e:{r:curRow,c:maxLots-1}});
+    rowHeights[curRow] = {hpt:22};
+    curRow++;
+
+    /* 각 섹션 블록 */
+    sections.forEach(function(s) {
+      var lots = s.lots || [];
+      var lotCount = lots.length;
+      if (!lotCount) return;
+
+      var maxSteps = 0;
+      lots.forEach(function(l) { maxSteps = Math.max(maxSteps, (l.steps||[]).length); });
+
+      /* 섹션 헤더 */
+      var secBg = s.type === 'P' ? '1D4ED8' : s.type === 'N' ? '6D28D9' : '047857';
+      var secLbl = SEC_LABEL[s.type] + ' 섹션  (' + lotCount + '개 Lot' + (maxSteps ? ', 최대 ' + maxSteps + ' 공정' : '') + ')';
+      sc(curRow, 0, secLbl, {
+        font: { bold:true, sz:11, color:{rgb:'FFFFFF'} },
+        fill: { fgColor:{rgb:secBg} },
+        alignment: { horizontal:'center', vertical:'center' }
+      });
+      for (var fc2 = 1; fc2 < lotCount; fc2++) sc(curRow, fc2, '', { fill:{fgColor:{rgb:secBg}} });
+      if (lotCount > 1) merges.push({s:{r:curRow,c:0}, e:{r:curRow,c:lotCount-1}});
+      rowHeights[curRow] = {hpt:18};
+      curRow++;
+
+      /* Lot 이름 행 */
+      var nameBg = s.type === 'P' ? 'DBEAFE' : s.type === 'N' ? 'EDE9FE' : 'D1FAE5';
+      lots.forEach(function(l, ci) {
+        var stKey = lotStatus(l);
+        var stLbl = {pass:' [PASS]', fail:' [FAIL]', progress:' [진행 중]'}[stKey] || '';
+        var nameStr = (l.name || '(이름 없음)') + stLbl + (l.subName ? '\n(' + l.subName + ')' : '');
+        sc(curRow, ci, nameStr, {
+          font: { bold:true, sz:10, color:{rgb:'1E293B'} },
+          fill: { fgColor:{rgb:nameBg} },
+          alignment: { horizontal:'center', vertical:'center', wrapText:true }
+        });
+      });
+      rowHeights[curRow] = {hpt: lots.some(function(l){return l.subName;}) ? 30 : 18};
+      curRow++;
+
+      /* 공정 행 */
+      if (maxSteps > 0) {
+        for (var si = 0; si < maxSteps; si++) {
+          var rowH = 15;
+          lots.forEach(function(l, ci) {
+            var steps = l.steps || [];
+            var st = steps[si];
+            if (!st) {
+              sc(curRow, ci, '', { fill:{fgColor:{rgb:'F9FAFB'}} });
+              return;
+            }
+            var n = stepNum(steps, si, st.type);
+            var lbl = stepLbl(st, n);
+            var tagStr = st.tag === 'pass' ? ' ✓' : st.tag === 'fail' ? ' ✗' : st.tag === 'pending' ? ' ⋯' : '';
+            var parts = [lbl + tagStr];
+            if (st.location) parts.push('위치: ' + st.location);
+            if (st.detail)   parts.push(st.detail);
+            var dateParts = [st.date || '', st.operator || ''].filter(Boolean);
+            if (dateParts.length) parts.push(dateParts.join(' · '));
+            var cellVal = parts.join('\n');
+            if (cellVal.split('\n').length > rowH / 15) rowH = cellVal.split('\n').length * 15;
+            var fill = FILL[st.type] || 'F3F4F6';
+            var fontClr = st.tag === 'fail' ? 'DC2626' : (FONT[st.type] || '374151');
+            sc(curRow, ci, cellVal, {
+              font: { sz:9, color:{rgb:fontClr}, bold: st.tag === 'fail' },
+              fill: { fgColor:{rgb:fill} },
+              alignment: { wrapText:true, vertical:'top' }
+            });
+          });
+          rowHeights[curRow] = {hpt: Math.max(rowH, 28)};
+          curRow++;
+        }
+      }
+
+      /* 구분 빈 행 */
+      curRow++;
+    });
+
+    /* 시트 범위 & 설정 */
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:curRow-1, c:maxLots-1}});
+    ws['!merges'] = merges;
+    var cols = [];
+    for (var ci2 = 0; ci2 < maxLots; ci2++) cols.push({wch:30});
+    ws['!cols'] = cols;
+    ws['!rows'] = rowHeights;
+
+    XLSX.utils.book_append_sheet(wb, ws, '공정도');
 
     var fname = (d.material || d.title || 'PN_Flow').replace(/[\\/:*?"<>|]/g,'_') + '_' + (d.date || todayStr()) + '.xlsx';
     XLSX.writeFile(wb, fname);
