@@ -176,7 +176,15 @@ function load() {
 
     if (_firstLoad) {
       _firstLoad = false;
-      STATE.docs = incoming;
+
+      // incoming 병합 — 단, 로컬에서 막 생성한 문서(아직 저장 전)나
+      // 편집 중인 문서는 보존. STATE.docs를 통째 교체하면
+      // load() 콜백 직전에 newDoc()로 만든 문서가 사라져
+      // getDoc()이 undefined가 되고 모든 뮤테이터가 no-op이 됨.
+      Object.keys(incoming).forEach(function(id) {
+        if (id === STATE.currentId && (STATE.editKey || _pendingSave)) return;
+        STATE.docs[id] = incoming[id];
+      });
 
       // 고정 ID로 예시 문서 유무·버전 확인 → 없거나 구버전이면 (재)생성
       var ex = STATE.docs[SEED_ID];
@@ -188,7 +196,8 @@ function load() {
         DB.child(SEED_ID).set(doc);
       }
 
-      showList();
+      // currentId가 이미 있으면 문서 편집 뷰, 없으면 목록 뷰 렌더
+      render();
       return;
     }
 
