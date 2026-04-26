@@ -243,6 +243,55 @@ function load() {
 
 /* ── 뮤테이터 ───────────────────────────────────── */
 window.APP = {
+  onSearchInput: function() { renderList(); },
+  initSortable: function() {
+    if (typeof Sortable === 'undefined') return;
+    var docBody = document.getElementById('doc-body');
+    if (docBody) {
+      Sortable.create(docBody, { animation: 150, handle: '.pf-sec-header', onEnd: function(evt) { APP.moveSecDrag(evt.oldIndex, evt.newIndex); } });
+    }
+    document.querySelectorAll('.pf-lot-row').forEach(function(row) {
+      Sortable.create(row, { animation: 150, group: 'lots', handle: '.pf-lot-header', filter: '.pf-add-lot-col', onEnd: function(evt) {
+        var fromSecId = evt.from.closest('.pf-section').dataset.secId;
+        var toSecId = evt.to.closest('.pf-section').dataset.secId;
+        APP.moveLotDrag(evt.item.dataset.lotId, fromSecId, toSecId, evt.oldIndex, evt.newIndex);
+      }});
+    });
+    document.querySelectorAll('.pf-steps-list').forEach(function(list) {
+      Sortable.create(list, { animation: 150, group: 'steps', onEnd: function(evt) {
+        var fromLotId = evt.from.closest('.pf-lot-col').dataset.lotId;
+        var toLotId = evt.to.closest('.pf-lot-col').dataset.lotId;
+        APP.moveStepDrag(evt.item.dataset.stepId, fromLotId, toLotId, evt.oldIndex, evt.newIndex);
+      }});
+    });
+  },
+  moveSecDrag: function(oldIdx, newIdx) {
+    var d = getDoc(); if(!d) return;
+    var el = d.sections.splice(oldIdx, 1)[0];
+    d.sections.splice(newIdx, 0, el);
+    save(); render();
+  },
+  moveLotDrag: function(lotId, fromSecId, toSecId, oldIdx, newIdx) {
+    var d = getDoc(); if(!d) return;
+    var fS = d.sections.find(function(s){return s.id===fromSecId;});
+    var tS = d.sections.find(function(s){return s.id===toSecId;});
+    if(!fS || !tS) return;
+    var l = fS.lots.splice(oldIdx, 1)[0];
+    tS.lots.splice(newIdx, 0, l);
+    save(); render();
+  },
+  moveStepDrag: function(stepId, fromLotId, toLotId, oldIdx, newIdx) {
+    var d = getDoc(); if(!d) return;
+    var fL, tL;
+    d.sections.forEach(function(s) { s.lots.forEach(function(l) {
+      if(l.id===fromLotId) fL = l;
+      if(l.id===toLotId) tL = l;
+    });});
+    if(!fL || !tL) return;
+    var st = fL.steps.splice(oldIdx, 1)[0];
+    tL.steps.splice(newIdx, 0, st);
+    save(); render();
+  },
   newDoc: function() {
     var d = mkDoc();
     STATE.docs[d.id] = d;
@@ -282,15 +331,6 @@ window.APP = {
     if(STATE.collapsedSecs.has(sid)) STATE.collapsedSecs.delete(sid);
     else STATE.collapsedSecs.add(sid);
     render();
-  },
-  moveSec: function(sid, dir, ev) {
-    if(ev) ev.stopPropagation();
-    var d = getDoc(); if(!d) return;
-    var i = d.sections.findIndex(s=>s.id===sid); if(i<0) return;
-    var j = dir==='up'?i-1:i+1;
-    if(j<0||j>=d.sections.length) return;
-    var t=d.sections[i]; d.sections[i]=d.sections[j]; d.sections[j]=t;
-    save(); render();
   },
   toggleLot: function(lid, ev) {
     if(ev) ev.stopPropagation();
@@ -348,15 +388,6 @@ window.APP = {
     save();
     render();
   },
-  moveStep: function(sid, dir) {
-    var l = findStepLot(sid); if(!l) return;
-    var i = l.steps.findIndex(s=>s.id===sid);
-    if(i<0||(dir==='up'&&i===0)||(dir==='down'&&i===l.steps.length-1)) return;
-    var j = dir==='up'?i-1:i+1;
-    var t = l.steps[i]; l.steps[i]=l.steps[j]; l.steps[j]=t;
-    save();
-    render();
-  },
   setSectionType: function(sid, type) {
     var d = getDoc(); if(!d) return;
     var s = d.sections.find(x=>x.id===sid); if(s) s.type=type;
@@ -367,10 +398,7 @@ window.APP = {
     var l = findLot(lid); if(l) l.name=val;
     save();
   },
-  updateLotSub: function(lid, val) {
-    var l = findLot(lid); if(l) l.subName=val;
-    save();
-  },
+  // updateLotSub removed
   onMetaChange: function() {
     var d = getDoc(); if(!d) return;
     d.title = document.getElementById('inp-title').value;
@@ -580,11 +608,18 @@ function render() {
 function renderList() {
   document.getElementById('v-list').classList.remove('pf-hidden');
   document.getElementById('v-doc').classList.add('pf-hidden');
+  var keyword = (document.getElementById('list-search') ? document.getElementById('list-search').value : '').toLowerCase();
   var docs = Object.values(STATE.docs).sort(function(a,b){
     // 예시 문서 항상 맨 앞
     if(a.id===SEED_ID) return -1;
     if(b.id===SEED_ID) return 1;
     return (b.date||'').localeCompare(a.date||'');
+  }).filter(function(d) {
+    if(!keyword) return true;
+    var t = (d.title||'').toLowerCase();
+    var m = (d.material||'').toLowerCase();
+    var a = (d.author||'').toLowerCase();
+    return t.indexOf(keyword) !== -1 || m.indexOf(keyword) !== -1 || a.indexOf(keyword) !== -1;
   });
   var html = docs.map(function(d) {
     var secs = Array.isArray(d.sections) ? d.sections : Object.values(d.sections||{});
@@ -623,6 +658,7 @@ function renderDoc() {
   var html = secs.length === 0 ? renderEmptyDoc() : secs.map(renderSec).join('');
   document.getElementById('doc-body').innerHTML = html;
   renderUpdatedInfo();
+  APP.initSortable();
 }
 
 /* ── 요약 스트립 ───────────────────────────────── */
@@ -693,8 +729,6 @@ function renderSec(s) {
     '<button class="pf-sec-tog'+(s.type==='P'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'P\',event)">P</button>'+
     '<button class="pf-sec-tog'+(s.type==='N'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'N\',event)">N</button>'+
     '<button class="pf-sec-tog'+(s.type==='S'?' active':'')+'" onclick="APP.setSectionType(\''+s.id+'\',\'S\',event)">S</button>'+
-    (canUp?'<button class="pf-sec-collapse" onclick="APP.moveSec(\''+s.id+'\',\'up\',event)" title="위로">↑</button>':'')+
-    (canDown?'<button class="pf-sec-collapse" onclick="APP.moveSec(\''+s.id+'\',\'down\',event)" title="아래로">↓</button>':'')+
     '<button class="pf-sec-del" onclick="APP.deleteSection(\''+s.id+'\',event)">✕ 섹션 삭제</button>'+
     '</div></div>'+
     bodyHtml+'</div>';
@@ -736,7 +770,6 @@ function renderLot(l, s) {
       '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div>'+
     '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
-    '<input class="pf-lot-sub-inp" value="'+esc(l.subName||'')+'" placeholder="별칭 (선택)" oninput="APP.updateLotSub(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
     '</div>'+bodyHtml+'</div>';
 }
 
@@ -753,8 +786,6 @@ function renderStep(st, l, i) {
   var stepHtml = '<div class="pf-step '+st.type+' '+pending+' '+editing+'" data-step-id="'+st.id+'" onclick="APP.onStepClick(\''+st.id+'\');event.stopPropagation()">'+
     '<div class="pf-step-hd"><span class="pf-step-lbl">'+esc(lbl)+tagHtml+'</span>'+
     '<span class="pf-step-btns">'+
-    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'up\');event.stopPropagation()">↑</button>'+
-    '<button class="pf-sb" onclick="APP.moveStep(\''+st.id+'\',\'down\');event.stopPropagation()">↓</button>'+
     '<button class="pf-sb pf-sb-del" onclick="APP.deleteStep(\''+st.id+'\');event.stopPropagation()">✕</button>'+
     '</span></div>'+
     (st.detail?'<div class="pf-step-detail">'+esc(st.detail)+'</div>':'')+
