@@ -1,0 +1,617 @@
+/* ──────────────────────────────────────────────────────────
+   품질 대시보드 — Phase 1 (소자평가 데이터)
+   ────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+.dash-layout {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── 헤더 ─────────────────────────────────────────────── */
+.dash-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.dash-subtitle {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.dash-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ── 세그먼트 토글 ────────────────────────────────────── */
+.seg-group {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.seg-btn:hover {
+  color: var(--text);
+}
+
+.seg-btn.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.dash-btn-refresh {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s, transform 0.3s;
+}
+
+.dash-btn-refresh:hover {
+  background: var(--surface-2);
+  transform: rotate(180deg);
+}
+
+/* ── KPI 카드 ─────────────────────────────────────────── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+.kpi-card[data-kpi="ongoing"]::before { background: #4a9eff; }
+.kpi-card[data-kpi="leadtime"]::before { background: #10b981; }
+.kpi-card[data-kpi="urgent"]::before { background: #f59e0b; }
+.kpi-card[data-kpi="resultRate"]::before { background: #9333ea; }
+
+.kpi-card:hover {
+  border-color: var(--border-hover);
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.kpi-sub {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.kpi-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.kpi-delta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.kpi-delta .delta-up   { color: #10b981; font-weight: 600; }
+.kpi-delta .delta-down { color: var(--accent); font-weight: 600; }
+.kpi-delta .delta-flat { color: var(--text-faint); font-weight: 600; }
+
+/* ── 그리드 레이아웃 ──────────────────────────────────── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 14px;
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* ── 차트 카드 ─────────────────────────────────────────── */
+.chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card .card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.chart-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chart-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 320px;
+}
+
+.chart-canvas-wrap.chart-h-260 {
+  height: 260px;
+}
+
+.chart-canvas-wrap.chart-h-300 {
+  height: 300px;
+}
+
+.lt-level-tag {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(190, 0, 57, 0.12);
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+/* ── 필터 바 ─────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.filter-field:first-child {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.filter-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.filter-hint {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.filter-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.filter-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.filter-input-sm {
+  width: 150px;
+}
+
+.month-range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range-sep {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+#monthRangeWrap.is-hidden { display: none; }
+
+/* 자동완성 드롭다운 (재료) */
+.ac-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ac-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.ac-clear:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.ac-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  z-index: 50;
+  display: none;
+}
+
+.ac-dropdown.is-open { display: block; }
+
+.ac-item {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ac-item:last-child { border-bottom: none; }
+
+.ac-item:hover, .ac-item.is-active {
+  background: var(--surface-2);
+}
+
+.ac-item.ac-all {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ac-item-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ac-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+/* select 스타일 통일 */
+select.filter-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%236b7280' d='M0 0l5 6 5-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+/* ── 진행 중 재료 리스트 ─────────────────────────────── */
+.list-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.ongoing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ongoing-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ongoing-row:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-deep);
+}
+
+.ongoing-row.is-urgent {
+  border-left: 3px solid #f59e0b;
+}
+
+.ongoing-row.is-overdue {
+  border-left: 3px solid var(--accent);
+}
+
+.ongoing-mat {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ongoing-lot {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ongoing-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.ongoing-dn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(74, 158, 255, 0.15);
+  color: #4a9eff;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ongoing-dn.dn-alert  { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.ongoing-dn.dn-danger { background: rgba(239, 68, 68, 0.18);  color: var(--accent); }
+
+.ongoing-date {
+  font-size: 0.7rem;
+  color: var(--text-faint);
+}
+
+.ongoing-result-pin {
+  font-size: 0.7rem;
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* ── 최근 결과 테이블 ────────────────────────────────── */
+.result-table-wrap {
+  overflow-x: auto;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.result-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  z-index: 1;
+}
+
+.result-table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.result-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.result-table .lot-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.result-table .pct-good { color: #10b981; font-weight: 600; }
+.result-table .pct-warn { color: #f59e0b; font-weight: 600; }
+.result-table .pct-bad  { color: var(--accent); font-weight: 600; }
+
+.result-table .lt-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  background: rgba(190, 0, 57, 0.1);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+/* ── 빈 상태 ─────────────────────────────────────────── */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+/* ── 향후 SQC 안내 배너 ─────────────────────────────── */
+.future-banner {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border-hover);
+  border-radius: var(--radius);
+  margin-top: 8px;
+}
+
+.future-icon {
+  font-size: 1.4rem;
+  opacity: 0.7;
+}
+
+.future-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.83rem;
+}
+
+.future-text b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.future-text span {
+  color: var(--text-muted);
+}
+
+/* ── 로딩 오버레이 ──────────────────────────────────── */
+.dash-loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 999;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  backdrop-filter: blur(2px);
+}
+
+.dash-loading.hidden {
+  display: none;
+}
+
+/* ── 반응형 ─────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .grid-3col { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .dash-layout { padding: 16px; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .grid-2col, .grid-3col { grid-template-columns: 1fr; }
+  .dash-header { align-items: flex-start; }
+}
