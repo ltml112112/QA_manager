@@ -258,10 +258,9 @@ window.APP = {
       }});
     });
     document.querySelectorAll('.pf-steps-list').forEach(function(list) {
-      Sortable.create(list, { animation: 150, group: 'steps', onEnd: function(evt) {
-        var fromLotId = evt.from.closest('.pf-lot-col').dataset.lotId;
-        var toLotId = evt.to.closest('.pf-lot-col').dataset.lotId;
-        APP.moveStepDrag(evt.item.dataset.stepId, fromLotId, toLotId, evt.oldIndex, evt.newIndex);
+      Sortable.create(list, { animation: 150, onEnd: function(evt) {
+        var lotId = evt.from.closest('.pf-lot-col').dataset.lotId;
+        APP.moveStepDrag(evt.item.dataset.stepId, lotId, lotId, evt.oldIndex, evt.newIndex);
       }});
     });
   },
