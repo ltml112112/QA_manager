@@ -112,7 +112,6 @@ var apps = [
     src:         './apps/10_quality_dashboard/index.html',
     loaderText:  '품질 대시보드 로딩 중...',
     locked:      true,
-    wip:         true,
   },
   {
     id:          'complaint',
