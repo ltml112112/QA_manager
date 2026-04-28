@@ -217,6 +217,185 @@ body {
   height: 260px;
 }
 
+.chart-canvas-wrap.chart-h-300 {
+  height: 300px;
+}
+
+.lt-level-tag {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border-radius: var(--radius-xs);
+  background: rgba(190, 0, 57, 0.12);
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+/* ── 필터 바 ─────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  flex-wrap: wrap;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.filter-field:first-child {
+  flex: 1;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.filter-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.filter-hint {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.filter-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.filter-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.filter-input-sm {
+  width: 150px;
+}
+
+.month-range-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range-sep {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+#monthRangeWrap.is-hidden { display: none; }
+
+/* 자동완성 드롭다운 (재료) */
+.ac-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ac-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.ac-clear:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.ac-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  z-index: 50;
+  display: none;
+}
+
+.ac-dropdown.is-open { display: block; }
+
+.ac-item {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ac-item:last-child { border-bottom: none; }
+
+.ac-item:hover, .ac-item.is-active {
+  background: var(--surface-2);
+}
+
+.ac-item.ac-all {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.ac-item-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ac-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+/* select 스타일 통일 */
+select.filter-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%236b7280' d='M0 0l5 6 5-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
 /* ── 진행 중 재료 리스트 ─────────────────────────────── */
 .list-card {
   display: flex;

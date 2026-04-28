@@ -26,7 +26,7 @@
   <header class="dash-header">
     <div class="dash-title-block">
       <h1 class="dash-title">품질 대시보드</h1>
-      <div class="dash-subtitle">소자평가 데이터 — Lot 일정 + OLED 분석 결과 통합 뷰</div>
+      <div class="dash-subtitle">소자평가 데이터 — Lot 일정 + OLED 분석 결과</div>
     </div>
     <div class="dash-controls">
       <!-- 기간 단위 -->
@@ -35,16 +35,42 @@
         <button class="seg-btn" data-period="quarter">분기별</button>
         <button class="seg-btn" data-period="year">연도별</button>
       </div>
-      <!-- 부서 필터 -->
-      <div class="seg-group" role="tablist" aria-label="부서">
-        <button class="seg-btn active" data-dept="all">전체</button>
-        <button class="seg-btn" data-dept="합성생산">합성생산</button>
-        <button class="seg-btn" data-dept="정제생산/소자이관">정제/소자이관</button>
-      </div>
       <!-- 새로고침 -->
       <button class="dash-btn-refresh" id="btnRefresh" title="새로고침">↻</button>
     </div>
   </header>
+
+  <!-- 필터 바: 재료 / 월 범위 / LT 레벨 -->
+  <section class="filter-bar">
+    <!-- 재료 검색 드롭다운 -->
+    <div class="filter-field">
+      <label class="filter-label">재료</label>
+      <div class="ac-wrap">
+        <input class="filter-input" type="text" id="materialSearch"
+               placeholder="전체 재료" autocomplete="off">
+        <button class="ac-clear" id="materialClear" title="초기화" type="button" style="display:none">✕</button>
+        <div class="ac-dropdown" id="materialDropdown"></div>
+      </div>
+    </div>
+
+    <!-- 월 범위 (월별 모드에서만 표시) -->
+    <div class="filter-field" id="monthRangeWrap">
+      <label class="filter-label">월 범위</label>
+      <div class="month-range-row">
+        <input class="filter-input filter-input-sm" type="month" id="fromMonth">
+        <span class="range-sep">~</span>
+        <input class="filter-input filter-input-sm" type="month" id="toMonth">
+      </div>
+    </div>
+
+    <!-- LT 레벨 선택 (절대값 추이용) -->
+    <div class="filter-field">
+      <label class="filter-label">LT 레벨 <span class="filter-hint">(절대값 추이용)</span></label>
+      <select class="filter-input filter-input-sm" id="ltLevelSelect">
+        <option value="auto">자동 (가장 많은 레벨)</option>
+      </select>
+    </div>
+  </section>
 
   <!-- KPI 카드 5개 -->
   <section class="kpi-row" id="kpiRow">
@@ -56,7 +82,7 @@
     <div class="kpi-card" data-kpi="ongoing">
       <div class="kpi-label">진행 중</div>
       <div class="kpi-value" id="kpiOngoing">—</div>
-      <div class="kpi-delta" id="kpiOngoingDelta">미완료 건</div>
+      <div class="kpi-delta" id="kpiOngoingDelta">미완료 건 (전체)</div>
     </div>
     <div class="kpi-card" data-kpi="leadtime">
       <div class="kpi-label">평균 소요일 <span class="kpi-sub">(이관→완료)</span></div>
@@ -69,19 +95,19 @@
       <div class="kpi-delta" id="kpiUrgentDelta">⚡ 표시 비율</div>
     </div>
     <div class="kpi-card" data-kpi="resultRate">
-      <div class="kpi-label">결과 입력률 <span class="kpi-sub">(정제/소자)</span></div>
+      <div class="kpi-label">결과 입력률</div>
       <div class="kpi-value" id="kpiResultRate">—</div>
       <div class="kpi-delta" id="kpiResultRateDelta">OLED 결과 저장</div>
     </div>
   </section>
 
-  <!-- 메인 그리드: 추이(좌) + 부서/재료(우) -->
+  <!-- 메인 그리드: 추이(좌) + 재료 Top(우) -->
   <section class="grid-2col">
     <!-- 평가 추이 -->
     <div class="card chart-card">
       <div class="card-header">
         <span class="chart-title">평가 추이</span>
-        <span class="chart-sub" id="trendSub">최근 12개월 / 부서별</span>
+        <span class="chart-sub" id="trendSub">최근 12개월</span>
       </div>
       <div class="chart-canvas-wrap">
         <canvas id="trendChart"></canvas>
@@ -95,6 +121,19 @@
       </div>
       <div class="chart-canvas-wrap">
         <canvas id="materialChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- LT 절대값 추이 (풀 너비) -->
+  <section>
+    <div class="card chart-card">
+      <div class="card-header">
+        <span class="chart-title">LT 절대값 추이 <span id="ltAbsLevelTag" class="lt-level-tag">—</span></span>
+        <span class="chart-sub" id="ltAbsSub">평가일순 · REF / SAMPLE 시간(hr)</span>
+      </div>
+      <div class="chart-canvas-wrap chart-h-300">
+        <canvas id="ltAbsChart"></canvas>
       </div>
     </div>
   </section>
@@ -136,7 +175,7 @@
     <div class="card list-card">
       <div class="card-header">
         <span class="chart-title">진행 중 재료</span>
-        <span class="chart-sub" id="ongoingSub">미완료 정제/소자이관 Lot</span>
+        <span class="chart-sub" id="ongoingSub">미완료 Lot</span>
       </div>
       <div class="ongoing-list" id="ongoingList"></div>
     </div>
