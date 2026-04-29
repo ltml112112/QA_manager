@@ -28,6 +28,7 @@ const STATE = {
   stageLabels:    [],     // 흐름도 Excel 헤더 라벨 ["1단계","2단계",...]
   stageTypeLabels:[],     // 실제 공정명 ["완제품","정제1차품","정제원재료",...]
   lotSearchIndex: {},     // Lot → 'lot|itemName|remark' 소문자 캐시 (검색 성능)
+  edgeWeightMap:  {},     // '{outLot}→{inLot}' → 투입량(g) (화살표 두께용)
   selectedLot:    null,
   selectedBatch:  null,
   traceDir:       'backward', // 'backward' | 'forward'
@@ -414,7 +415,8 @@ function parseSubCols(rows, stages) {
       remarkLotCol: null,  // 두 번째 LOT 컬럼 또는 "비고" 컬럼 (비고 Lot)
       itemCodeCol:  null,
       itemNameCol:  null,
-      stageNameCol: null
+      stageNameCol: null,
+      weightCol:    null,  // 투입량 컬럼
     };
 
     for (var c = stg.startCol; c < endCol; c++) {
@@ -440,6 +442,8 @@ function parseSubCols(rows, stages) {
         sub.itemNameCol = c;
       } else if (cell === '단계') {
         sub.stageNameCol = c;
+      } else if (upper.indexOf('투입량') !== -1 || upper.indexOf('투입') !== -1 || upper === '중량' || upper.indexOf('WEIGHT') !== -1) {
+        if (sub.weightCol === null) sub.weightCol = c;
       }
     }
     result.push(sub);
@@ -453,23 +457,25 @@ function parseSubCols(rows, stages) {
    1단계(완제품)가 미기재인 경우에도 2단계부터 체인 형성 가능
 */
 function parseFlowRows(rows, subCols) {
-  var byOutput       = {};  // 완제품Lot → [원료Lot, ...]
-  var byInput        = {};  // 원료Lot  → [완제품Lot, ...]
-  var lotMeta        = {};  // Lot → {itemCode, itemName}
-  var lotStage       = {};  // Lot → 단계 인덱스 (0=완제품/1단계, N=원료/마지막단계)
+  var byOutput        = {};  // 완제품Lot → [원료Lot, ...]
+  var byInput         = {};  // 원료Lot  → [완제품Lot, ...]
+  var lotMeta         = {};  // Lot → {itemCode, itemName}
+  var lotStage        = {};  // Lot → 단계 인덱스 (0=완제품/1단계, N=원료/마지막단계)
+  var edgeWeightMap   = {};  // '{outLot}→{inLot}' → 투입량(g)
   var stageTypeLabels = new Array(subCols.length).fill(''); // 실제 공정명 ("완제품","정제1차품" 등)
 
   for (var r = 2; r < rows.length; r++) {
     var row = rows[r];
 
-    // 각 단계에서 Lot 번호 + 메타 + 공정명 추출
+    // 각 단계에서 Lot 번호 + 메타 + 공정명 + 투입량 추출
     var stageLots = subCols.map(function(sub, sIdx) {
       var lot       = sub.mainLotCol    !== null ? String(row[sub.mainLotCol]    || '').trim() : '';
       var remark    = sub.remarkLotCol  !== null ? String(row[sub.remarkLotCol]  || '').trim() : '';
       var itemCode  = sub.itemCodeCol   !== null ? String(row[sub.itemCodeCol]   || '').trim() : '';
       var itemName  = sub.itemNameCol   !== null ? String(row[sub.itemNameCol]   || '').trim() : '';
       var stageName = sub.stageNameCol  !== null ? String(row[sub.stageNameCol]  || '').trim() : '';
-      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, remark: remark, stageIdx: sIdx };
+      var weight    = sub.weightCol     !== null ? parseFloat(String(row[sub.weightCol] || '')) : NaN;
+      return { lot: lot, itemCode: itemCode, itemName: itemName, stageName: stageName, remark: remark, stageIdx: sIdx, weight: weight };
     });
 
     // lotMeta + lotStage 저장, stageTypeLabels 수집
@@ -494,17 +500,23 @@ function parseFlowRows(rows, subCols) {
     if (validIdxs.length < 2) continue;
 
     for (var vi = 0; vi < validIdxs.length - 1; vi++) {
-      var outLot = stageLots[validIdxs[vi]].lot;     // 더 완제품 방향 (낮은 단계 인덱스)
-      var inLot  = stageLots[validIdxs[vi + 1]].lot; // 더 원료 방향 (높은 단계 인덱스)
+      var outLot   = stageLots[validIdxs[vi]].lot;       // 더 완제품 방향 (낮은 단계 인덱스)
+      var inLot    = stageLots[validIdxs[vi + 1]].lot;   // 더 원료 방향 (높은 단계 인덱스)
+      var inWeight = stageLots[validIdxs[vi + 1]].weight; // 원료의 투입량
       if (!byOutput[outLot]) byOutput[outLot] = [];
       if (byOutput[outLot].indexOf(inLot) === -1) byOutput[outLot].push(inLot);
       if (!byInput[inLot]) byInput[inLot] = [];
       if (byInput[inLot].indexOf(outLot) === -1) byInput[inLot].push(outLot);
+      // 투입량 저장 (동일 엣지가 여러 행에 걸쳐 나타나면 누적)
+      var eKey = outLot + '→' + inLot;
+      if (!isNaN(inWeight) && inWeight > 0) {
+        edgeWeightMap[eKey] = (edgeWeightMap[eKey] || 0) + inWeight;
+      }
     }
   }
 
   return { byOutput: byOutput, byInput: byInput, lotMeta: lotMeta,
-           lotStage: lotStage, stageTypeLabels: stageTypeLabels };
+           lotStage: lotStage, stageTypeLabels: stageTypeLabels, edgeWeightMap: edgeWeightMap };
 }
 
 /* 4-G: 진입점 */
@@ -520,6 +532,7 @@ function parseFlowData() {
   STATE.byInputLot       = maps.byInput;
   STATE.lotMeta          = maps.lotMeta;
   STATE.lotStage         = maps.lotStage;
+  STATE.edgeWeightMap    = maps.edgeWeightMap;
   STATE.stageLabels      = subCols.map(function(sub) { return sub.stageLabel; });
   STATE.stageTypeLabels  = maps.stageTypeLabels;
 
@@ -1000,27 +1013,80 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
   svg.classList.add('genealogy-svg');
   svg.setAttribute('width',  totalW);
   svg.setAttribute('height', totalH);
-  svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
+  // pointer-events는 path별로 설정 — SVG 컨테이너 자체는 기본(auto)
+  svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;';
 
-  var defs   = document.createElementNS(NS, 'defs');
-  var marker = document.createElementNS(NS, 'marker');
-  marker.setAttribute('id', 'gn-arrow');
-  marker.setAttribute('markerWidth',  '8');
-  marker.setAttribute('markerHeight', '6');
-  marker.setAttribute('refX', '8');
-  marker.setAttribute('refY', '3');
-  marker.setAttribute('orient', 'auto');
-  var poly = document.createElementNS(NS, 'polygon');
-  poly.setAttribute('points', '0 0, 8 3, 0 6');
-  poly.setAttribute('fill', 'var(--border-hover)');
-  marker.appendChild(poly);
-  defs.appendChild(marker);
+  /* ── 투입량 비중 사전 계산 ── */
+  // 각 outLot별 총 투입량 합산 (표시되는 엣지 기준)
+  var totalByOut = {};
+  var seen0 = {};
+  edges.forEach(function(e) {
+    var lc = colMap[e.to], rc = colMap[e.from];
+    if (lc >= rc) return;
+    var key = e.to + '→' + e.from;
+    if (seen0[key]) return;
+    seen0[key] = true;
+    var w = STATE.edgeWeightMap[e.from + '→' + e.to];
+    if (w > 0) {
+      totalByOut[e.from] = (totalByOut[e.from] || 0) + w;
+    }
+  });
+
+  /* ── 마커 정의 (두께 티어별 고정 크기 화살촉) ── */
+  // markerUnits="userSpaceOnUse" → 픽셀 고정 크기, stroke-width 무관
+  var defs = document.createElementNS(NS, 'defs');
+  var TIERS = [
+    { id: 'gn-arr-0', sw: 1.5, mw: 8,  mh: 6,  pts: '0 0, 8 3, 0 6'   },
+    { id: 'gn-arr-1', sw: 2.5, mw: 9,  mh: 7,  pts: '0 0, 9 3.5, 0 7'  },
+    { id: 'gn-arr-2', sw: 4,   mw: 11, mh: 8,  pts: '0 0, 11 4, 0 8'   },
+    { id: 'gn-arr-3', sw: 5.5, mw: 13, mh: 10, pts: '0 0, 13 5, 0 10'  },
+    { id: 'gn-arr-4', sw: 7,   mw: 15, mh: 11, pts: '0 0, 15 5.5, 0 11' },
+  ];
+  TIERS.forEach(function(t) {
+    var m = document.createElementNS(NS, 'marker');
+    m.setAttribute('id',           t.id);
+    m.setAttribute('markerUnits',  'userSpaceOnUse');
+    m.setAttribute('markerWidth',  String(t.mw));
+    m.setAttribute('markerHeight', String(t.mh));
+    m.setAttribute('refX',        String(t.mw));      // 화살촉 끝점 = 경로 끝점
+    m.setAttribute('refY',        String(t.mh / 2));
+    m.setAttribute('orient',      'auto');
+    var p = document.createElementNS(NS, 'polygon');
+    p.setAttribute('points', t.pts);
+    p.setAttribute('fill',   'var(--border-hover)');
+    m.appendChild(p);
+    defs.appendChild(m);
+  });
   svg.appendChild(defs);
 
+  /* ── 툴팁 엘리먼트 (body에 1개만 유지) ── */
+  var tooltip = document.getElementById('gn-edge-tooltip');
+  if (!tooltip) {
+    tooltip = document.createElement('div');
+    tooltip.id = 'gn-edge-tooltip';
+    tooltip.style.cssText = [
+      'position:fixed',
+      'background:var(--surface)',
+      'border:1px solid var(--border)',
+      'border-radius:6px',
+      'padding:6px 11px',
+      'font-size:0.78rem',
+      'color:var(--text)',
+      'pointer-events:none',
+      'display:none',
+      'z-index:9999',
+      'box-shadow:0 3px 10px rgba(0,0,0,0.18)',
+      'white-space:nowrap',
+      'line-height:1.55',
+    ].join(';');
+    document.body.appendChild(tooltip);
+  }
+
+  /* ── 경로 그리기 ── */
   var seen = {};
   edges.forEach(function(e) {
     var lc = colMap[e.to], rc = colMap[e.from];
-    if (lc >= rc) return;                          // 역방향/동일 컬럼 skip
+    if (lc >= rc) return;
     var key = e.to + '→' + e.from;
     if (seen[key]) return;
     seen[key] = true;
@@ -1029,24 +1095,72 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
     var yR = layout.y[e.from], hR = layout.h[e.from];
     if (yL === undefined || yR === undefined) return;
 
-    var x1 = lc * (COL_W + COL_GAP) + COL_W;   // 원료 오른쪽 끝
+    var x1 = lc * (COL_W + COL_GAP) + COL_W;
     var y1 = HDR_H + 8 + yL + hL / 2;
-    var x2 = rc * (COL_W + COL_GAP);             // 완제품 왼쪽 끝
+    var x2 = rc * (COL_W + COL_GAP);
     var y2 = HDR_H + 8 + yR + hR / 2;
     var cx = (x1 + x2) / 2;
 
+    /* 투입량·비중 계산 */
+    var edgeKey  = e.from + '→' + e.to;
+    var w        = STATE.edgeWeightMap[edgeKey];   // 투입량(g), 없으면 undefined
+    var hasW     = w !== undefined && w > 0;
+    var tot      = totalByOut[e.from] || 0;
+    var ratio    = (hasW && tot > 0) ? w / tot : null;
+
+    /* 두께 티어 선택 */
+    var tierIdx = 0;
+    if (ratio !== null) {
+      if      (ratio > 0.75) tierIdx = 4;
+      else if (ratio > 0.50) tierIdx = 3;
+      else if (ratio > 0.30) tierIdx = 2;
+      else if (ratio > 0.10) tierIdx = 1;
+      else                   tierIdx = 0;
+    }
+    var tier = TIERS[tierIdx];
+
+    /* 시각 경로 */
+    var dAttr = 'M ' + x1 + ' ' + y1 +
+      ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2;
+
     var path = document.createElementNS(NS, 'path');
-    path.setAttribute('d',
-      'M ' + x1 + ' ' + y1 +
-      ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2);
+    path.setAttribute('d',            dAttr);
     path.setAttribute('stroke',       'var(--border-hover)');
-    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('stroke-width', String(tier.sw));
     path.setAttribute('fill',         'none');
-    path.setAttribute('marker-end',   'url(#gn-arrow)');
+    path.setAttribute('marker-end',   'url(#' + tier.id + ')');
+    path.setAttribute('pointer-events', 'none');
     svg.appendChild(path);
+
+    /* 투명 히트 영역 (두꺼운 투명 경로 → hover 감지) */
+    var hit = document.createElementNS(NS, 'path');
+    hit.setAttribute('d',            dAttr);
+    hit.setAttribute('stroke',       'transparent');
+    hit.setAttribute('stroke-width', '14');
+    hit.setAttribute('fill',         'none');
+    hit.setAttribute('pointer-events', 'stroke');
+    hit.style.cursor = hasW ? 'pointer' : 'default';
+    svg.appendChild(hit);
+
+    if (hasW) {
+      var pct = ratio !== null ? (ratio * 100).toFixed(1) + '%' : '-';
+      var wTxt = w % 1 === 0 ? w + ' g' : w.toFixed(1) + ' g';
+      hit.addEventListener('mousemove', function(ev) {
+        tooltip.innerHTML =
+          '<span style="color:var(--text-muted);font-size:0.72rem">' + escHtml(e.to) + ' → ' + escHtml(e.from) + '</span><br>' +
+          '투입량 <strong>' + wTxt + '</strong> &nbsp;|&nbsp; 비중 <strong style="color:var(--accent)">' + pct + '</strong>';
+        tooltip.style.display = 'block';
+        tooltip.style.left    = (ev.clientX + 14) + 'px';
+        tooltip.style.top     = (ev.clientY - 36) + 'px';
+      });
+      hit.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+      });
+    }
   });
 
-  inner.appendChild(svg);
+  /* SVG를 lot 노드보다 먼저 삽입 → 노드가 SVG 위에 렌더됨 */
+  inner.insertBefore(svg, inner.firstChild);
 }
 
 /* 6-F: 계보도 렌더링 메인 (절대좌표 tree layout) */
