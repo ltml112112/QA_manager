@@ -17,6 +17,7 @@
 | | `coa_dev` | COA 생성 — 개발용 | 개발 예정 (locked) |
 | | `coa_prod` | COA 생성 — 양산용 | 개발 예정 (locked) |
 | | `ext_code` | 외부코드 관리 (고객사별) | 개발 예정 (locked) |
+| | `lcms` | LC/MS Report 변환기 | 구현 완료 (locked) |
 | **품질 데이터** | `cpl` | Lot 추적관리 & SQC | 구현 완료 (locked) |
 | | `dashboard` | 품질 대시보드 | 개발 예정 (locked) |
 | | `complaint` | 불량·컴플레인 관리 | 개발 예정 (locked) |
@@ -71,8 +72,14 @@ QA_manager/
     │   └── index.html                # 제품 Spec & CTQ/CTP (개발 예정) [제품·소재 관리]
     ├── 13_iqc/
     │   └── index.html                # 원자재 입고검사 IQC (개발 예정) [제품·소재 관리]
-    └── 14_sys_docs/
-        └── index.html                # 시스템 문서 & SOP (개발 예정) [문서 관리]
+    ├── 14_sys_docs/
+    │   └── index.html                # 시스템 문서 & SOP (개발 예정) [문서 관리]
+    ├── 15_pn_flow/
+    │   ├── index.html                # P/N 공정 Flow 관리 [공정 이력 관리]
+    │   ├── style.css
+    │   └── app.js
+    └── 16_lcms_converter/
+        └── index.html                # LC/MS Report 변환기 (Agilent PDF + Excel → 변형 PDF) [자동화]
 ```
 
 ---
@@ -378,7 +385,7 @@ const apps = [
 - [ ] `<link rel="stylesheet" href="../../assets/css/global_style.css">` 포함되어 있는가?
 - [ ] 테마 동기화 JS(`window.addEventListener('message', ...)`) 포함되어 있는가?
 - [ ] `main.js`의 `apps` 배열에 올바른 `src` 경로로 등록했는가?
-- [ ] `id`가 기존 앱들과 겹치지 않는가? (사용 중: `oled`, `lotschedule`, `hplc`, `lgd`, `sdc`, `coa_dev`, `coa_prod`, `ext_code`, `cpl`, `dashboard`, `complaint`, `spec_ctq`, `iqc`, `sys_docs`)
+- [ ] `id`가 기존 앱들과 겹치지 않는가? (사용 중: `oled`, `lotschedule`, `hplc`, `lgd`, `sdc`, `coa_dev`, `coa_prod`, `ext_code`, `lcms`, `cpl`, `dashboard`, `complaint`, `pn_flow`, `spec_ctq`, `iqc`, `sys_docs`)
 - [ ] GAS 외부 URL 앱이라면 `sandbox` 필드를 추가했는가?
 
 ---
@@ -1073,7 +1080,96 @@ topbar의 `✏ 개별 등록` 버튼 클릭 시 중앙 모달로 열림.
 
 ---
 
-## 7~15번 앱 — 개발 예정 플레이스홀더
+## 7. LC/MS Report 변환기 (`apps/16_lcms_converter/index.html`)
+
+Agilent LC/MS **Single Injection Report** PDF의 2페이지 MSD 테이블을 사용자가 가공한 형식으로 자동 변환하는 도구. 단일 HTML 파일에 CSS·HTML·JS 전부 포함.
+
+### 기능 요약
+- PDF + Excel 다중 업로드 (한 드롭존에 혼합)
+- 확장자 제외 **파일명이 같은 쌍**을 자동 매칭 (예: `LT-PHM220_0409.pdf` ↔ `LT-PHM220_0409.xlsx`)
+- 매칭된 쌍만 일괄 변환 → 1쌍이면 PDF 단독 다운로드, 2쌍 이상이면 ZIP 다운로드
+- 모든 처리는 브라우저 내(서버 전송 없음)
+
+### 입력 형식
+
+**PDF**: Agilent Single Injection Report (2페이지 이상). 2페이지 MSD 테이블 영역이 변환 대상.
+
+**Excel** (1번째 시트): A=`#`, B=`m/z`, C=`Abundance` 컬럼 순서. 그룹 사이에 `# / m/z / Abundance` 헤더 행을 두면 다중 피크 처리됨.
+
+```
+A     B       C
+#     m/z     Abundance      ← 그룹 헤더
+37    665.4   32.3
+38    666.5   62
+...
+#     m/z     Abundance      ← 다음 그룹
+21    889.5   39.2
+```
+
+### 컬럼 변환
+
+```
+RT / Type / Width / Area / Height / Area% / Name   →   RT / Type / m/z / Abun(%)
+```
+
+기존 컬럼 영역을 흰 사각형으로 덮은 뒤 새 헤더와 그룹별 데이터 행을 같은 좌표에 다시 그림. 그룹 첫 행에만 RT·Type 표시, 이하 행은 m/z·Abun만 표시.
+
+### 좌표 템플릿 (`TMPL`)
+
+Agilent Single Injection Report의 2페이지 레이아웃은 보고서마다 동일한 고정 양식 → 좌표를 상수로 박아둠.
+
+| 키 | 값 | 의미 |
+|----|----|------|
+| `headerY` | 505.58 | 헤더 행 baseline (PDF 좌표 = 아래에서부터) |
+| `firstDataY` | 484.68 | 첫 데이터 행 baseline |
+| `rowSpacing` | 20.2 | 새 테이블 행 간격 |
+| `groupGap` | 43.9 | 그룹 사이 간격 |
+| `xRT, xType` | 69.4, 114.9 | RT·Type 컬럼 좌측 x |
+| `xMzRight, xAbRight` | 166.8, 206.8 | m/z·Abun 컬럼 우측 정렬 기준 x |
+| `xHdrRT, xHdrType, xHdrMz, xHdrAb` | 62.4, 110.4, 147.1, 182.4 | 헤더 좌측 x |
+| `coverLeft, coverRightMargin` | 55, 73 | 흰 사각형 가림판 좌·우 여백 |
+
+> 양식이 다른 보고서에는 동작하지 않음. Agilent 보고서 양식이 바뀌면 이 상수들을 새 좌표로 갱신해야 함.
+
+### CDN 라이브러리
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+```
+
+### 처리 흐름
+
+1. 드롭존에 PDF·Excel 혼합 업로드 → 확장자 기준 `pdfMap` / `xlMap`으로 분리.
+2. 같은 basename을 가진 항목끼리 매칭 → `pairs` 배열.
+3. 매칭된 각 쌍에 대해 `processPair()`:
+   - PDF 원본을 두 개의 `Uint8Array`로 복제 (PDF.js는 ArrayBuffer를 transfer하므로 pdf-lib용 별도 사본 필요).
+   - PDF.js로 2페이지 텍스트 좌표를 읽어 `headerY` 아래 130pt 범위 내에서 `\d+\.\d{3}` 패턴(체류시간) + 2글자 대문자 패턴(Type)을 묶음 단위로 추출.
+   - SheetJS로 Excel 1번째 시트를 `header:1` 모드로 읽어 `parseGroups()`로 그룹화.
+   - pdf-lib으로 2페이지 기존 테이블 영역(`headerY+13` ~ `lastY-14` 높이)을 흰 사각형으로 덮음.
+   - 새 헤더(Helvetica Bold) + 그룹별 데이터 행(Helvetica Regular) 다시 그림. m/z는 `toFixed(1)`, Abundance는 정수면 정수, 아니면 그대로 표시.
+4. `JSZip`에 `_수정본.pdf` 이름으로 추가.
+5. 1쌍이면 PDF 직접 다운로드, 2쌍 이상이면 `LCMS_수정본_YYYYMMDD_HHMM.zip`으로 압축 다운로드.
+
+### 주요 함수
+
+| 함수 | 역할 |
+|------|------|
+| `parseGroups(data)` | Excel 행 배열 → 그룹별 `{mz, abun}` 배열 |
+| `extractRTValues(pdfBuf)` | PDF.js로 2페이지 RT·Type 추출 |
+| `processPair(pdfFile, xlFile)` | 1쌍 처리 진입점 — 변형 PDF Uint8Array 반환 |
+| `runAll()` | 매칭된 모든 쌍 변환 + ZIP/PDF 다운로드 |
+| `rebuild()` | 매칭 테이블 + 실행 버튼 활성/비활성 갱신 |
+
+### 인증·잠금
+
+다른 자동화 도구와 동일하게 `_AG_ADMIN_ONLY = true` + `auth_guard.js` 사용. `main.js`에서 `locked: true`로 등록되어 일반 user 계정에서는 탭이 보이지 않음.
+
+---
+
+## 8. 개발 예정 플레이스홀더 (07·08·09·10·11·12·13·14번)
 
 아래 앱들은 `apps/` 폴더에 플레이스홀더 `index.html`이 생성되어 있음.
 실제 기능 구현 시 해당 파일을 교체하면 됨. `main.js`의 `src` 경로는 변경 불필요.
