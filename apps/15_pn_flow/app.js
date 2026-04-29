@@ -56,6 +56,15 @@ var STATE = {
   collapsedSecs: new Set(), collapsedLots: new Set()
 };
 
+var _undoStack = [];
+var MAX_UNDO = 20;
+
+function pushUndo() {
+  var d = getDoc(); if(!d) return;
+  _undoStack.push(JSON.stringify(d.sections));
+  if (_undoStack.length > MAX_UNDO) _undoStack.shift();
+}
+
 /* ── 상대 시간 ─────────────────────────────────── */
 function timeAgo(ts) {
   if (!ts) return '';
@@ -264,8 +273,17 @@ window.APP = {
       }});
     });
   },
+  undo: function() {
+    if (!_undoStack.length) return;
+    var d = getDoc(); if(!d) return;
+    d.sections = normDoc({sections: JSON.parse(_undoStack.pop())}).sections;
+    save(); render();
+    setSaveStatus('saved', '실행 취소됨');
+  },
   moveSecDrag: function(oldIdx, newIdx) {
     var d = getDoc(); if(!d) return;
+    if (oldIdx === newIdx) return;
+    pushUndo();
     var el = d.sections.splice(oldIdx, 1)[0];
     d.sections.splice(newIdx, 0, el);
     save(); render();
@@ -275,6 +293,8 @@ window.APP = {
     var fS = d.sections.find(function(s){return s.id===fromSecId;});
     var tS = d.sections.find(function(s){return s.id===toSecId;});
     if(!fS || !tS) return;
+    if (fromSecId === toSecId && oldIdx === newIdx) return;
+    pushUndo();
     var l = fS.lots.splice(oldIdx, 1)[0];
     tS.lots.splice(newIdx, 0, l);
     save(); render();
@@ -287,6 +307,8 @@ window.APP = {
       if(l.id===toLotId) tL = l;
     });});
     if(!fL || !tL) return;
+    if (fromLotId === toLotId && oldIdx === newIdx) return;
+    pushUndo();
     var st = fL.steps.splice(oldIdx, 1)[0];
     tL.steps.splice(newIdx, 0, st);
     save(); render();
@@ -305,6 +327,7 @@ window.APP = {
   },
   openDoc: function(id) {
     STATE.currentId = id;
+    _undoStack = [];
     render();
   },
   deleteDoc: function(id) {
@@ -593,9 +616,13 @@ function closeEdit() {
   STATE.editKey = null;
 }
 
-/* ── Esc 로 드로어 닫기 ──────────────────────────── */
+/* ── 키보드 단축키 ───────────────────────────────── */
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && STATE.editKey) { closeEdit(); renderDoc(); renderDrawer(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && STATE.currentId && !STATE.editKey) {
+    e.preventDefault();
+    APP.undo();
+  }
 });
 
 /* ── 렌더링 ────────────────────────────────────── */
@@ -609,9 +636,6 @@ function renderList() {
   document.getElementById('v-doc').classList.add('pf-hidden');
   var keyword = (document.getElementById('list-search') ? document.getElementById('list-search').value : '').toLowerCase();
   var docs = Object.values(STATE.docs).sort(function(a,b){
-    // 예시 문서 항상 맨 앞
-    if(a.id===SEED_ID) return -1;
-    if(b.id===SEED_ID) return 1;
     return (b.date||'').localeCompare(a.date||'');
   }).filter(function(d) {
     if(!keyword) return true;
@@ -626,12 +650,10 @@ function renderList() {
       var lots = Array.isArray(s.lots) ? s.lots : Object.values(s.lots||{});
       return sum + lots.length;
     }, 0);
-    var isExample = d.id === SEED_ID;
     var updInfo = d.updatedAt
       ? '<span class="pf-card-upd"> · '+timeAgo(d.updatedAt)+(d.updatedBy?' · '+esc(d.updatedBy.split('@')[0]):'')+'</span>'
       : '';
-    return '<div class="pf-doc-card'+(isExample?' pf-doc-example':'')+'" onclick="APP.openDoc(\''+d.id+'\')">'+
-      (isExample?'<div class="pf-example-badge">예시</div>':'')+
+    return '<div class="pf-doc-card" onclick="APP.openDoc(\''+d.id+'\')">'+
       '<div class="pf-card-title">'+esc(d.title||'제목 없음')+'</div>'+
       '<div class="pf-card-meta">'+
       (d.material?'<span class="pf-card-chip mat">'+esc(d.material)+'</span>':'')+
