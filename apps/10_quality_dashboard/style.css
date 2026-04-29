@@ -28,11 +28,14 @@ body {
 }
 
 .dash-title {
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  display: inline-block;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
 }
 
 .dash-subtitle {

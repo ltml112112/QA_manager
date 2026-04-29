@@ -483,12 +483,15 @@ html, body {
 
 /* ── 앱 페이지 타이틀 공통 ── */
 .page-title {
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text);
   margin: 0 0 4px 0;
   line-height: 1.3;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  display: inline-block;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
 }
 .page-subtitle {
   font-size: 0.8rem;
@@ -510,10 +513,13 @@ html, body {
   display: inline-block;
 }
 .wip-title {
-  font-size: 1.125rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--text);
   margin: 12px 0 8px;
+  display: inline-block;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
 }
 .wip-desc {
   color: var(--text-muted);
