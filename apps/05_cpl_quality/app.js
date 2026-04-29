@@ -1184,6 +1184,13 @@ function renderGenealogy(lot) {
   inner.className = 'genealogy-inner';
   inner.style.cssText = 'width:' + totalW + 'px;height:' + totalH + 'px;';
 
+  /* 각 outLot별 총 투입량 (노드 레이블용) */
+  var totalByOut = {};
+  edges.forEach(function(e) {
+    var w = STATE.edgeWeightMap[e.from + '→' + e.to];
+    if (w > 0) totalByOut[e.from] = (totalByOut[e.from] || 0) + w;
+  });
+
   /* 컬럼별 헤더 + lot 노드 */
   for (var c = 0; c < numCols; c++) {
     var colX = c * (COL_W + COL_GAP);
@@ -1207,8 +1214,12 @@ function renderGenealogy(lot) {
       node.style.cssText =
         'left:' + colX + 'px;top:' + nodeY + 'px;' +
         'width:' + COL_W + 'px;min-height:' + nodeH + 'px;';
+      var tw = totalByOut[l];
+      var twHtml = tw > 0
+        ? '<span class="lot-node-total">' + (tw % 1 === 0 ? tw : parseFloat(tw.toFixed(1))) + ' g</span>'
+        : '';
       node.innerHTML =
-        '<div class="lot-node-id">' + escHtml(l) + '</div>' +
+        '<div class="lot-node-id"><span>' + escHtml(l) + '</span>' + twHtml + '</div>' +
         (meta.remark ? '<div class="lot-node-remark">' + escHtml(meta.remark) + '</div>' : '');
       node.onclick = (function(lClosed) { return function() {
         STATE.selectedLot = lClosed;
