@@ -8,9 +8,10 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 
 .pf-topbar {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 24px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
-.pf-app-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
+.pf-app-title { font-size: 1.5rem; font-weight: 700; color: var(--text); margin: 0; line-height: 1.2; letter-spacing: -0.02em; border-left: 4px solid var(--accent); padding-left: 12px; }
 
 .pf-doc-grid {
   display: grid;

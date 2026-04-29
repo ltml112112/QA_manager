@@ -33,20 +33,16 @@ body {
 .lcms-hdr {
   width: 100%;
   max-width: 820px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 14px;
 }
-.lcms-hdr-logo {
-  width: 36px; height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
+.lcms-hdr-logo { display: none; }
 .lcms-hdr-text { flex: 1; }
-.lcms-hdr-text h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+.lcms-hdr-text h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; line-height: 1.2; border-left: 4px solid var(--accent); padding-left: 12px; }
 .lcms-hdr-text p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .lcms-help-btn {
   display: flex; align-items: center; gap: 6px;
@@ -378,12 +374,6 @@ table.fmt-tbl th {
 <body>
 
 <header class="lcms-hdr">
-  <div class="lcms-hdr-logo">
-    <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5" width="20" height="20">
-      <path d="M3 10 Q6 4 10 10 Q14 16 17 10"/>
-      <line x1="3" y1="16" x2="17" y2="16"/>
-    </svg>
-  </div>
   <div class="lcms-hdr-text">
     <h1>LC/MS Report 변환기</h1>
     <p>PDF와 Excel을 한 곳에 올리면 파일명으로 자동 매칭 · MSD 테이블을 m/z, Abun(%) 형식으로 변환</p>
