@@ -63,6 +63,14 @@ function pushUndo() {
   var d = getDoc(); if(!d) return;
   _undoStack.push(JSON.stringify(d.sections));
   if (_undoStack.length > MAX_UNDO) _undoStack.shift();
+  updateUndoBtn();
+}
+
+function updateUndoBtn() {
+  var btn = document.getElementById('pf-undo-btn'); if(!btn) return;
+  var n = _undoStack.length;
+  btn.disabled = n === 0;
+  btn.textContent = n > 0 ? '↩ 되돌리기 (' + n + ')' : '↩ 되돌리기';
 }
 
 /* ── 상대 시간 ─────────────────────────────────── */
@@ -277,6 +285,7 @@ window.APP = {
     if (!_undoStack.length) return;
     var d = getDoc(); if(!d) return;
     d.sections = normDoc({sections: JSON.parse(_undoStack.pop())}).sections;
+    updateUndoBtn();
     save(); render();
     setSaveStatus('saved', '실행 취소됨');
   },
@@ -328,6 +337,7 @@ window.APP = {
   openDoc: function(id) {
     STATE.currentId = id;
     _undoStack = [];
+    updateUndoBtn();
     render();
   },
   deleteDoc: function(id) {
