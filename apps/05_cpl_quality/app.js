@@ -507,10 +507,10 @@ function parseFlowRows(rows, subCols) {
       if (byOutput[outLot].indexOf(inLot) === -1) byOutput[outLot].push(inLot);
       if (!byInput[inLot]) byInput[inLot] = [];
       if (byInput[inLot].indexOf(outLot) === -1) byInput[inLot].push(outLot);
-      // 투입량 저장 (동일 엣지가 여러 행에 걸쳐 나타나면 누적)
+      // 투입량 저장 — 하위 원료 분기로 같은 엣지가 여러 행에 반복될 수 있으므로 첫 등장값만 사용
       var eKey = outLot + '→' + inLot;
-      if (!isNaN(inWeight) && inWeight > 0) {
-        edgeWeightMap[eKey] = (edgeWeightMap[eKey] || 0) + inWeight;
+      if (!isNaN(inWeight) && inWeight > 0 && edgeWeightMap[eKey] === undefined) {
+        edgeWeightMap[eKey] = inWeight;
       }
     }
   }
@@ -1032,32 +1032,8 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
     }
   });
 
-  /* ── 마커 정의 (두께 티어별 고정 크기 화살촉) ── */
-  // markerUnits="userSpaceOnUse" → 픽셀 고정 크기, stroke-width 무관
-  var defs = document.createElementNS(NS, 'defs');
-  var TIERS = [
-    { id: 'gn-arr-0', sw: 1.5, mw: 8,  mh: 6,  pts: '0 0, 8 3, 0 6'   },
-    { id: 'gn-arr-1', sw: 2.5, mw: 9,  mh: 7,  pts: '0 0, 9 3.5, 0 7'  },
-    { id: 'gn-arr-2', sw: 4,   mw: 11, mh: 8,  pts: '0 0, 11 4, 0 8'   },
-    { id: 'gn-arr-3', sw: 5.5, mw: 13, mh: 10, pts: '0 0, 13 5, 0 10'  },
-    { id: 'gn-arr-4', sw: 7,   mw: 15, mh: 11, pts: '0 0, 15 5.5, 0 11' },
-  ];
-  TIERS.forEach(function(t) {
-    var m = document.createElementNS(NS, 'marker');
-    m.setAttribute('id',           t.id);
-    m.setAttribute('markerUnits',  'userSpaceOnUse');
-    m.setAttribute('markerWidth',  String(t.mw));
-    m.setAttribute('markerHeight', String(t.mh));
-    m.setAttribute('refX',        String(t.mw));      // 화살촉 끝점 = 경로 끝점
-    m.setAttribute('refY',        String(t.mh / 2));
-    m.setAttribute('orient',      'auto');
-    var p = document.createElementNS(NS, 'polygon');
-    p.setAttribute('points', t.pts);
-    p.setAttribute('fill',   'var(--border-hover)');
-    m.appendChild(p);
-    defs.appendChild(m);
-  });
-  svg.appendChild(defs);
+  /* ── 두께 티어 (투입 비중별 stroke-width) ── */
+  var TIERS = [1.5, 2.5, 4, 5.5, 7];
 
   /* ── 툴팁 엘리먼트 (body에 1개만 유지) ── */
   var tooltip = document.getElementById('gn-edge-tooltip');
@@ -1117,18 +1093,18 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
       else if (ratio > 0.10) tierIdx = 1;
       else                   tierIdx = 0;
     }
-    var tier = TIERS[tierIdx];
+    var sw = TIERS[tierIdx];
 
     /* 시각 경로 */
     var dAttr = 'M ' + x1 + ' ' + y1 +
       ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2;
 
     var path = document.createElementNS(NS, 'path');
-    path.setAttribute('d',            dAttr);
-    path.setAttribute('stroke',       'var(--border-hover)');
-    path.setAttribute('stroke-width', String(tier.sw));
-    path.setAttribute('fill',         'none');
-    path.setAttribute('marker-end',   'url(#' + tier.id + ')');
+    path.setAttribute('d',              dAttr);
+    path.setAttribute('stroke',         'var(--border-hover)');
+    path.setAttribute('stroke-width',   String(sw));
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('fill',           'none');
     path.setAttribute('pointer-events', 'none');
     svg.appendChild(path);
 
