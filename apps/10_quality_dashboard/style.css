@@ -32,10 +32,10 @@ body {
   font-weight: 700;
   color: var(--text);
   margin: 0;
-  letter-spacing: -0.015em;
-  display: inline-block;
-  padding-bottom: 6px;
-  border-bottom: 2px solid var(--accent);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  border-left: 4px solid var(--accent);
+  padding-left: 12px;
 }
 
 .dash-subtitle {
