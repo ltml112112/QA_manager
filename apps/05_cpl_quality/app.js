@@ -1017,8 +1017,11 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
   svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;';
 
   /* ── 투입량 비중 사전 계산 ── */
-  // 각 outLot별 총 투입량 합산 (표시되는 엣지 기준)
-  var totalByOut = {};
+  // 각 outLot별 총 투입량 합산 + 최대 투입 엣지 추적 (표시되는 엣지 기준)
+  var totalByOut  = {};
+  var maxWByOut   = {};  // outLot → 최대 투입량
+  var maxEdgeByOut = {}; // outLot → 최대 투입 inLot
+  var edgeCntByOut = {}; // outLot → 투입량 있는 엣지 수
   var seen0 = {};
   edges.forEach(function(e) {
     var lc = colMap[e.to], rc = colMap[e.from];
@@ -1028,7 +1031,12 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
     seen0[key] = true;
     var w = STATE.edgeWeightMap[e.from + '→' + e.to];
     if (w > 0) {
-      totalByOut[e.from] = (totalByOut[e.from] || 0) + w;
+      totalByOut[e.from]   = (totalByOut[e.from]   || 0) + w;
+      edgeCntByOut[e.from] = (edgeCntByOut[e.from] || 0) + 1;
+      if (maxWByOut[e.from] === undefined || w > maxWByOut[e.from]) {
+        maxWByOut[e.from]    = w;
+        maxEdgeByOut[e.from] = e.to;
+      }
     }
   });
 
@@ -1095,13 +1103,19 @@ function drawGenealogyConnections(inner, edges, colMap, layout, COL_W, COL_GAP, 
     }
     var sw = TIERS[tierIdx];
 
+    /* 최대 투입 엣지 여부 — 경쟁 엣지가 2개 이상일 때만 강조 */
+    var isMax = hasW &&
+                maxEdgeByOut[e.from] === e.to &&
+                (edgeCntByOut[e.from] || 0) >= 2;
+    var strokeColor = isMax ? 'var(--accent)' : 'var(--border-hover)';
+
     /* 시각 경로 */
     var dAttr = 'M ' + x1 + ' ' + y1 +
       ' C ' + cx + ' ' + y1 + ', ' + cx + ' ' + y2 + ', ' + x2 + ' ' + y2;
 
     var path = document.createElementNS(NS, 'path');
     path.setAttribute('d',              dAttr);
-    path.setAttribute('stroke',         'var(--border-hover)');
+    path.setAttribute('stroke',         strokeColor);
     path.setAttribute('stroke-width',   String(sw));
     path.setAttribute('stroke-linecap', 'round');
     path.setAttribute('fill',           'none');
