@@ -10,7 +10,7 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 24px;
 }
-.pf-app-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0; }
+.pf-app-title { font-size: 1.125rem; font-weight: 700; color: var(--text); margin: 0; letter-spacing: -0.01em; }
 
 .pf-doc-grid {
   display: grid;
