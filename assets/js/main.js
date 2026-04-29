@@ -91,6 +91,16 @@ var apps = [
     locked:      true,
     wip:         true,
   },
+  {
+    id:          'lcms',
+    group:       '자동화',
+    label:       'LC/MS Report 변환기',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/16_lcms_converter/index.html',
+    loaderText:  'LC/MS Report 변환기 로딩 중...',
+    locked:      true,
+  },
 
   // ── 품질 데이터 ────────────────────────────────────────────────────────────
   {

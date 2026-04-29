@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LC/MS Report 변환기</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+
+<script>window._AG_ADMIN_ONLY = true;</script>
+<script src="../../assets/js/auth_guard.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+/* 이 앱 고유 레이아웃·컴포넌트만 — :root, * reset, body 기본은 global_style.css 사용 */
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+
+/* ── 헤더 ────────────────────────────────────────── */
+.lcms-hdr {
+  width: 100%;
+  max-width: 820px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lcms-hdr-logo {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.lcms-hdr-text { flex: 1; }
+.lcms-hdr-text h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+.lcms-hdr-text p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.lcms-help-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.lcms-help-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── 카드 (포털 .card 위에 너비 제한만 추가) ────── */
+.lcms-card {
+  width: 100%;
+  max-width: 820px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.lcms-ch {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface-2);
+}
+.lcms-ct {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.lcms-cb { padding: 16px 18px; }
+
+/* ── 드롭존 ────────────────────────────────────── */
+.dz {
+  border: 2px dashed var(--border-hover);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: transparent;
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px;
+}
+.dz:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+.dz input {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+.dz-icon { width: 32px; height: 32px; color: var(--text-faint); }
+.dz-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.dz-sub   { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+.dz.has-f { border-color: var(--success); background: var(--success-bg); }
+.dz.has-f .dz-icon { color: var(--success); }
+
+/* ── 파일 목록 ─────────────────────────────────── */
+.file-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.file-chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11px; font-family: var(--font-mono);
+  overflow: hidden;
+}
+.file-chip-icon { flex-shrink: 0; width: 14px; height: 14px; }
+.file-chip-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; color: var(--text);
+}
+.chip-pdf { border-color: var(--accent-glow); }
+.chip-xl  { border-color: var(--success-bg); }
+
+/* ── 배지 (포털 토큰 기반) ─────────────────────── */
+.lbadge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 20px;
+  font-size: 10px; font-weight: 500;
+  font-family: var(--font-mono);
+}
+.lbadge-accent  { background: var(--accent-glow);  color: var(--accent); }
+.lbadge-ok      { background: var(--success-bg);   color: var(--success); }
+.lbadge-err     { background: var(--danger-bg);    color: var(--danger); }
+.lbadge-warn    { background: var(--warning-bg);   color: var(--warning); }
+
+/* ── 매칭 테이블 ────────────────────────────────── */
+table.lcms-t { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.lcms-t th {
+  padding: 7px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 500;
+  background: var(--surface-2);
+}
+table.lcms-t td {
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+table.lcms-t tr:last-child td { border-bottom: none; }
+
+/* ── 진행 표시 ──────────────────────────────────── */
+.plist {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 18px;
+}
+.pitem {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; font-family: var(--font-mono);
+}
+.pdot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.wait    { background: var(--text-faint); }
+.running { background: var(--warning); animation: lcms-pulse .8s infinite; }
+.done    { background: var(--success); }
+.fail    { background: var(--danger); }
+@keyframes lcms-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── 실행 버튼 ──────────────────────────────────── */
+#run {
+  width: 100%;
+  max-width: 820px;
+  padding: 13px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-top: 2px;
+}
+#run:disabled { opacity: .35; cursor: not-allowed; }
+#run:not(:disabled):hover { background: var(--accent-hover); }
+
+/* ── 형식 가이드 ────────────────────────────────── */
+.fguide {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+.fguide p { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.fguide code {
+  font-family: var(--font-mono); font-size: 10px;
+  background: var(--bg); padding: 1px 5px;
+  border-radius: 3px;
+}
+table.fg { border-collapse: collapse; font-size: 11px; font-family: var(--font-mono); }
+table.fg th, table.fg td {
+  padding: 3px 10px; border: 1px solid var(--border-hover);
+}
+table.fg th { color: var(--text-muted); font-weight: 500; }
+.fg-faint { color: var(--text-faint); }
+
+/* ── 도움말 모달 ────────────────────────────────── */
+.lcms-modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 1000;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.lcms-modal-overlay.open { display: flex; }
+.lcms-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%; max-width: 640px;
+  max-height: 88vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+.lcms-modal-hdr {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0;
+  background: var(--surface);
+  border-radius: 14px 14px 0 0;
+  z-index: 1;
+}
+.lcms-modal-hdr-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 600;
+  color: var(--text);
+}
+.lcms-modal-close {
+  background: none; border: none;
+  color: var(--text-muted); cursor: pointer;
+  padding: 4px;
+  font-size: 18px; line-height: 1;
+  border-radius: 4px;
+}
+.lcms-modal-body {
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 22px;
+  font-size: 13px; line-height: 1.65;
+}
+.lcms-modal-body section h3 {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: 10px;
+}
+.lcms-modal-body p { color: var(--text); }
+.lcms-modal-hr { border: none; border-top: 1px solid var(--border); }
+
+.diag-box {
+  margin-top: 10px; display: flex; align-items: center;
+  gap: 10px; font-family: var(--font-mono); font-size: 11px;
+}
+.diag-old, .diag-new {
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-radius: 6px;
+  flex: 1;
+}
+.diag-old { border: 1px solid var(--danger-bg); color: var(--danger); }
+.diag-new { border: 1px solid var(--success-bg); color: var(--success); }
+
+table.fmt-tbl {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  width: 100%;
+}
+table.fmt-tbl th, table.fmt-tbl td {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+}
+table.fmt-tbl th {
+  color: var(--text-muted);
+  font-weight: 500;
+  background: var(--surface-2);
+}
+.fmt-hdr { color: var(--accent); }
+.fmt-faint { color: var(--text-faint); }
+
+.lcms-tip {
+  margin-top: 8px; padding: 8px 12px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+  color: var(--warning);
+  font-size: 11px;
+}
+
+.fname-row {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+}
+.fname-mark { min-width: 16px; }
+.fname-mark.ok  { color: var(--success); }
+.fname-mark.bad { color: var(--danger); }
+.fname-chip {
+  background: var(--surface-2);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.fname-chip.good { border-color: var(--success); }
+.fname-chip.bad  { border-color: var(--danger); }
+.fname-chip .ext { color: var(--text-faint); }
+
+.step-row {
+  display: flex; gap: 12px;
+  align-items: flex-start;
+}
+.step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.step-num.ok {
+  background: var(--success-bg);
+  border-color: var(--success);
+  color: var(--success);
+}
+.step-text { padding-top: 2px; }
+
+.note-list {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 12px; color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+
+<header class="lcms-hdr">
+  <div class="lcms-hdr-logo">
+    <svg viewBox="0 0 20 20" fill="none" stroke="white" stroke-width="1.5" width="20" height="20">
+      <path d="M3 10 Q6 4 10 10 Q14 16 17 10"/>
+      <line x1="3" y1="16" x2="17" y2="16"/>
+    </svg>
+  </div>
+  <div class="lcms-hdr-text">
+    <h1>LC/MS Report 변환기</h1>
+    <p>PDF와 Excel을 한 곳에 올리면 파일명으로 자동 매칭 · MSD 테이블을 m/z, Abun(%) 형식으로 변환</p>
+  </div>
+  <button class="lcms-help-btn" onclick="document.getElementById('help-modal').classList.add('open')">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="8" cy="8" r="7"/><path d="M8 11v-1"/><path d="M8 8c0-1.5 2-1.5 2-3a2 2 0 00-4 0"/>
+    </svg>
+    도움말
+  </button>
+</header>
+
+<!-- ── 업로드 카드 ─────────────────────────────── -->
+<div class="lcms-card">
+  <div class="lcms-ch">
+    <span class="lcms-ct">파일 업로드</span>
+    <span class="lbadge lbadge-accent" id="pair-badge">대기 중</span>
+  </div>
+  <div class="lcms-cb">
+    <label class="dz" id="dz">
+      <input type="file" id="file-in" accept=".pdf,.xlsx,.xls" multiple>
+      <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17,8 12,3 7,8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p class="dz-title">PDF + Excel 파일을 여기에 드래그하거나 클릭해서 선택</p>
+      <p class="dz-sub" id="dz-sub">.pdf .xlsx 혼합 선택 가능 · 파일명이 같은 쌍을 자동 매칭</p>
+    </label>
+    <div class="file-grid" id="file-grid" style="display:none"></div>
+
+    <div class="fguide">
+      <p>Excel 형식 — 데이터 그룹이 여러 개면 <code># / m/z / Abundance</code> 헤더 행으로 구분</p>
+      <table class="fg">
+        <tr><th>A</th><th>B (m/z)</th><th>C (Abundance)</th><th class="fg-faint">비고</th></tr>
+        <tr><td>#</td><td>m/z</td><td>Abundance</td><td class="fg-faint">그룹 헤더</td></tr>
+        <tr><td>37</td><td>665.4</td><td>32.3</td><td></td></tr>
+        <tr><td>…</td><td>…</td><td>…</td><td></td></tr>
+        <tr><td>#</td><td>m/z</td><td>Abundance</td><td class="fg-faint">그룹 헤더</td></tr>
+        <tr><td>21</td><td>889.5</td><td>39.2</td><td></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── 매칭 카드 ───────────────────────────────── -->
+<div class="lcms-card" id="pairs-card" style="display:none">
+  <div class="lcms-ch">
+    <span class="lcms-ct">파일 매칭</span>
+    <span style="font-size:11px;color:var(--text-muted)" id="pairs-summ"></span>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="lcms-t">
+      <thead><tr><th>PDF</th><th>Excel</th><th>상태</th></tr></thead>
+      <tbody id="pairs-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── 진행 카드 ───────────────────────────────── -->
+<div class="lcms-card" id="prog-card" style="display:none">
+  <div class="lcms-ch"><span class="lcms-ct">변환 진행</span></div>
+  <div class="plist" id="prog-list"></div>
+</div>
+
+<button id="run" disabled onclick="runAll()">선택된 쌍 모두 변환 &amp; 다운로드</button>
+
+<div id="help-modal" class="lcms-modal-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="lcms-modal">
+    <div class="lcms-modal-hdr">
+      <div class="lcms-modal-hdr-title">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5">
+          <circle cx="8" cy="8" r="7"/><path d="M8 11v-1"/><path d="M8 8c0-1.5 2-1.5 2-3a2 2 0 00-4 0"/>
+        </svg>
+        <span>도움말</span>
+      </div>
+      <button class="lcms-modal-close" onclick="document.getElementById('help-modal').classList.remove('open')">✕</button>
+    </div>
+
+    <div class="lcms-modal-body">
+
+      <section>
+        <h3>이 도구는 무엇인가요?</h3>
+        <p>Agilent LC/MS <strong>Single Injection Report</strong> PDF의 2페이지에 있는 MSD 테이블 형식을 변환합니다.</p>
+        <div class="diag-box">
+          <div class="diag-old">
+            RT / Type / Width / Area<br>Height / Area% / Name
+          </div>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--success)" stroke-width="1.5" style="flex-shrink:0">
+            <path d="M4 10h12M12 5l5 5-5 5"/>
+          </svg>
+          <div class="diag-new">
+            RT / Type / m/z / Abun(%)<br>(Excel 데이터로 교체)
+          </div>
+        </div>
+      </section>
+
+      <hr class="lcms-modal-hr">
+
+      <section>
+        <h3>① Excel 파일 준비</h3>
+        <p style="margin-bottom:10px">아래 형식으로 작성합니다. <strong>A열=#, B열=m/z, C열=Abundance</strong> 순서를 지켜야 합니다.</p>
+        <table class="fmt-tbl">
+          <tr>
+            <th>A열</th>
+            <th>B열 (m/z)</th>
+            <th>C열 (Abundance)</th>
+            <th class="fmt-faint" style="font-weight:400">설명</th>
+          </tr>
+          <tr><td class="fmt-hdr">#</td><td class="fmt-hdr">m/z</td><td class="fmt-hdr">Abundance</td><td class="fmt-faint">그룹 구분 헤더행</td></tr>
+          <tr><td>37</td><td>665.4</td><td>32.3</td><td class="fmt-faint">피크 1 데이터</td></tr>
+          <tr><td>38</td><td>666.5</td><td>62</td><td></td></tr>
+          <tr><td class="fmt-faint">…</td><td class="fmt-faint">…</td><td class="fmt-faint">…</td><td></td></tr>
+          <tr><td class="fmt-hdr">#</td><td class="fmt-hdr">m/z</td><td class="fmt-hdr">Abundance</td><td class="fmt-faint">그룹 구분 헤더행</td></tr>
+          <tr><td>21</td><td>889.5</td><td>39.2</td><td class="fmt-faint">피크 2 데이터</td></tr>
+        </table>
+        <div class="lcms-tip">
+          ⚠ 피크(RT)가 1개인 경우 헤더행 1개 + 데이터만 입력<br>
+          ⚠ m/z 값은 소수점 첫째 자리로 자동 반올림됩니다 (예: 650 → 650.0)
+        </div>
+      </section>
+
+      <hr class="lcms-modal-hr">
+
+      <section>
+        <h3>② 파일명 규칙</h3>
+        <p style="margin-bottom:10px">PDF와 Excel의 <strong>파일명(확장자 제외)이 동일</strong>해야 자동으로 매칭됩니다.</p>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div class="fname-row">
+            <span class="fname-mark ok">✓</span>
+            <span class="fname-chip good">LT-PHM220_0409<span class="ext">.pdf</span></span>
+            <span class="fname-mark" style="color:var(--text-faint)">+</span>
+            <span class="fname-chip good">LT-PHM220_0409<span class="ext">.xlsx</span></span>
+          </div>
+          <div class="fname-row">
+            <span class="fname-mark bad">✗</span>
+            <span class="fname-chip bad">LT-PHM220_0409<span class="ext">.pdf</span></span>
+            <span class="fname-mark" style="color:var(--text-faint)">+</span>
+            <span class="fname-chip bad">LT-PHM220<span class="ext">.xlsx</span></span>
+          </div>
+        </div>
+        <p style="color:var(--text-muted);margin-top:8px;font-size:12px">여러 쌍을 한꺼번에 업로드하면 매칭된 쌍만 순서대로 처리됩니다.</p>
+      </section>
+
+      <hr class="lcms-modal-hr">
+
+      <section>
+        <h3>③ 사용 방법</h3>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="step-row">
+            <div class="step-num">1</div>
+            <p class="step-text">업로드 영역에 PDF 파일과 Excel 파일을 <strong>함께</strong> 드래그하거나, 클릭 후 다중 선택합니다.</p>
+          </div>
+          <div class="step-row">
+            <div class="step-num">2</div>
+            <p class="step-text">파일 매칭 결과를 확인합니다. <span style="color:var(--success)">✓ 매칭</span> 표시된 쌍만 처리됩니다.</p>
+          </div>
+          <div class="step-row">
+            <div class="step-num">3</div>
+            <p class="step-text"><strong>선택된 쌍 모두 변환 &amp; 다운로드</strong> 버튼을 클릭합니다.</p>
+          </div>
+          <div class="step-row">
+            <div class="step-num ok">✓</div>
+            <p class="step-text">변환된 PDF가 <strong>원본파일명_수정본.pdf</strong> 형태로 자동 다운로드됩니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <hr class="lcms-modal-hr">
+
+      <section>
+        <h3>주의 사항</h3>
+        <div class="note-list">
+          <p>• Agilent <strong style="color:var(--text)">Single Injection Report</strong> 형식의 2페이지 PDF에만 동작합니다.</p>
+          <p>• 인터넷 연결이 필요합니다 (라이브러리 로딩용).</p>
+          <p>• 파일은 서버로 전송되지 않으며 브라우저 내에서만 처리됩니다.</p>
+          <p>• Excel 1번째 시트의 데이터만 읽습니다.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── 테마 동기화 (포털 표준 IIFE) ───────────────────── */
+(function () {
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('qa_theme', t);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'light');
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+
+/* ── PDF.js 워커 ─────────────────────────────────── */
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* ── Agilent 단일 사출 보고서 좌표 템플릿 ────────── */
+const TMPL = {
+  headerY:    505.58,
+  firstDataY: 484.68,
+  origRowGap: 23.6,
+  rowSpacing: 20.2,
+  groupGap:   43.9,
+  FS: 9,
+  xRT: 69.4, xType: 114.9, xMzRight: 166.8, xAbRight: 206.8,
+  xHdrRT: 62.4, xHdrType: 110.4, xHdrMz: 147.1, xHdrAb: 182.4,
+  coverLeft: 55, coverRightMargin: 73,
+};
+
+/* ── 유틸 ─────────────────────────────────────────── */
+let pdfMap = {}, xlMap = {}, pairs = [];
+function stripExt(n) { return n.replace(/\.[^.]+$/, ''); }
+function fmtNum(n)   { return n % 1 === 0 ? String(Math.round(n)) : String(n); }
+function readBuf(f) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsArrayBuffer(f);
+  });
+}
+function isPDF(n) { return /\.pdf$/i.test(n); }
+function isXL(n)  { return /\.(xlsx|xls)$/i.test(n); }
+
+/* ── 파일 업로드 핸들러 ──────────────────────────── */
+document.getElementById('file-in').addEventListener('change', function () {
+  pdfMap = {}; xlMap = {};
+  Array.from(this.files).forEach(f => {
+    const base = stripExt(f.name);
+    if (isPDF(f.name))      pdfMap[base] = f;
+    else if (isXL(f.name))  xlMap[base]  = f;
+  });
+  updateFileGrid(this.files);
+  rebuild();
+});
+
+function updateFileGrid(files) {
+  const grid = document.getElementById('file-grid');
+  const arr = Array.from(files);
+  if (!arr.length) { grid.style.display = 'none'; return; }
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+  arr.forEach(f => {
+    const isPdf = isPDF(f.name);
+    const chip = document.createElement('div');
+    chip.className = 'file-chip ' + (isPdf ? 'chip-pdf' : 'chip-xl');
+    const stroke = isPdf ? 'var(--accent)' : 'var(--success)';
+    const inner = isPdf
+      ? '<path d="M8 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5z"/><path d="M8 1v4h4"/>'
+      : '<rect x="1" y="1" width="12" height="12" rx="1.5"/><path d="M1 5h12M5 13V5"/>';
+    chip.innerHTML =
+      '<svg class="file-chip-icon" viewBox="0 0 14 14" fill="none" stroke="' + stroke + '" stroke-width="1.3">' +
+      inner + '</svg>' +
+      '<span class="file-chip-name" title="' + f.name + '">' + f.name + '</span>';
+    grid.appendChild(chip);
+  });
+  const dz = document.getElementById('dz');
+  const total = arr.length;
+  dz.classList.toggle('has-f', total > 0);
+  document.getElementById('dz-sub').textContent = total > 0
+    ? total + '개 선택됨 (PDF ' + Object.keys(pdfMap).length + '개 · Excel ' + Object.keys(xlMap).length + '개)'
+    : '.pdf .xlsx 혼합 선택 가능 · 파일명이 같은 쌍을 자동 매칭';
+}
+
+/* ── 파일 매칭 ──────────────────────────────────── */
+function rebuild() {
+  const allNames = new Set([...Object.keys(pdfMap), ...Object.keys(xlMap)]);
+  pairs = [];
+  const tbody = document.getElementById('pairs-body');
+  tbody.innerHTML = '';
+  let ok = 0, no = 0;
+  allNames.forEach(name => {
+    const pf = pdfMap[name], xf = xlMap[name], matched = !!(pf && xf);
+    matched ? ok++ : no++;
+    pairs.push({ name, pdfFile: pf || null, xlFile: xf || null, matched });
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + (pf ? pf.name : '<span style="color:var(--text-faint)">없음</span>') + '</td>' +
+      '<td>' + (xf ? xf.name : '<span style="color:var(--text-faint)">없음</span>') + '</td>' +
+      '<td>' + (matched
+        ? '<span class="lbadge lbadge-ok">✓ 매칭</span>'
+        : '<span class="lbadge lbadge-err">미매칭</span>') + '</td>';
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pairs-card').style.display = allNames.size ? '' : 'none';
+  document.getElementById('pairs-summ').textContent = ok + '쌍 매칭 / ' + no + '개 미매칭';
+  const badge = document.getElementById('pair-badge');
+  badge.textContent = ok ? (ok + '쌍 준비됨') : '매칭 없음';
+  badge.className = ok ? 'lbadge lbadge-ok' : 'lbadge lbadge-err';
+  document.getElementById('run').disabled = ok === 0;
+}
+
+/* ── Excel 그룹 파싱 ────────────────────────────── */
+function parseGroups(data) {
+  const groups = [], cur = [];
+  for (const row of data) {
+    if (!row.some(v => v !== '' && v !== null && v !== undefined)) continue;
+    if (String(row[0]).trim() === '#') {
+      if (cur.length) { groups.push([...cur]); cur.length = 0; }
+    } else {
+      const mz = parseFloat(row[1]), abun = parseFloat(row[2]);
+      if (!isNaN(mz) && !isNaN(abun)) cur.push({ mz, abun });
+    }
+  }
+  if (cur.length) groups.push(cur);
+  return groups;
+}
+
+/* ── PDF.js: RT/Type 추출 ──────────────────────── */
+async function extractRTValues(pdfBuf) {
+  const doc = await pdfjsLib.getDocument({
+    data: pdfBuf,
+    disableFontFace: true,
+    nativeImageDecoderSupport: 'none',
+    isEvalSupported: false,
+    ignoreErrors: true,
+  }).promise;
+
+  if (doc.numPages < 2) throw new Error('PDF가 2페이지 미만입니다');
+
+  const page = await doc.getPage(2);
+  const tc = await page.getTextContent({
+    normalizeWhitespace: false,
+    disableCombineTextItems: true,
+  });
+
+  const lineMap = {};
+  tc.items.filter(i => i.str).forEach(item => {
+    const yk = (Math.round(item.transform[5] * 10) / 10).toFixed(1);
+    (lineMap[yk] = lineMap[yk] || []).push(item);
+  });
+
+  const belowYs = Object.keys(lineMap)
+    .map(Number)
+    .filter(y => y < TMPL.headerY - 3 && y > TMPL.headerY - 130)
+    .sort((a, b) => b - a);
+
+  const rtVals = [];
+  for (const y of belowYs) {
+    const yk = y.toFixed(1);
+    const ls = lineMap[yk] || [];
+    const t = ls.map(i => i.str).join('');
+    const rt = t.match(/\b(\d+\.\d{3})\b/);
+    const tp = t.match(/\b([A-Z]{2})\b/);
+    if (rt && tp) rtVals.push({ rt: rt[1], type: tp[1] });
+  }
+  return rtVals;
+}
+
+/* ── 핵심: PDF 변형 ─────────────────────────────── */
+async function processPair(pdfFile, xlFile) {
+  const [pdfRaw, xlRaw] = await Promise.all([readBuf(pdfFile), readBuf(xlFile)]);
+
+  const wb = XLSX.read(xlRaw, { type: 'array' });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const groups = parseGroups(data);
+  if (!groups.length) throw new Error('Excel에서 데이터를 찾지 못했습니다');
+
+  const buf1 = new Uint8Array(pdfRaw.slice(0));
+  const buf2 = new Uint8Array(pdfRaw.slice(0));
+  const rtVals = await extractRTValues(buf1);
+
+  const { headerY, firstDataY, rowSpacing, groupGap, FS,
+          xRT, xType, xMzRight, xAbRight,
+          xHdrRT, xHdrType, xHdrMz, xHdrAb,
+          coverLeft, coverRightMargin } = TMPL;
+
+  const gsY = [];
+  let cur = firstDataY;
+  for (const grp of groups) {
+    gsY.push(cur);
+    cur -= (grp.length - 1) * rowSpacing + groupGap;
+  }
+  const lastY = gsY[gsY.length - 1] - (groups[groups.length - 1].length - 1) * rowSpacing;
+
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const doc = await PDFDocument.load(buf2, { ignoreEncryption: true });
+  const bf = await doc.embedFont(StandardFonts.HelveticaBold);
+  const rf = await doc.embedFont(StandardFonts.Helvetica);
+  const page = doc.getPages()[1];
+  const { width: pw } = page.getSize();
+
+  const coverH = (headerY + 13) - (lastY - 14);
+  page.drawRectangle({
+    x: coverLeft, y: lastY - 14,
+    width: pw - coverLeft - coverRightMargin,
+    height: coverH,
+    color: rgb(1, 1, 1),
+    borderWidth: 0,
+  });
+
+  const dr = (txt, x, y, font) =>
+    page.drawText(txt, { x, y, size: FS, font, color: rgb(0, 0, 0) });
+  dr('RT [min]', xHdrRT, headerY, bf);
+  dr('Type',     xHdrType, headerY, bf);
+  dr('m/z',      xHdrMz, headerY, bf);
+  dr('Abun(%)',  xHdrAb, headerY, bf);
+
+  groups.forEach((grp, gi) => {
+    const { rt = '', type = 'BB' } = rtVals[gi] || {};
+    grp.forEach(({ mz, abun }, ri) => {
+      const y = gsY[gi] - ri * rowSpacing;
+      if (ri === 0) { dr(rt, xRT, y, rf); dr(type, xType, y, rf); }
+      const ms = parseFloat(mz).toFixed(1), as = fmtNum(abun);
+      page.drawText(ms, {
+        x: xMzRight - rf.widthOfTextAtSize(ms, FS),
+        y, size: FS, font: rf, color: rgb(0, 0, 0),
+      });
+      page.drawText(as, {
+        x: xAbRight - rf.widthOfTextAtSize(as, FS),
+        y, size: FS, font: rf, color: rgb(0, 0, 0),
+      });
+    });
+  });
+
+  return await doc.save();
+}
+
+/* ── 일괄 실행 → ZIP / 단일 PDF 다운로드 ────────── */
+async function runAll() {
+  const btn = document.getElementById('run');
+  btn.disabled = true;
+  btn.textContent = '변환 중...';
+
+  const matched = pairs.filter(p => p.matched);
+  const progCard = document.getElementById('prog-card');
+  const progList = document.getElementById('prog-list');
+  progCard.style.display = '';
+  progList.innerHTML = '';
+
+  const elMap = {};
+  matched.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'pitem';
+    el.innerHTML =
+      '<div class="pdot wait"></div>' +
+      '<span style="flex:1">' + p.pdfFile.name + '</span>' +
+      '<span style="color:var(--text-muted);font-size:11px"></span>';
+    progList.appendChild(el);
+    elMap[p.name] = {
+      dot: el.querySelector('.pdot'),
+      msg: el.querySelectorAll('span')[1],
+    };
+  });
+
+  const zipRow = document.createElement('div');
+  zipRow.className = 'pitem';
+  zipRow.style.display = 'none';
+  zipRow.innerHTML =
+    '<div class="pdot wait" id="zip-dot"></div>' +
+    '<span style="flex:1;color:var(--text-muted)">ZIP 압축 중...</span>' +
+    '<span id="zip-msg" style="color:var(--text-muted);font-size:11px"></span>';
+  progList.appendChild(zipRow);
+
+  const zip = new JSZip();
+  let ok = 0, err = 0;
+
+  for (const p of matched) {
+    const { dot, msg } = elMap[p.name];
+    dot.className = 'pdot running';
+    msg.textContent = '처리 중...';
+    try {
+      const out = await processPair(p.pdfFile, p.xlFile);
+      const fname = stripExt(p.pdfFile.name) + '_수정본.pdf';
+      zip.file(fname, out);
+      dot.className = 'pdot done';
+      msg.textContent = '완료 ✓';
+      msg.style.color = 'var(--success)';
+      ok++;
+    } catch (e) {
+      dot.className = 'pdot fail';
+      msg.textContent = '오류: ' + e.message;
+      msg.style.color = 'var(--danger)';
+      err++;
+      console.error(p.name, e);
+    }
+  }
+
+  if (ok === 1) {
+    const [fname, fileData] = Object.entries(zip.files)[0];
+    const blob = new Blob([await fileData.async('uint8array')], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  } else if (ok > 1) {
+    zipRow.style.display = 'flex';
+    document.getElementById('zip-dot').className = 'pdot running';
+
+    const zipBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+    const now = new Date();
+    const ts = now.getFullYear() +
+               String(now.getMonth() + 1).padStart(2, '0') +
+               String(now.getDate()).padStart(2, '0') + '_' +
+               String(now.getHours()).padStart(2, '0') +
+               String(now.getMinutes()).padStart(2, '0');
+    const zipName = 'LCMS_수정본_' + ts + '.zip';
+
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = zipName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+    document.getElementById('zip-dot').className = 'pdot done';
+    document.getElementById('zip-msg').textContent =
+      zipName + ' (' + (zipBlob.size / 1024).toFixed(0) + ' KB)';
+    document.getElementById('zip-msg').style.color = 'var(--success)';
+  }
+
+  btn.textContent = '완료 (성공 ' + ok + '개' + (err ? ' / 실패 ' + err + '개' : '') + ') — 다시 실행';
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>
