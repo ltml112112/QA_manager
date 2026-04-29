@@ -287,6 +287,49 @@ html[data-theme="dark"] {
 | `.alert-success/danger/warning/info` | 알림 박스 |
 | `.log-box` | 터미널형 로그 박스 |
 
+#### 페이지 타이틀 규칙
+
+모든 앱의 페이지 최상단 타이틀은 아래 기준으로 통일:
+
+| 항목 | 값 |
+|------|-----|
+| font-size | `1.5rem` |
+| font-weight | `700` |
+| color | `var(--text)` |
+| 좌측 세로 바 | `border-left: 4px solid var(--accent); padding-left: 12px` |
+| line-height | `1.2` |
+| letter-spacing | `-0.02em` |
+
+**시각적 구조:**
+```
+│ 페이지 타이틀          ← border-left 4px accent 색
+  부제목 (선택)          ← 13px, text-muted, padding-left 16px
+──────────────────────── ← header 컨테이너 border-bottom (콘텐츠와 분리)
+```
+
+**global_style.css에 정의된 공통 클래스:**
+- `.page-title` — 페이지 타이틀 (위 스펙 그대로)
+- `.page-subtitle` — 부제목 (0.8rem, text-muted, padding-left 16px)
+- `.wip-title` — 개발예정 플레이스홀더 타이틀 (`.page-title`과 동일 스펙)
+
+**주의사항:**
+- 타이틀 앞에 이모지·SVG 아이콘 로고 **사용하지 않음** — 좌측 세로 바가 시각적 식별자 역할
+- `card-header` 내부 아이콘도 불필요 — 텍스트만으로 충분
+- 타이틀을 가운데 정렬하지 말 것 — 항상 좌측 정렬
+- 앱별 per-file CSS에 직접 스펙을 작성하는 경우 위 값과 동일하게 유지
+
+**앱별 타이틀 CSS 위치:**
+
+| 앱 | 파일 | 선택자 |
+|----|------|--------|
+| 01 OLED | `index.html` `<style>` | `header h1` |
+| 03 HPLC | `index.html` `<style>` | `h1` |
+| 07-09, 11-13 WIP | `global_style.css` | `.wip-title` |
+| 10 대시보드 | `style.css` | `.dash-title` |
+| 14 시스템 문서 | `index.html` `<style>` | `.doc-title` |
+| 15 PN Flow | `style.css` | `.pf-app-title` |
+| 16 LCMS | `index.html` `<style>` | `.lcms-hdr-text h1` |
+
 ---
 
 ## 새 도구 추가 가이드 (Step-by-Step)
