@@ -96,7 +96,8 @@ body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: colu
 }
 .lot-node:hover { border-color: var(--border-hover); background: var(--surface); }
 .lot-node.gn-selected { border-color: var(--accent); background: rgba(190,0,57,0.08); }
-.lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
+.lot-node-id { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.lot-node-total { font-size: 0.68rem; font-weight: 500; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 .lot-node-remark { font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; color: #4a7fc1; margin-top: 2px; }
 .genealogy-svg {
   position: absolute; top: 0; left: 0;
