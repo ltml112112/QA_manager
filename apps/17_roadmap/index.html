@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { padding: 28px 32px; }
+.rd-wrap { max-width: 900px; margin: 0 auto; }
+
+/* ── 헤더 ── */
+.rd-header { margin-bottom: 32px; }
+.rd-title {
+  font-size: 1.5rem; font-weight: 700; color: var(--text);
+  border-left: 4px solid var(--accent); padding-left: 12px;
+  letter-spacing: -0.02em; line-height: 1.2;
+}
+.rd-subtitle { font-size: 13px; color: var(--text-muted); padding-left: 16px; margin-top: 6px; }
+
+/* ── Phase 카드 ── */
+.phase-row { display: flex; gap: 20px; margin-bottom: 28px; align-items: stretch; }
+.phase-card {
+  flex: 1; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; position: relative; overflow: hidden;
+}
+.phase-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+}
+.phase-done::before  { background: #10b981; }
+.phase-next::before  { background: #f59e0b; }
+.phase-future::before{ background: #6366f1; }
+
+.phase-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; margin-bottom: 8px; display: flex;
+  align-items: center; gap: 6px;
+}
+.phase-done  .phase-label { color: #10b981; }
+.phase-next  .phase-label { color: #f59e0b; }
+.phase-future .phase-label { color: #6366f1; }
+
+.phase-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.phase-done  .phase-dot  { background: #10b981; }
+.phase-next  .phase-dot  { background: #f59e0b; }
+.phase-future .phase-dot { background: #6366f1; }
+
+.phase-period {
+  font-size: 12px; font-weight: 700; color: var(--text);
+  font-family: var(--font-mono); margin-bottom: 4px;
+}
+.phase-name {
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.phase-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px; }
+
+/* ── 앱 태그 목록 ── */
+.app-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.app-tag {
+  font-size: 11px; padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--border); color: var(--text-muted);
+  font-weight: 500; white-space: nowrap;
+}
+.app-tag.done   { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); color: #059669; }
+.app-tag.wip    { background: rgba(245,158,11,0.08);  border-color: rgba(245,158,11,0.3);  color: #d97706; }
+.app-tag.future { background: rgba(99,102,241,0.08);  border-color: rgba(99,102,241,0.3);  color: #4f46e5; }
+
+/* ── 타임라인 바 ── */
+.timeline-bar {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 28px;
+}
+.tl-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 14px; letter-spacing: 0.04em; }
+.tl-track { position: relative; height: 8px; background: var(--bg-deep); border-radius: 4px; margin-bottom: 8px; }
+.tl-fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #10b981 0%, #10b981 44%, #f59e0b 44%, #f59e0b 75%, #6366f1 75%);
+}
+.tl-now {
+  position: absolute; top: -6px; width: 2px; height: 20px;
+  background: var(--accent); border-radius: 1px;
+}
+.tl-now::after {
+  content: '오늘'; position: absolute;
+  top: 22px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: var(--accent); font-weight: 700;
+  white-space: nowrap;
+}
+.tl-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-faint); font-family: var(--font-mono); margin-top: 6px; }
+
+/* ── 범례 ── */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── 핵심 통합 섹션 ── */
+.integration-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px; margin-bottom: 16px;
+}
+.int-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.int-badge {
+  font-size: 10px; font-weight: 700; padding: 3px 8px;
+  border-radius: 4px; white-space: nowrap;
+}
+.int-badge.phase1 { background: rgba(16,185,129,0.10); color: #059669; }
+.int-badge.phase2 { background: rgba(245,158,11,0.10); color: #d97706; }
+.int-badge.phase3 { background: rgba(99,102,241,0.10); color: #4f46e5; }
+.int-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.int-flow {
+  font-size: 12px; color: var(--text-muted); line-height: 1.8;
+  font-family: var(--font-mono); padding-left: 4px;
+}
+.int-flow strong { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="rd-wrap">
+
+  <!-- 헤더 -->
+  <div class="rd-header">
+    <div class="rd-title">포털 개발 로드맵</div>
+    <div class="rd-subtitle">전자재료사업부 품질경영팀 · QA Manager Portal · 2025 – 2027</div>
+  </div>
+
+  <!-- 타임라인 진행 바 -->
+  <div class="timeline-bar">
+    <div class="tl-title">전체 진행 현황</div>
+    <div class="tl-track">
+      <div class="tl-fill" style="width:100%"></div>
+      <!-- 오늘(2026-04) 위치: Phase1=2025-09~2026-04 = 8개월, 전체=30개월 → 약 27% -->
+      <div class="tl-now" style="left: 27%"></div>
+    </div>
+    <div class="tl-labels">
+      <span>2025.09</span>
+      <span>2026.04</span>
+      <span>2026.11</span>
+      <span>2027.04</span>
+      <span>2027.09</span>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Phase 1 — 핵심 모듈 구축</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Phase 2 — COA 자동화 & 연동</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> Phase 3 — 지능형 품질 허브</div>
+    </div>
+  </div>
+
+  <!-- Phase 카드 3개 -->
+  <div class="phase-row">
+
+    <div class="phase-card phase-done">
+      <div class="phase-label"><div class="phase-dot"></div> Phase 1 — 완료</div>
+      <div class="phase-period">2025.09 → 2026.04</div>
+      <div class="phase-name">핵심 모듈 구축</div>
+      <div class="phase-desc">소자평가·품질 데이터·공정 이력·자동화 도구 16개 앱 구축. 데이터 사일로 제거.</div>
+      <div class="app-tags">
+        <span class="app-tag done">OLED IVL&LT</span>
+        <span class="app-tag done">Lot 일정 관리</span>
+        <span class="app-tag done">품질 대시보드</span>
+        <span class="app-tag done">Lot 추적 & SQC</span>
+        <span class="app-tag done">P/N 공정 Flow</span>
+        <span class="app-tag done">HPLC/DSC 자동화</span>
+        <span class="app-tag done">LGD 사전심사</span>
+        <span class="app-tag done">LC/MS 변환기</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-next">
+      <div class="phase-label"><div class="phase-dot"></div> Phase 2 — 예정</div>
+      <div class="phase-period">2026.05 → 2026.11</div>
+      <div class="phase-name">COA 자동화 & 데이터 연동</div>
+      <div class="phase-desc">소자평가 결과 + Lot 흐름도 + SQC 데이터를 기반으로 COA 자동 발행. 외부코드 연동.</div>
+      <div class="app-tags">
+        <span class="app-tag wip">COA 생성 — 개발용</span>
+        <span class="app-tag wip">COA 생성 — 양산용</span>
+        <span class="app-tag wip">외부코드 관리</span>
+        <span class="app-tag wip">SDC 사전심사</span>
+        <span class="app-tag wip">제품 Spec & CTQ</span>
+        <span class="app-tag wip">원자재 IQC</span>
+      </div>
+    </div>
+
+    <div class="phase-card phase-future">
+      <div class="phase-label"><div class="phase-dot"></div> Phase 3 — 계획</div>
+      <div class="phase-period">2026.11 → 2027.09</div>
+      <div class="phase-name">지능형 품질 허브</div>
+      <div class="phase-desc">컴플레인 역추적, SPC 자동 알림, 데이터 기반 품질 예측. 전 사이클 통합 완성.</div>
+      <div class="app-tags">
+        <span class="app-tag future">불량·컴플레인 관리</span>
+        <span class="app-tag future">SPC 자동 알림</span>
+        <span class="app-tag future">품질 예측 모델</span>
+        <span class="app-tag future">고객사 포털</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 핵심 통합 시나리오 -->
+  <div class="timeline-bar" style="margin-bottom:16px;">
+    <div class="tl-title" style="margin-bottom:0">핵심 통합 시나리오</div>
+  </div>
+
+  <div class="integration-card">
+    <div class="int-head">
+      <span class="int-badge phase1">Phase 1 — 현재 운영</span>
+      <span class="int-title">소자평가 결과 자동 연동</span>
+    </div>
+    <div class="int-flow">
+      <strong>OLED 분석기(01)</strong> CSV 업로드 → 분석 →
+      <strong>Lot 일정(06)</strong> 카드에 LT% 배지 자동 표시 →
+      <strong>품질 대시보드(10)</strong> KPI·차트 실시간 갱신
+    </div>
+  </div>
+
+  <div class="integration-card">
+    <div class="int-head">
+      <span class="int-badge phase1">Phase 1 — 현재 운영</span>
+      <span class="int-title">Lot 계보 + 이탈 원인 추적</span>
+    </div>
+    <div class="int-flow">
+      <strong>Lot 추적 & SQC(05)</strong> SPC 차트 이탈 포인트 클릭 →
+      Batch Deep-Dive 패널 →
+      <strong>P/N 공정 Flow(15)</strong> 해당 단계 작업 이력 연계 확인
+    </div>
+  </div>
+
+  <div class="integration-card">
+    <div class="int-head">
+      <span class="int-badge phase2">Phase 2 — 예정</span>
+      <span class="int-title">COA 자동 발행</span>
+    </div>
+    <div class="int-flow">
+      <strong>OLED 결과(01↔06)</strong> +
+      <strong>Lot 흐름도(05)</strong> +
+      <strong>SQC 데이터(05)</strong> →
+      <strong>COA 생성(07/08)</strong> 자동 PDF 발행 →
+      외부코드(09) 매핑 → 고객사 전달
+    </div>
+  </div>
+
+  <div class="integration-card">
+    <div class="int-head">
+      <span class="int-badge phase3">Phase 3 — 계획</span>
+      <span class="int-title">컴플레인 역추적 + SPC 알림</span>
+    </div>
+    <div class="int-flow">
+      고객 컴플레인 접수(11) →
+      <strong>Lot 계보(05)</strong> 역추적 → 원인 공정 특정 →
+      SPC 관리한계 이탈 자동 알림 → 예방 조치 이력 기록
+    </div>
+  </div>
+
+</div>
+<script>
+(function() {
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('qa_theme', theme);
+  }
+  applyTheme(localStorage.getItem('qa_theme') || 'light');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
+  });
+})();
+</script>
+</body>
+</html>
