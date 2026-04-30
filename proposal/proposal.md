@@ -154,7 +154,45 @@ style: |
 
 ---
 
-## 5. 핵심 통합 사례 — "이미 작동하고 있는 통합"
+## 5. Phase 1 — 실제 운영 화면 (예시)
+
+<div class="columns">
+<div>
+
+![w:540](./screenshots/10_dashboard.png)
+
+<div class="small center">**App 10** — 품질 대시보드 (KPI 5 + 차트 6)</div>
+
+</div>
+<div>
+
+![w:540](./screenshots/06_lot_schedule.png)
+
+<div class="small center">**App 06** — 소자평가 Lot 일정 캘린더</div>
+
+</div>
+</div>
+
+<div class="columns">
+<div>
+
+![w:540](./screenshots/05_genealogy.png)
+
+<div class="small center">**App 05** — Lot 계보도 + SPC TREND</div>
+
+</div>
+<div>
+
+![w:540](./screenshots/15_pn_flow.png)
+
+<div class="small center">**App 15** — P/N 공정 Flow 편집기</div>
+
+</div>
+</div>
+
+---
+
+## 6. 핵심 통합 사례 — "이미 작동하고 있는 통합"
 
 <div class="columns">
 <div>
@@ -187,7 +225,32 @@ style: |
 
 ---
 
-## 6. Phase 2 — COA 자동 발행 (다음 6개월 목표)
+## 7. 통합 사례 — 화면으로 보는 흐름 (예시)
+
+<div class="columns">
+<div>
+
+**Case A** — 06 Lot 카드에 OLED 결과 배지 자동 표시
+
+![w:540](./screenshots/06_oled_badge_zoom.png)
+
+<div class="small center">분석기(01)에서 "결과 저장" 클릭 → 06 카드에 즉시 반영</div>
+
+</div>
+<div>
+
+**Case B** — 이탈 클릭 → 전 공정 측정값 즉시 확인
+
+![w:540](./screenshots/05_deepdive.png)
+
+<div class="small center">SPC 이탈 → Deep-Dive → 원인 후보 식별</div>
+
+</div>
+</div>
+
+---
+
+## 8. Phase 2 — COA 자동 발행 (다음 6개월 목표)
 
 <div class="columns">
 <div>
@@ -234,7 +297,7 @@ style: |
 
 ---
 
-## 7. 데이터 통합 시나리오 — Lot xxxx 출하까지
+## 9. 데이터 통합 시나리오 — Lot xxxx 출하까지
 
 ```
 Day 1   원자재 입고
@@ -262,7 +325,7 @@ Day 10  출하 가능성 판정
 
 ---
 
-## 8. Phase 3 — 실시간 Trend & 역추적 허브
+## 10. Phase 3 — 실시간 Trend & 역추적 허브
 
 <div class="columns">
 <div>
@@ -303,7 +366,7 @@ CTQ/CTP가 정의되면 자동 연쇄:
 
 ---
 
-## 9. 로드맵
+## 11. 로드맵
 
 ![w:1100](./diagrams/roadmap.png)
 
@@ -315,7 +378,7 @@ CTQ/CTP가 정의되면 자동 연쇄:
 
 ---
 
-## 10. 기대 효과
+## 12. 기대 효과
 
 <div class="columns">
 <div>
@@ -346,7 +409,7 @@ CTQ/CTP가 정의되면 자동 연쇄:
 
 ---
 
-## 11. 기술 스택 — 단순함이 곧 지속가능성
+## 13. 기술 스택 — 단순함이 곧 지속가능성
 
 <div class="columns">
 <div>
@@ -387,7 +450,7 @@ CTQ/CTP가 정의되면 자동 연쇄:
 
 ---
 
-## 12. 다음 결정 사항
+## 14. 다음 결정 사항
 
 ### 즉시 결정이 필요한 항목
 

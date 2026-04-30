@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>예시 — OLED 결과 통합 (Mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { background: var(--bg); padding: 40px 60px; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.example-banner {
+  position: fixed; top: 12px; right: 14px;
+  background: #f59e0b; color: #fff;
+  padding: 5px 14px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.zoom-wrap { display: flex; align-items: stretch; gap: 50px; max-width: 1200px; }
+.zoom-side { flex: 0 0 auto; }
+.caption { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; padding-left: 14px; border-left: 3px solid var(--accent); font-weight: 600; }
+.subcaption { font-size: 11px; color: var(--text-faint); padding-left: 14px; margin-bottom: 12px; }
+
+/* ── Detail card (Lot card in modal) ── */
+.detail-card {
+  width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+.dc-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.dc-mat { font-weight: 700; font-size: 14px; color: var(--text); }
+.dc-dept { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(147,51,234,0.1); color: #9333ea; font-weight: 700; }
+
+.dc-row { display: flex; gap: 10px; padding: 4px 0; font-size: 12px; }
+.dc-label { width: 80px; color: var(--text-muted); font-weight: 600; }
+.dc-val { flex: 1; color: var(--text); font-family: var(--font-mono); }
+
+/* ── Result badge (the highlight) ── */
+.dc-result-badge {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+}
+.dc-rb-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.dc-rb-title { font-size: 12px; font-weight: 700; color: #f59e0b; }
+.dc-rb-actions { display: flex; gap: 6px; }
+.dc-rb-btn { font-size: 10px; padding: 2px 7px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: var(--text-muted); }
+.dc-rb-btn:hover { color: var(--accent); }
+
+.dc-rb-table { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-radius: 6px; overflow: hidden; border: 1px solid rgba(245,158,11,0.3); }
+.dc-rb-col { padding: 6px 0; text-align: center; background: var(--surface); }
+.dc-rb-col.is-sel { background: rgba(245, 158, 11, 0.12); }
+.dc-rb-lv-sel { font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+.dc-rb-lv-dim { font-size: 13px; font-weight: 600; color: #fb923c; font-family: var(--font-mono); }
+.dc-rb-pct-sel { font-size: 14px; font-weight: 700; color: var(--text); font-family: var(--font-mono); margin-top: 2px; }
+.dc-rb-pct-dim { font-size: 14px; font-weight: 600; color: #fb923c; font-family: var(--font-mono); margin-top: 2px; }
+.dc-rb-date { font-size: 10px; color: var(--text-muted); text-align: right; margin-top: 6px; }
+
+/* ── Arrow ── */
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 32px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.flow-arrow-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── OLED analyzer panel (right side) ── */
+.oled-panel {
+  width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+.oled-header { font-size: 13px; font-weight: 700; color: var(--accent); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.oled-table { width: 100%; font-size: 11px; border-collapse: collapse; font-family: var(--font-mono); margin-bottom: 12px; }
+.oled-table th, .oled-table td { padding: 4px 6px; text-align: center; border: 1px solid var(--border); }
+.oled-table th { background: var(--surface-2); color: var(--accent); font-family: var(--font-body); font-size: 10px; }
+.oled-table .blue { color: #1d6fd6; font-weight: 700; }
+.oled-table .red  { color: #ef4444; font-weight: 700; }
+.embed-btn { width: 100%; padding: 9px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.embed-btn:hover { background: var(--accent-hover); }
+</style>
+</head>
+<body>
+<div class="example-banner">예시 / MOCKUP — 실제 데이터 아님</div>
+
+<div class="zoom-wrap">
+
+  <!-- Right: OLED analyzer (in iframe, embed mode) -->
+  <div class="zoom-side">
+    <div class="caption">① OLED 분석기 (App 01) — embed 모드</div>
+    <div class="subcaption">06번 앱이 ?embed=1 로 iframe 호출</div>
+    <div class="oled-panel">
+      <div class="oled-header">REF1 ↔ SAMPLE1 비교 (J=10mA/cm²)</div>
+      <table class="oled-table">
+        <thead>
+          <tr><th>항목</th><th>REF1</th><th>SAMPLE1</th><th>비율</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>전압 (V)</td><td>4.32</td><td>4.28</td><td class="blue">99.1%</td></tr>
+          <tr><td>효율 (cd/A)</td><td>62.4</td><td>61.8</td><td class="blue">99.0%</td></tr>
+          <tr><td>EQE (%)</td><td>18.3</td><td>18.1</td><td class="blue">98.9%</td></tr>
+          <tr><td>CIE x</td><td>0.140</td><td>0.141</td><td class="blue">100.7%</td></tr>
+          <tr><td>CIE y</td><td>0.150</td><td>0.149</td><td class="blue">99.3%</td></tr>
+          <tr><td>최대파장 (nm)</td><td>458</td><td>459</td><td class="blue">+1 nm</td></tr>
+        </tbody>
+      </table>
+
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;">LT 수명 (저레벨 모드)</div>
+      <table class="oled-table">
+        <thead>
+          <tr><th>레벨</th><th>REF (h)</th><th>SAMPLE (h)</th><th>%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>LT95 ★</td><td>820</td><td>835</td><td class="blue">101.8%</td></tr>
+          <tr><td>LT94</td><td>1420</td><td>1248</td><td class="red">87.9%</td></tr>
+          <tr><td>LT90</td><td>3650</td><td>3358</td><td class="blue">92.0%</td></tr>
+        </tbody>
+      </table>
+
+      <button class="embed-btn">📥 이 Lot에 결과 저장</button>
+    </div>
+  </div>
+
+  <!-- Arrow: postMessage flow -->
+  <div class="flow-arrow">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div>→</div>
+      <div style="font-size:10px;color:var(--text-muted);text-align:center;line-height:1.5;font-family:'JetBrains Mono';white-space:nowrap;">
+        postMessage<br>('oledResult')
+      </div>
+      <div style="font-size:10px;color:var(--text-faint);text-align:center;">
+        Firebase<br>oled_results/
+      </div>
+    </div>
+  </div>
+
+  <!-- Left: 06 Lot schedule detail card with badge -->
+  <div class="zoom-side">
+    <div class="caption">② Lot 카드 (App 06) — 결과 자동 반영</div>
+    <div class="subcaption">결과 저장 즉시 카드에 배지 표시</div>
+
+    <div class="detail-card">
+      <div class="dc-header">
+        <span class="dc-mat">LT-PHN410</span>
+        <span class="dc-dept">정제/소자이관</span>
+      </div>
+
+      <div class="dc-row"><span class="dc-label">Lot 번호</span><span class="dc-val">410-26-0420-B</span></div>
+      <div class="dc-row"><span class="dc-label">샘플 이관일</span><span class="dc-val">2026-04-20</span></div>
+      <div class="dc-row"><span class="dc-label">평가 시작일</span><span class="dc-val">2026-04-22</span></div>
+      <div class="dc-row"><span class="dc-label">완료 요청일</span><span class="dc-val">2026-04-29</span></div>
+      <div class="dc-row"><span class="dc-label">요청사항</span><span class="dc-val" style="font-family:var(--font-body);font-size:11px;">신규 정제 lot, LT 우선 평가</span></div>
+
+      <!-- The result badge -->
+      <div class="dc-result-badge">
+        <div class="dc-rb-head">
+          <span class="dc-rb-title">📊 소자평가 결과</span>
+          <div class="dc-rb-actions">
+            <button class="dc-rb-btn">상세 ▾</button>
+            <button class="dc-rb-btn">✕</button>
+          </div>
+        </div>
+        <div class="dc-rb-table">
+          <div class="dc-rb-col is-sel">
+            <div class="dc-rb-lv-sel">LT95 ★</div>
+            <div class="dc-rb-pct-sel">101.8%</div>
+          </div>
+          <div class="dc-rb-col">
+            <div class="dc-rb-lv-dim">LT94</div>
+            <div class="dc-rb-pct-dim">87.9%</div>
+          </div>
+          <div class="dc-rb-col">
+            <div class="dc-rb-lv-dim">LT90</div>
+            <div class="dc-rb-pct-dim">92.0%</div>
+          </div>
+        </div>
+        <div class="dc-rb-date">2026-04-28 저장</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
