@@ -80,6 +80,41 @@ var apps = [
     locked:      true,
   },
 
+  // ── 측정 데이터 관리 ───────────────────────────────────────────────────────
+  {
+    id:          'hplc_data',
+    group:       '측정 데이터 관리',
+    label:       'HPLC 데이터 입력',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/18_hplc_data/index.html',
+    loaderText:  'HPLC 데이터 입력 로딩 중...',
+    locked:      true,
+    wip:         true,
+  },
+  {
+    id:          'dsc_tga',
+    group:       '측정 데이터 관리',
+    label:       'DSC / TGA 데이터 입력',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/19_dsc_tga/index.html',
+    loaderText:  'DSC / TGA 데이터 입력 로딩 중...',
+    locked:      true,
+    wip:         true,
+  },
+  {
+    id:          'lot_flow',
+    group:       '측정 데이터 관리',
+    label:       'Lot 흐름도 관리',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/20_lot_flow/index.html',
+    loaderText:  'Lot 흐름도 관리 로딩 중...',
+    locked:      true,
+    wip:         true,
+  },
+
   // ── 품질 데이터 ────────────────────────────────────────────────────────────
   {
     id:          'cpl',
