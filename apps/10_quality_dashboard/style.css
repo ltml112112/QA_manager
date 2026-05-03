@@ -533,9 +533,10 @@ select.filter-input {
   color: var(--text-muted);
 }
 
-.result-table .pct-good { color: #10b981; font-weight: 600; }
-.result-table .pct-warn { color: #f59e0b; font-weight: 600; }
-.result-table .pct-bad  { color: var(--accent); font-weight: 600; }
+.result-table .pct-good      { color: #10b981; font-weight: 600; }
+.result-table .pct-excellent { color: #7c3aed; font-weight: 600; }
+.result-table .pct-warn      { color: #f59e0b; font-weight: 600; }
+.result-table .pct-bad       { color: var(--accent); font-weight: 600; }
 
 .result-table .lt-tag {
   display: inline-block;
