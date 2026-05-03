@@ -253,6 +253,23 @@ body { padding: 0; }
   font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0;
 }
 .status-item .si-name { font-weight: 600; flex: 1; }
+.status-item .si-tag {
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px;
+  flex-shrink: 0; letter-spacing: 0.02em;
+}
+/* 운영 중 — 짙게 */
+.status-item.si-active {
+  background: var(--surface); border: 1px solid var(--border);
+}
+.status-item.si-active .si-num { color: var(--accent); }
+.status-item.si-active .si-tag { background: rgba(16,185,129,0.12); color: #059669; }
+/* 완료 — 기본 */
+.status-item.si-done .si-tag { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }
+/* 구축 중 — 흐리게 */
+.status-item.si-wip {
+  opacity: 0.55;
+}
+.status-item.si-wip .si-tag { background: rgba(245,158,11,0.10); color: #b45309; }
 
 /* ── 목업 카드 ── */
 .mockup-card {
@@ -372,7 +389,7 @@ body { padding: 0; }
         <tr><th>영역</th><th>현재 도구</th><th>문제점</th></tr>
       </thead>
       <tbody>
-        <tr><td>소자평가 결과</td><td>이메일 + 엑셀 첨부</td><td>누락이 잦고 검색이 어려움</td></tr>
+        <tr><td>소자평가 결과</td><td>사내 공용 폴더 (raw data) + 엑셀</td><td>결과치가 많아 엑셀 파일이 무겁고, 시각화 및 추세 파악이 어려움</td></tr>
         <tr><td>Lot 이관 일정</td><td>카카오톡 + 메일 표</td><td>부서 간 요청 추적이 어려움</td></tr>
         <tr><td>Lot 계보 추적</td><td>사내 ERP + 합성생산팀 수기 관리</td><td>TREND 분석과의 연계가 끊겨 있음</td></tr>
         <tr><td>SQC TREND</td><td>엑셀 별도 관리</td><td>이상치 발생 시 원인 역추적이 어려움</td></tr>
@@ -400,16 +417,15 @@ body { padding: 0; }
         <div class="vf-row-label">입력</div>
         <div class="vf-row-nodes">
           <div class="vf-node input">원재료 IQC</div>
-          <div class="vf-arrow">→</div>
-          <div class="vf-node input">합성 / 정제 Flow</div>
+          <div class="vf-node input">공정 분석 (HPLC · DSC · TGA)</div>
+          <div class="vf-node input">CTQ / CTP</div>
+          <div class="vf-node input">투입 Lot</div>
         </div>
       </div>
 
       <div class="vf-row">
         <div class="vf-row-label">측정</div>
         <div class="vf-row-nodes">
-          <div class="vf-node proc">HPLC · DSC · TGA</div>
-          <div class="vf-arrow">→</div>
           <div class="vf-node proc">소자평가 (IVL · LT)</div>
         </div>
       </div>
@@ -462,19 +478,19 @@ body { padding: 0; }
         <div class="status-pill">진행 중</div>
       </div>
       <div class="status-grid">
-        <div class="status-item"><span class="si-num">06</span><span class="si-name">소자평가 Lot 일정</span></div>
-        <div class="status-item"><span class="si-num">01</span><span class="si-name">OLED IVL & LT 분석</span></div>
-        <div class="status-item"><span class="si-num">05</span><span class="si-name">Lot 추적 & SQC</span></div>
-        <div class="status-item"><span class="si-num">10</span><span class="si-name">품질 대시보드</span></div>
-        <div class="status-item"><span class="si-num">15</span><span class="si-name">P/N 공정 Flow</span></div>
-        <div class="status-item"><span class="si-num">03</span><span class="si-name">HPLC/DSC Report</span></div>
-        <div class="status-item"><span class="si-num">02</span><span class="si-name">LGD 사전심사 자동화</span></div>
-        <div class="status-item"><span class="si-num">16</span><span class="si-name">LC/MS Report 변환</span></div>
-        <div class="status-item"><span class="si-num">14</span><span class="si-name">시스템 문서 & SOP</span></div>
+        <div class="status-item si-active"><span class="si-num">06</span><span class="si-name">소자평가 Lot 일정</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">01</span><span class="si-name">OLED IVL & LT 분석</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">03</span><span class="si-name">HPLC/DSC Report</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">02</span><span class="si-name">LGD 사전심사 자동화</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-done"><span class="si-num">16</span><span class="si-name">LC/MS Report 변환</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-done"><span class="si-num">15</span><span class="si-name">P/N 공정 Flow</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-done"><span class="si-num">14</span><span class="si-name">시스템 문서 & SOP</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-wip"><span class="si-num">05</span><span class="si-name">Lot 추적 & SQC</span><span class="si-tag">구축 중</span></div>
+        <div class="status-item si-wip"><span class="si-num">10</span><span class="si-name">품질 대시보드</span><span class="si-tag">구축 중</span></div>
       </div>
       <div class="note-box" style="margin-top: 14px;">
-        소자평가 일정과 OLED 분석은 현업 운영 중입니다.
-        Lot 추적·SQC와 품질 대시보드는 구축 단계로, 향후 데이터 통합의 중심이 될 모듈입니다.
+        소자평가 일정, OLED 분석, HPLC/DSC Report, LGD 사전심사는 현재 현업에서 사용 중입니다.
+        Lot 추적·SQC와 품질 대시보드는 구축이 진행 중이며, 데이터 통합의 핵심이 될 모듈입니다.
       </div>
     </div>
   </section>
@@ -534,10 +550,10 @@ body { padding: 0; }
           <div class="hub-side-label">입력 데이터</div>
           <ul class="hub-list">
             <li><span class="hub-li-name">원재료 IQC</span><span class="hub-li-sub">입고 검사 이력</span></li>
-            <li><span class="hub-li-name">합성 / 정제 Flow</span><span class="hub-li-sub">공정 단계·조건 기록</span></li>
-            <li><span class="hub-li-name">HPLC · DSC · TGA</span><span class="hub-li-sub">분석 측정값</span></li>
+            <li><span class="hub-li-name">공정 분석 (HPLC · DSC · TGA)</span><span class="hub-li-sub">분석 측정값</span></li>
             <li><span class="hub-li-name">소자평가 (IVL · LT)</span><span class="hub-li-sub">전압 · 효율 · EQE · 수명</span></li>
-            <li><span class="hub-li-name">Spec (CTQ · CTP)</span><span class="hub-li-sub">규격 및 관리 한계 정의</span></li>
+            <li><span class="hub-li-name">CTQ / CTP</span><span class="hub-li-sub">규격 및 관리 한계 정의</span></li>
+            <li><span class="hub-li-name">투입 Lot</span><span class="hub-li-sub">합성·정제 단계별 Lot 연결</span></li>
           </ul>
         </div>
         <div class="hub-divider"></div>
@@ -804,11 +820,6 @@ body { padding: 0; }
       </div>
     </div>
 
-    <div class="note-box" style="margin-top: 18px;">
-      시간 단축은 결과로 따라오는 효과입니다.
-      본 시스템이 지향하는 것은 사람이 데이터를 옮기는 작업에서 벗어나,
-      데이터를 보고 판단하는 일에 집중할 수 있는 환경을 만드는 일입니다.
-    </div>
   </section>
 
   <div style="text-align: center; padding-top: 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-faint);">
