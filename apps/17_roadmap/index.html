@@ -25,16 +25,16 @@ body { padding: 0; }
 .section { margin-bottom: 48px; scroll-margin-top: 70px; }
 .section-num {
   display: inline-block; font-size: 11px; font-weight: 700;
-  color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px;
+  color: var(--text-muted); letter-spacing: 0.08em; margin-bottom: 6px;
   font-family: var(--font-mono);
 }
 .section-title {
   font-size: 1.2rem; font-weight: 700; color: var(--text);
-  margin-bottom: 6px; letter-spacing: -0.01em;
+  margin-bottom: 8px; letter-spacing: -0.01em;
 }
 .section-lead {
-  font-size: 13px; color: var(--text-muted); line-height: 1.7;
-  margin-bottom: 18px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.8;
+  margin-bottom: 20px;
 }
 
 /* ── 네비게이션 ── */
@@ -65,7 +65,7 @@ body { padding: 0; }
   border-radius: 12px; padding: 18px 20px;
 }
 .info-card h3 {
-  font-size: 14px; font-weight: 700; color: var(--accent);
+  font-size: 14px; font-weight: 700; color: var(--text);
   margin-bottom: 10px; padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
@@ -76,9 +76,9 @@ body { padding: 0; }
 }
 .info-card li::before {
   content: '·'; position: absolute; left: 4px;
-  color: var(--accent); font-weight: 700;
+  color: var(--text-muted); font-weight: 700;
 }
-.info-card li strong { color: var(--accent); }
+.info-card li .em { color: var(--text); font-weight: 600; }
 .info-card li .sub { font-size: 11px; color: var(--text-muted); display: block; padding-left: 0; }
 
 /* ── 문제점 표 ── */
@@ -88,123 +88,112 @@ body { padding: 0; }
   border-radius: 12px; overflow: hidden; font-size: 12px;
 }
 .problem-table th, .problem-table td {
-  padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+  padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--border);
 }
 .problem-table th {
-  background: var(--surface-2); color: var(--accent);
-  font-weight: 700; font-size: 11px;
+  background: var(--surface-2); color: var(--text-muted);
+  font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
 }
 .problem-table tr:last-child td { border-bottom: none; }
 .problem-table td:first-child { font-weight: 600; color: var(--text); width: 25%; }
 .problem-table td:nth-child(2) { color: var(--text-muted); width: 32%; font-family: var(--font-mono); font-size: 11px; }
 .problem-table td:last-child { color: var(--text); }
 
-/* ── 데이터 플로우 다이어그램 (CSS) ── */
-.flow-diagram {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 28px 24px; margin-bottom: 14px;
-  overflow-x: auto;
-}
-.flow-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap; min-width: 800px; }
-.flow-node {
-  background: var(--surface-2); border: 2px solid var(--border);
-  border-radius: 8px; padding: 10px 14px; text-align: center;
-  font-size: 11px; font-weight: 600; min-width: 90px; flex-shrink: 0;
-}
-.flow-arrow { color: var(--text-faint); font-size: 18px; flex-shrink: 0; }
-.flow-stage-label {
-  font-size: 10px; font-weight: 700; color: var(--text-muted);
-  letter-spacing: 0.08em; text-align: center; margin-bottom: 14px;
-  text-transform: uppercase;
-}
-
-/* ── 비전 다이어그램 (전체 흐름) ── */
+/* ── 비전 다이어그램 (Section 2 — 단계별 행 그리드) ── */
 .vision-flow {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 28px 20px; overflow-x: auto;
+  border-radius: 12px; padding: 24px 24px 18px;
 }
-.vf-stage { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap; min-width: 900px; margin-bottom: 14px; }
+.vf-row {
+  display: grid; grid-template-columns: 88px 1fr;
+  gap: 16px; align-items: center; padding: 10px 0;
+}
+.vf-row + .vf-row { border-top: 1px dashed var(--border); }
+.vf-row-label {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  letter-spacing: 0.08em; text-align: right; padding-right: 12px;
+  text-transform: uppercase; line-height: 1.3;
+}
+.vf-row-nodes {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
 .vf-node {
-  background: var(--surface-2); border: 2px solid var(--border);
-  border-radius: 8px; padding: 10px 14px; text-align: center;
-  font-size: 11px; font-weight: 600; min-width: 100px; flex-shrink: 0;
-  color: var(--text);
+  border: 1.5px solid var(--border); background: var(--surface-2);
+  border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600;
+  color: var(--text); white-space: nowrap;
 }
-.vf-node.input  { border-color: #6366f1; background: rgba(99,102,241,0.08); color: #4f46e5; }
-.vf-node.proc   { border-color: #f59e0b; background: rgba(245,158,11,0.08); color: #d97706; }
-.vf-node.output { border-color: #10b981; background: rgba(16,185,129,0.08); color: #059669; }
-.vf-node.spec   { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
-.vf-arrow { color: var(--text-faint); font-size: 18px; flex-shrink: 0; }
-.vf-section-divider {
-  border-top: 1px dashed var(--border); margin: 18px 0 14px;
-  padding-top: 14px; font-size: 11px; color: var(--text-muted); text-align: center;
+.vf-node.input  { border-color: #6366f1; background: rgba(99,102,241,0.06); color: #4338ca; }
+.vf-node.proc   { border-color: #f59e0b; background: rgba(245,158,11,0.06); color: #b45309; }
+.vf-node.output { border-color: #10b981; background: rgba(16,185,129,0.06); color: #047857; }
+.vf-node.merge  { border-color: var(--text-muted); background: var(--surface-2); color: var(--text); }
+.vf-arrow { color: var(--text-faint); font-size: 14px; flex-shrink: 0; }
+
+.vf-spec-bar {
+  margin-top: 16px; padding: 12px 16px;
+  background: var(--accent-glow); border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text); line-height: 1.6;
 }
+.vf-spec-bar .em { font-weight: 700; color: var(--accent); margin-right: 6px; }
+
+.vf-extras { margin-top: 18px; display: grid; gap: 10px; }
 .vf-extra {
   font-size: 12px; color: var(--text); line-height: 1.7;
   background: var(--surface-2); border-radius: 8px; padding: 12px 16px;
-  margin-top: 10px;
 }
-.vf-extra strong { color: var(--accent); }
+.vf-extra .em { font-weight: 700; color: var(--text); }
 .vf-extra .tag {
   display: inline-block; font-size: 10px; font-weight: 700;
   padding: 2px 7px; border-radius: 4px; margin-right: 6px;
-  background: var(--accent-glow); color: var(--accent);
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
 }
 
-/* ── 데이터 허브 다이어그램 (Section 5) ── */
-.hub-diagram {
+@media (max-width: 600px) {
+  .vf-row { grid-template-columns: 1fr; }
+  .vf-row-label { text-align: left; padding-right: 0; }
+}
+
+/* ── 데이터 흐름 카드 (Section 5 — 정돈된 단일 카드) ── */
+.hub-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 32px 24px; overflow-x: auto;
+  border-radius: 12px; overflow: hidden;
 }
-.hub-grid {
-  display: grid; align-items: center; gap: 24px;
-  grid-template-columns: 1fr 180px 1fr; min-width: 760px;
+.hub-card-header {
+  padding: 16px 24px; background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
 }
-.hub-col-in, .hub-col-out { display: flex; flex-direction: column; gap: 10px; }
-.hub-item {
-  background: var(--surface-2); border: 1.5px solid var(--border);
-  border-radius: 8px; padding: 12px 14px; font-size: 12px; font-weight: 600;
-  color: var(--text); position: relative; line-height: 1.4;
+.hub-card-title {
+  font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.01em;
 }
-.hub-item .hub-sub {
-  display: block; font-size: 10px; color: var(--text-muted);
-  font-weight: 500; margin-top: 3px; font-family: var(--font-mono);
+.hub-card-subtitle {
+  font-size: 11px; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.02em;
 }
-.hub-item.in  { border-color: #6366f1; background: rgba(99,102,241,0.06); }
-.hub-item.in::after {
-  content: '→'; position: absolute; right: -22px; top: 50%; transform: translateY(-50%);
-  color: #6366f1; font-size: 18px; font-weight: 700;
+.hub-card-body {
+  display: grid; grid-template-columns: 1fr 1px 1fr; gap: 24px;
+  padding: 22px 24px;
 }
-.hub-item.out { border-color: #10b981; background: rgba(16,185,129,0.06); }
-.hub-item.out::before {
-  content: '→'; position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
-  color: #10b981; font-size: 18px; font-weight: 700;
-}
-.hub-center {
-  background: linear-gradient(135deg, var(--accent) 0%, #d4004a 100%);
-  color: #fff; border-radius: 16px; padding: 32px 16px;
-  text-align: center; position: relative;
-  box-shadow: 0 8px 24px rgba(190,0,57,0.25);
-}
-.hub-center .hub-icon {
-  font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 8px;
-  font-family: var(--font-mono);
-}
-.hub-center .hub-name {
-  font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
-}
-.hub-center .hub-tag {
-  font-size: 10px; opacity: 0.85; margin-top: 6px; letter-spacing: 0.05em;
-  text-transform: uppercase; font-weight: 600;
-}
-.hub-col-label {
+.hub-divider { background: var(--border); }
+.hub-side-label {
   font-size: 10px; font-weight: 700; color: var(--text-muted);
-  letter-spacing: 0.08em; text-transform: uppercase;
-  margin-bottom: 8px; padding-left: 4px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.hub-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.hub-list li {
+  padding: 10px 12px; background: var(--surface-2);
+  border-radius: 6px; border-left: 3px solid transparent;
+}
+.hub-side-in  .hub-list li { border-left-color: #6366f1; }
+.hub-side-out .hub-list li { border-left-color: #10b981; }
+.hub-li-name {
+  font-size: 13px; font-weight: 600; color: var(--text); display: block;
+}
+.hub-li-sub {
+  font-size: 11px; color: var(--text-muted); margin-top: 2px; display: block;
 }
 @media (max-width: 720px) {
-  .hub-grid { grid-template-columns: 1fr; }
-  .hub-item.in::after, .hub-item.out::before { display: none; }
+  .hub-card-body { grid-template-columns: 1fr; gap: 18px; }
+  .hub-divider { display: none; }
 }
 
 /* ── Phase 카드 ── */
@@ -215,7 +204,7 @@ body { padding: 0; }
   border-radius: 12px; padding: 18px; position: relative; overflow: hidden;
 }
 .phase-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
 }
 .phase-now::before    { background: #f59e0b; }
 .phase-next::before   { background: #6366f1; }
@@ -233,7 +222,7 @@ body { padding: 0; }
 .phase-next .phase-dot   { background: #6366f1; }
 .phase-future .phase-dot { background: #9ca3af; }
 .phase-name { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
-.phase-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin: 8px 0 12px; }
+.phase-desc { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin: 8px 0 12px; }
 .app-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 .app-tag {
   font-size: 10px; padding: 2px 8px; border-radius: 20px;
@@ -247,7 +236,7 @@ body { padding: 0; }
   border-radius: 12px; padding: 18px 20px;
 }
 .status-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.status-title { font-size: 14px; font-weight: 700; color: var(--accent); }
+.status-title { font-size: 14px; font-weight: 700; color: var(--text); }
 .status-pill {
   font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 12px;
   background: rgba(245,158,11,0.10); color: #d97706; letter-spacing: 0.06em;
@@ -264,6 +253,23 @@ body { padding: 0; }
   font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); flex-shrink: 0;
 }
 .status-item .si-name { font-weight: 600; flex: 1; }
+.status-item .si-tag {
+  font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px;
+  flex-shrink: 0; letter-spacing: 0.02em;
+}
+/* 운영 중 — 짙게 */
+.status-item.si-active {
+  background: var(--surface); border: 1px solid var(--border);
+}
+.status-item.si-active .si-num { color: var(--accent); }
+.status-item.si-active .si-tag { background: rgba(16,185,129,0.12); color: #059669; }
+/* 완료 — 기본 */
+.status-item.si-done .si-tag { background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); }
+/* 구축 중 — 흐리게 */
+.status-item.si-wip {
+  opacity: 0.55;
+}
+.status-item.si-wip .si-tag { background: rgba(245,158,11,0.10); color: #b45309; }
 
 /* ── 목업 카드 ── */
 .mockup-card {
@@ -280,13 +286,11 @@ body { padding: 0; }
 .mockup-badge {
   display: inline-flex; gap: 4px; font-size: 10px; font-weight: 700;
   padding: 2px 8px; border-radius: 4px; width: fit-content; letter-spacing: 0.04em;
+  background: var(--surface-2); color: var(--text-muted);
 }
-.badge-green  { background: rgba(16,185,129,0.10); color: #059669; }
-.badge-blue   { background: rgba(74,158,255,0.10); color: #2563eb; }
-.badge-purple { background: rgba(147,51,234,0.10); color: #7c3aed; }
 .mockup-title { font-size: 14px; font-weight: 700; color: var(--text); }
 .mockup-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
-.mockup-link { font-size: 10px; color: var(--accent); font-family: var(--font-mono); }
+.mockup-link { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
 
 /* ── 코드 블록 (시나리오) ── */
 .code-block {
@@ -299,7 +303,7 @@ body { padding: 0; }
 .code-block .cb-app { color: #4a9eff; }
 .code-block .cb-arrow { color: #be0039; }
 
-/* ── 효과 카드 (전산화/휴먼에러 등) ── */
+/* ── 효과 카드 ── */
 .effect-grid {
   display: grid; gap: 14px;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -309,11 +313,14 @@ body { padding: 0; }
   border-radius: 12px; padding: 18px 20px; position: relative;
 }
 .effect-card .ec-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: var(--accent-glow); color: var(--accent);
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--surface-2); color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700; margin-bottom: 10px;
+  font-size: 16px; font-weight: 700; margin-bottom: 12px;
   font-family: var(--font-mono);
+}
+.effect-card.highlight .ec-icon {
+  background: var(--accent-glow); color: var(--accent);
 }
 .effect-card .ec-title {
   font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px;
@@ -322,9 +329,8 @@ body { padding: 0; }
   font-size: 12px; color: var(--text-muted); line-height: 1.7;
 }
 .effect-card.highlight {
-  background: var(--accent-glow); border-color: var(--accent);
+  border-color: var(--accent);
 }
-.effect-card.highlight .ec-title { color: var(--accent); }
 
 /* ── COA 입력 데이터 그리드 ── */
 .coa-input-grid {
@@ -337,17 +343,13 @@ body { padding: 0; }
   color: var(--text); text-align: center; font-weight: 600;
 }
 
-/* ── 인용 박스 ── */
-.quote-box {
-  border-left: 4px solid var(--accent);
-  background: var(--accent-glow);
-  padding: 12px 16px; border-radius: 0 8px 8px 0;
-  font-size: 13px; color: var(--text); line-height: 1.7;
-  margin: 12px 0;
+/* ── 노트 박스 (인용 대신 차분한 회색 박스) ── */
+.note-box {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 18px; margin: 12px 0;
+  font-size: 13px; color: var(--text); line-height: 1.8;
 }
-.quote-box strong { color: var(--accent); }
-
-/* ── 결정 사항 카드 (사용 안함, 삭제) ── */
+.note-box .em { font-weight: 700; color: var(--text); }
 </style>
 </head>
 <body>
@@ -355,14 +357,14 @@ body { padding: 0; }
 
   <!-- 네비게이션 -->
   <nav class="rd-nav">
-    <a href="#problem">① 문제 정의</a>
+    <a href="#problem">① 배경</a>
     <a href="#vision">② 비전</a>
-    <a href="#current">③ 현재 모습</a>
-    <a href="#screens">④ 화면 갤러리</a>
-    <a href="#hub">⑤ 데이터 중심축</a>
-    <a href="#coa">⑥ COA 자동 발행</a>
+    <a href="#current">③ 현황</a>
+    <a href="#screens">④ 화면</a>
+    <a href="#hub">⑤ 데이터 흐름</a>
+    <a href="#coa">⑥ COA 자동화</a>
     <a href="#scenario">⑦ 시나리오</a>
-    <a href="#trend">⑧ Trend & 보고</a>
+    <a href="#trend">⑧ Trend·보고</a>
     <a href="#roadmap">⑨ 로드맵</a>
     <a href="#effect">⑩ 기대 효과</a>
   </nav>
@@ -370,188 +372,226 @@ body { padding: 0; }
   <!-- 헤더 -->
   <div class="rd-header">
     <div class="rd-title">QA Manager Portal — 통합 품질 관리 시스템</div>
-    <div class="rd-subtitle">전자재료사업부 품질경영팀 · 파편화된 데이터를 한 곳에 모으는 중심 축</div>
+    <div class="rd-subtitle">전자재료사업부 품질경영팀 · 품질 데이터 통합 관리 제안</div>
   </div>
 
-  <!-- ① 문제 정의 -->
+  <!-- ① 배경 -->
   <section class="section" id="problem">
     <div class="section-num">SECTION 01</div>
-    <div class="section-title">왜 만드는가 — 현재 업무의 데이터 파편화</div>
-    <div class="section-lead">지금 품질 데이터·평가 결과·Lot 이력이 <strong>각자 다른 도구에 흩어져 있음</strong>. 같은 Lot의 정보가 여러 시스템을 거쳐 통합되어야만 출하 의사결정이 가능한 구조.</div>
+    <div class="section-title">추진 배경</div>
+    <div class="section-lead">
+      현재 품질 데이터, 평가 결과, Lot 이력은 이메일·엑셀·ERP 등 여러 도구에 나뉘어 관리되고 있습니다.
+      같은 Lot에 대한 정보를 모으려면 매번 여러 시스템을 거쳐야 출하 판단이 가능한 구조입니다.
+    </div>
 
     <table class="problem-table">
       <thead>
         <tr><th>영역</th><th>현재 도구</th><th>문제점</th></tr>
       </thead>
       <tbody>
-        <tr><td>소자평가 결과</td><td>이메일 + 엑셀 첨부</td><td>누락·재집계 빈번, 검색 불가</td></tr>
-        <tr><td>Lot 이관 일정</td><td>카카오톡 + 메일 표</td><td>부서 간 요청 추적 어려움</td></tr>
-        <tr><td>Lot 계보 추적</td><td>사내 ERP + 합성생산팀 수기 관리</td><td>TREND 분석 연계 불가</td></tr>
-        <tr><td>SQC TREND</td><td>엑셀 별도 관리</td><td>이상치 발생 시 원인 역추적 안 됨</td></tr>
-        <tr><td>COA 발행</td><td>엑셀 VBA</td><td>고객사·제품별 양식 변경 시 수동 대응 한계</td></tr>
-        <tr><td>사전심사 자료 (LGD/SDC)</td><td>엑셀 VBA</td><td>양식 변경 시 매크로 매번 수정</td></tr>
+        <tr><td>소자평가 결과</td><td>사내 공용 폴더 (raw data) + 엑셀</td><td>결과치가 많아 엑셀 파일이 무겁고, 시각화 및 추세 파악이 어려움</td></tr>
+        <tr><td>Lot 이관 일정</td><td>카카오톡 + 메일 표</td><td>부서 간 요청 추적이 어려움</td></tr>
+        <tr><td>Lot 계보 추적</td><td>사내 ERP + 합성생산팀 수기 관리</td><td>TREND 분석과의 연계가 끊겨 있음</td></tr>
+        <tr><td>SQC TREND</td><td>엑셀 별도 관리</td><td>이상치 발생 시 원인 역추적이 어려움</td></tr>
+        <tr><td>COA 발행</td><td>엑셀 VBA</td><td>고객사·제품별 양식 변경 대응에 한계</td></tr>
+        <tr><td>사전심사 자료(LGD/SDC)</td><td>엑셀 VBA</td><td>양식 변경마다 매크로를 재작성해야 함</td></tr>
       </tbody>
     </table>
 
-    <div class="quote-box"><strong>결론</strong> — 데이터를 한 곳에 모으는 <strong>중심 축</strong>이 필요함. 입력부터 출력까지 한 흐름으로 연결되어야 함.</div>
+    <div class="note-box">
+      각 데이터를 한 곳에 모으고, 입력부터 출력까지 하나의 흐름으로 연결할 수 있는 시스템이 필요하다고 판단됩니다.
+    </div>
   </section>
 
   <!-- ② 비전 -->
   <section class="section" id="vision">
     <div class="section-num">SECTION 02</div>
-    <div class="section-title">비전 한 장 — 전체 흐름을 한 시스템으로</div>
-    <div class="section-lead"><strong>원재료 IQC → 합성/정제 Flow → 측정(HPLC·DSC·TGA·소자평가) → Lot 결과 → COA 발행 → Lot 추적 → 대시보드</strong>. 그리고 이 전체 흐름이 <strong>Spec(CTQ·CTP) 등록</strong>으로 묶임.</div>
+    <div class="section-title">목표 — 전 과정을 단일 시스템으로</div>
+    <div class="section-lead">
+      원재료 입고부터 출하 후 추적까지 전 과정을 하나의 시스템에서 다루는 것이 목표입니다.
+      모든 단계는 Spec(CTQ·CTP) 정의를 공통 기준으로 묶입니다.
+    </div>
 
     <div class="vision-flow">
-      <div class="flow-stage-label">메인 데이터 흐름</div>
-      <div class="vf-stage">
-        <div class="vf-node input">원재료 IQC</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node input">합성/정제 Flow</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node proc">HPLC · DSC · TGA</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node proc">소자평가 (IVL · LT)</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node proc">Lot 결과 통합</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node output">COA 발행</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node output">Lot 추적</div>
-        <div class="vf-arrow">→</div>
-        <div class="vf-node output">대시보드</div>
-      </div>
-      <div style="text-align: center; margin: 16px 0 8px;">
-        <div class="vf-node spec" style="display: inline-block;">↑ Spec 등록 (CTQ · CTP) — 전체 흐름의 기준 정의 ↑</div>
+      <div class="vf-row">
+        <div class="vf-row-label">입력</div>
+        <div class="vf-row-nodes">
+          <div class="vf-node input">원재료 IQC</div>
+          <div class="vf-node input">공정 분석 (HPLC · DSC · TGA)</div>
+          <div class="vf-node input">CTQ / CTP</div>
+          <div class="vf-node input">투입 Lot</div>
+        </div>
       </div>
 
-      <div class="vf-section-divider">＋ 부가 기능</div>
-      <div class="vf-extra">
-        <span class="tag">개발재료</span>
-        <strong>P/N Flow 관리</strong> — 공정이 통합되기 전, 여러 공정 방법에 대한 기록·비교 기능
+      <div class="vf-row">
+        <div class="vf-row-label">측정</div>
+        <div class="vf-row-nodes">
+          <div class="vf-node proc">소자평가 (IVL · LT)</div>
+        </div>
       </div>
-      <div class="vf-extra">
-        <span class="tag">출하 무관</span>
-        <strong>HPLC/DSC Report 자동화</strong> — 열안정성 test, 회수 재료 report 생성용 (자주 사용하는 자동화 툴이 될 예정)
+
+      <div class="vf-row">
+        <div class="vf-row-label">통합</div>
+        <div class="vf-row-nodes">
+          <div class="vf-node merge">Lot 결과 통합</div>
+        </div>
+      </div>
+
+      <div class="vf-row">
+        <div class="vf-row-label">활용</div>
+        <div class="vf-row-nodes">
+          <div class="vf-node output">COA 발행</div>
+          <div class="vf-node output">Lot 추적</div>
+          <div class="vf-node output">대시보드</div>
+        </div>
+      </div>
+
+      <div class="vf-spec-bar">
+        <span class="em">기준</span> Spec(CTQ · CTP) 정의가 전 단계의 판정·계산 기준이 됩니다.
+      </div>
+
+      <div class="vf-extras">
+        <div class="vf-extra">
+          <span class="tag">개발재료</span>
+          <span class="em">P/N Flow 관리</span> — 공정이 통합되기 전 단계에서 여러 공정 방법을 기록·비교하기 위한 기능입니다.
+        </div>
+        <div class="vf-extra">
+          <span class="tag">출하 무관</span>
+          <span class="em">HPLC/DSC Report 자동화</span> — 열안정성 평가, 회수 재료 리포트 등 일상적으로 자주 쓰이는 자동화 도구입니다.
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ③ 현재 모습 -->
+  <!-- ③ 현황 -->
   <section class="section" id="current">
     <div class="section-num">SECTION 03</div>
-    <div class="section-title">현재 모습 — Phase 1 진행 중</div>
-    <div class="section-lead">소자평가 영역부터 시작해서 <strong>전체 흐름을 하나씩 묶어가는 중</strong>. 일부 모듈은 운영 중이고 핵심 모듈은 아직 구축 중.</div>
+    <div class="section-title">진행 현황 — Phase 1</div>
+    <div class="section-lead">
+      소자평가 영역부터 시작해 핵심 모듈을 순차적으로 구축하고 있습니다.
+      일부 모듈은 이미 현업에서 사용 중이며, 데이터 통합의 뼈대가 되는 모듈은 구축이 진행 중입니다.
+    </div>
 
     <div class="status-card">
       <div class="status-head">
-        <div class="status-title">● Phase 1 모듈 — 구축 중</div>
+        <div class="status-title">Phase 1 모듈</div>
         <div class="status-pill">진행 중</div>
       </div>
       <div class="status-grid">
-        <div class="status-item"><span class="si-num">06</span><span class="si-name">소자평가 Lot 일정</span></div>
-        <div class="status-item"><span class="si-num">01</span><span class="si-name">OLED IVL & LT 분석</span></div>
-        <div class="status-item"><span class="si-num">05</span><span class="si-name">Lot 추적 & SQC</span></div>
-        <div class="status-item"><span class="si-num">10</span><span class="si-name">품질 대시보드</span></div>
-        <div class="status-item"><span class="si-num">15</span><span class="si-name">P/N 공정 Flow</span></div>
-        <div class="status-item"><span class="si-num">03</span><span class="si-name">HPLC/DSC Report</span></div>
-        <div class="status-item"><span class="si-num">02</span><span class="si-name">LGD 사전심사 자동화</span></div>
-        <div class="status-item"><span class="si-num">16</span><span class="si-name">LC/MS Report 변환</span></div>
-        <div class="status-item"><span class="si-num">14</span><span class="si-name">시스템 문서 & SOP</span></div>
+        <div class="status-item si-active"><span class="si-num">06</span><span class="si-name">소자평가 Lot 일정</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">01</span><span class="si-name">OLED IVL & LT 분석</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">03</span><span class="si-name">HPLC/DSC Report</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-active"><span class="si-num">02</span><span class="si-name">LGD 사전심사 자동화</span><span class="si-tag">운영 중</span></div>
+        <div class="status-item si-done"><span class="si-num">16</span><span class="si-name">LC/MS Report 변환</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-done"><span class="si-num">15</span><span class="si-name">P/N 공정 Flow</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-done"><span class="si-num">14</span><span class="si-name">시스템 문서 & SOP</span><span class="si-tag">완료</span></div>
+        <div class="status-item si-wip"><span class="si-num">05</span><span class="si-name">Lot 추적 & SQC</span><span class="si-tag">구축 중</span></div>
+        <div class="status-item si-wip"><span class="si-num">10</span><span class="si-name">품질 대시보드</span><span class="si-tag">구축 중</span></div>
       </div>
-      <div class="quote-box" style="margin-top: 14px;">
-        소자평가 일정 / OLED 분석은 운영 중. <strong>Lot 추적·SQC, 품질 대시보드는 구축 중</strong>으로 핵심 데이터 통합의 뼈대가 되는 모듈들.
+      <div class="note-box" style="margin-top: 14px;">
+        소자평가 일정, OLED 분석, HPLC/DSC Report, LGD 사전심사는 현재 현업에서 사용 중입니다.
+        Lot 추적·SQC와 품질 대시보드는 구축이 진행 중이며, 데이터 통합의 핵심이 될 모듈입니다.
       </div>
     </div>
   </section>
 
-  <!-- ④ 화면 갤러리 -->
+  <!-- ④ 화면 -->
   <section class="section" id="screens">
     <div class="section-num">SECTION 04</div>
-    <div class="section-title">화면 갤러리 — 구축 목표 화면 (예시)</div>
-    <div class="section-lead">아래 카드 클릭 시 실제 디자인의 mockup 화면이 새 탭에서 열립니다. (일부는 구축 중인 모듈의 목표 화면)</div>
+    <div class="section-title">주요 화면 시안</div>
+    <div class="section-lead">
+      각 카드를 클릭하면 실제 화면 또는 목표 디자인 시안이 새 탭에서 열립니다.
+    </div>
 
     <div class="card-grid">
       <a class="mockup-card" href="../../proposal/mockups/10_dashboard.html" target="_blank" rel="noopener">
-        <span class="mockup-badge badge-green">App 10</span>
+        <span class="mockup-badge">App 10</span>
         <div class="mockup-title">품질 대시보드</div>
-        <div class="mockup-desc">KPI + 차트 + 진행 중 소재 + 최신 결과 테이블. 주간·월간·연간 보고에 활용 예정.</div>
+        <div class="mockup-desc">KPI, 차트, 진행 중 소재 목록, 최신 결과 테이블. 주간·월간·연간 보고에 활용됩니다.</div>
         <div class="mockup-link">→ mockups/10_dashboard.html</div>
       </a>
       <a class="mockup-card" href="../../proposal/mockups/06_lot_schedule.html" target="_blank" rel="noopener">
-        <span class="mockup-badge badge-green">App 06</span>
+        <span class="mockup-badge">App 06</span>
         <div class="mockup-title">소자평가 Lot 일정</div>
-        <div class="mockup-desc">월별 캘린더 + 합성/정제 Lot 카드. D+N 뱃지, 시급 표시, OLED 결과 배지.</div>
+        <div class="mockup-desc">월별 캘린더와 합성·정제 Lot 카드. D+N 표시, 시급 표시, OLED 결과 배지를 포함합니다.</div>
         <div class="mockup-link">→ mockups/06_lot_schedule.html</div>
       </a>
       <a class="mockup-card" href="../../proposal/mockups/05_genealogy.html" target="_blank" rel="noopener">
-        <span class="mockup-badge badge-green">App 05</span>
+        <span class="mockup-badge">App 05</span>
         <div class="mockup-title">Lot 계보도 + SPC TREND</div>
-        <div class="mockup-desc">합성품 → 정제원재료 → 1차품 → 완제품 계보 + 공정별 SPC 차트.</div>
+        <div class="mockup-desc">합성품에서 정제원재료, 1차품, 완제품으로 이어지는 계보와 공정별 SPC 차트를 함께 확인합니다.</div>
         <div class="mockup-link">→ mockups/05_genealogy.html</div>
       </a>
       <a class="mockup-card" href="../../proposal/mockups/15_pn_flow.html" target="_blank" rel="noopener">
-        <span class="mockup-badge badge-green">App 15</span>
+        <span class="mockup-badge">App 15</span>
         <div class="mockup-title">P/N 공정 Flow 편집기</div>
-        <div class="mockup-desc">드래그앤드롭 공정 빌더. 개발재료의 여러 공정 방법 기록·비교에 활용.</div>
+        <div class="mockup-desc">드래그앤드롭 기반 공정 빌더. 개발재료의 여러 공정 방법을 기록·비교하는 데 활용됩니다.</div>
         <div class="mockup-link">→ mockups/15_pn_flow.html</div>
       </a>
     </div>
   </section>
 
-  <!-- ⑤ 데이터 중심축 -->
+  <!-- ⑤ 데이터 흐름 -->
   <section class="section" id="hub">
     <div class="section-num">SECTION 05</div>
-    <div class="section-title">데이터 중심축 — 이 시스템이 왜 필요한가</div>
-    <div class="section-lead">최종 목표인 <strong>COA 발행 · Lot 추적 · 대시보드</strong>까지 가기 위해서는, 흩어져 있는 입력 데이터를 한 곳에 모으는 <strong>중심 축</strong>이 필요함. 이 시스템이 그 역할을 함.</div>
+    <div class="section-title">데이터 흐름 — 입력에서 활용까지</div>
+    <div class="section-lead">
+      출하 시 사용되는 COA, 사후 Lot 추적, 경영 보고용 대시보드가 신뢰성을 가지려면
+      입력 데이터부터 한 곳에 모여 있어야 합니다. 본 시스템이 그 역할을 담당합니다.
+    </div>
 
-    <div class="hub-diagram">
-      <div class="hub-grid">
-        <!-- 입력 (좌) -->
-        <div class="hub-col-in">
-          <div class="hub-col-label">▶ 입력 데이터</div>
-          <div class="hub-item in">원재료 IQC<span class="hub-sub">입고 검사 이력</span></div>
-          <div class="hub-item in">합성 / 정제 Flow<span class="hub-sub">공정 이력</span></div>
-          <div class="hub-item in">HPLC · DSC · TGA<span class="hub-sub">분석 측정값</span></div>
-          <div class="hub-item in">소자평가 (IVL · LT)<span class="hub-sub">전압·효율·EQE·수명</span></div>
-          <div class="hub-item in">Spec (CTQ · CTP)<span class="hub-sub">규격·관리 한계 정의</span></div>
+    <div class="hub-card">
+      <div class="hub-card-header">
+        <div class="hub-card-title">QA Manager Portal</div>
+        <div class="hub-card-subtitle">통합 데이터 흐름 — 입력 5종 · 활용 4종</div>
+      </div>
+      <div class="hub-card-body">
+        <div class="hub-side hub-side-in">
+          <div class="hub-side-label">입력 데이터</div>
+          <ul class="hub-list">
+            <li><span class="hub-li-name">원재료 IQC</span><span class="hub-li-sub">입고 검사 이력</span></li>
+            <li><span class="hub-li-name">공정 분석 (HPLC · DSC · TGA)</span><span class="hub-li-sub">분석 측정값</span></li>
+            <li><span class="hub-li-name">소자평가 (IVL · LT)</span><span class="hub-li-sub">전압 · 효율 · EQE · 수명</span></li>
+            <li><span class="hub-li-name">CTQ / CTP</span><span class="hub-li-sub">규격 및 관리 한계 정의</span></li>
+            <li><span class="hub-li-name">투입 Lot</span><span class="hub-li-sub">합성·정제 단계별 Lot 연결</span></li>
+          </ul>
         </div>
-
-        <!-- 중심 허브 -->
-        <div class="hub-center">
-          <div class="hub-icon">⊕</div>
-          <div class="hub-name">데이터 허브</div>
-          <div class="hub-tag">QA Manager Portal</div>
-        </div>
-
-        <!-- 출력 (우) -->
-        <div class="hub-col-out">
-          <div class="hub-col-label" style="text-align: right; padding-right: 4px;">출력 ▶</div>
-          <div class="hub-item out">COA 자동 발행<span class="hub-sub">고객사·제품별 유연 대응</span></div>
-          <div class="hub-item out">Lot 추적<span class="hub-sub">계보 + 이상치 역추적</span></div>
-          <div class="hub-item out">대시보드<span class="hub-sub">주간·월간·연간 보고</span></div>
-          <div class="hub-item out">Trend 모니터링<span class="hub-sub">실시간 SQC 시각화</span></div>
+        <div class="hub-divider"></div>
+        <div class="hub-side hub-side-out">
+          <div class="hub-side-label">활용 결과</div>
+          <ul class="hub-list">
+            <li><span class="hub-li-name">COA 자동 발행</span><span class="hub-li-sub">고객사 · 제품별 양식 대응</span></li>
+            <li><span class="hub-li-name">Lot 추적</span><span class="hub-li-sub">계보 + 이상치 역추적</span></li>
+            <li><span class="hub-li-name">대시보드</span><span class="hub-li-sub">주간 · 월간 · 연간 보고</span></li>
+            <li><span class="hub-li-name">Trend 모니터링</span><span class="hub-li-sub">실시간 SQC 시각화</span></li>
+          </ul>
         </div>
       </div>
     </div>
 
-    <div class="quote-box">한 번 입력된 데이터가 <strong>여러 출력으로 자동으로 흐름</strong>. 사람이 같은 데이터를 여러 시스템에 다시 입력할 필요 없음.</div>
+    <div class="note-box">
+      한 번 입력된 데이터가 여러 출력에 동시에 반영됩니다.
+      동일한 값을 여러 시스템에 다시 입력하는 작업은 발생하지 않습니다.
+    </div>
   </section>
 
-  <!-- ⑥ COA 자동 발행 -->
+  <!-- ⑥ COA 자동화 -->
   <section class="section" id="coa">
     <div class="section-num">SECTION 06</div>
-    <div class="section-title">COA 자동 발행 — 유연한 양식 대응</div>
-    <div class="section-lead">현재 <strong>다양한 고객사가 다양한 form 의 COA sheet</strong>를 요청하고 있음. 기존 정형화된 엑셀 VBA로는 대응에 한계. 입력 데이터 항목도 점점 많아지고 있음.</div>
+    <div class="section-title">COA 자동 발행 — 다양한 양식 대응</div>
+    <div class="section-lead">
+      최근 고객사별로 요청되는 COA 양식이 다양해지고, 포함되어야 할 측정 항목 또한 빠르게 늘어나고 있습니다.
+      기존 엑셀 VBA 방식은 양식이 바뀔 때마다 매크로를 다시 손봐야 해 대응이 점점 어려워지는 상황입니다.
+    </div>
 
     <div class="col-2">
       <div class="info-card">
-        <h3>● 기존 → 현재의 변화</h3>
+        <h3>요구 사항의 변화</h3>
         <ul>
-          <li><strong>예전</strong>: HPLC 순도 1개 항목만 제출<span class="sub">정형화된 엑셀 양식으로 충분히 대응 가능</span></li>
-          <li><strong>지금</strong>: 항목이 폭증 — 다양한 측정값이 동시에 요구됨</li>
+          <li><span class="em">예전</span> · HPLC 순도 1개 항목만 제출하면 충분했던 시기<span class="sub">정형화된 엑셀 양식으로도 대응이 가능했습니다</span></li>
+          <li><span class="em">현재</span> · 측정 항목이 다양해지고 동시에 요구되는 추세입니다</li>
         </ul>
-        <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted); font-weight: 600;">최근 요청되는 입력 항목 예시:</div>
+        <div style="margin-top: 12px; font-size: 11px; color: var(--text-muted); font-weight: 600;">최근 요청 항목 예시</div>
         <div class="coa-input-grid">
           <div class="coa-item">HPLC 순도</div>
           <div class="coa-item">지정 imp peak</div>
@@ -561,36 +601,38 @@ body { padding: 0; }
           <div class="coa-item">LT chart</div>
           <div class="coa-item">입도 분석</div>
           <div class="coa-item">RoHS</div>
-          <div class="coa-item">Metal·할로겐</div>
+          <div class="coa-item">Metal · 할로겐</div>
         </div>
       </div>
 
       <div class="info-card">
-        <h3>● 해결 방향</h3>
+        <h3>해결 방향</h3>
         <ul>
-          <li><strong>데이터를 하나로 묶음</strong><span class="sub">원재료 IQC부터 Lot 추적·대시보드까지 한 흐름</span></li>
-          <li><strong>유연한 양식 엔진</strong><span class="sub">고객사·제품별로 다른 항목 조합을 동적으로 구성</span></li>
-          <li><strong>자동 채움</strong><span class="sub">한 번 측정·등록된 값은 모든 양식에 자동 반영</span></li>
-          <li><strong>Spec 기반 자동 판정</strong><span class="sub">CTQ/CTP 정의에 따라 OK/NG 자동 표시</span></li>
+          <li><span class="em">데이터 통합</span><span class="sub">원재료 IQC부터 Lot 추적·대시보드까지 단일 흐름으로 연결합니다</span></li>
+          <li><span class="em">양식 엔진</span><span class="sub">고객사·제품별 항목 조합을 동적으로 구성할 수 있는 구조로 설계합니다</span></li>
+          <li><span class="em">자동 채움</span><span class="sub">한 번 측정·등록된 값은 모든 양식에 자동 반영됩니다</span></li>
+          <li><span class="em">자동 판정</span><span class="sub">CTQ/CTP 정의에 따라 OK/NG가 자동으로 표시됩니다</span></li>
         </ul>
-        <div class="quote-box" style="margin-top: 12px;">
-          <strong>핵심</strong> — 원재료 IQC부터 COA 발행, 그 이후 Lot 추적·대시보드까지 <strong>전 과정을 한 줄로 묶는 것</strong>이 이 시스템의 가장 중요한 목표.
+        <div class="note-box" style="margin-top: 12px;">
+          원재료 입고부터 COA 발행, 그리고 출하 후 Lot 추적·대시보드까지 전 과정을 하나의 데이터 흐름으로 묶는 것이 본 시스템의 가장 중요한 목표입니다.
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ⑦ 데이터 시나리오 -->
+  <!-- ⑦ 시나리오 -->
   <section class="section" id="scenario">
     <div class="section-num">SECTION 07</div>
-    <div class="section-title">데이터 통합 시나리오 — Lot ANA0101 출하까지</div>
-    <div class="section-lead">완성 시점에서 입고부터 COA 발행, 출하 후 Lot 추적·대시보드 반영까지 <strong>전 흐름이 한 시스템에 기록</strong>되는 모습.</div>
+    <div class="section-title">통합 시나리오 — Lot ANA0101 출하까지</div>
+    <div class="section-lead">
+      구축이 완료되었을 때 하나의 Lot이 입고부터 출하·사후 추적까지 어떻게 시스템에 기록되는지 보여주는 시나리오입니다.
+    </div>
 
     <pre class="code-block"><span class="cb-day">[ 1 ]</span>  원재료 입고
        <span class="cb-arrow">→</span> <span class="cb-app">App 13 (IQC)</span>            — Lot 시작점 등록 (입고 검사값)
 
 <span class="cb-day">[ 2 ]</span>  합성 / 정제 진행
-       <span class="cb-arrow">→</span> <span class="cb-app">App 15 (P/N Flow)</span>       — 공정 단계·조건 기록
+       <span class="cb-arrow">→</span> <span class="cb-app">App 15 (P/N Flow)</span>       — 공정 단계 · 조건 기록
        <span class="cb-arrow">→</span> <span class="cb-app">App 03 (HPLC/DSC)</span>       — 분석 데이터 등록
 
 <span class="cb-day">[ 3 ]</span>  정제 완료 → 소자평가 의뢰
@@ -598,50 +640,56 @@ body { padding: 0; }
        <span class="cb-arrow">→</span> <span class="cb-app">App 01 (OLED 분석)</span>      — IVL · LT 결과 자동 저장
 
 <span class="cb-day">[ 4 ]</span>  품질 데이터 종합
-       <span class="cb-arrow">→</span> <span class="cb-app">App 05 (Lot 추적 + SQC)</span> — 계보·TREND 검증
+       <span class="cb-arrow">→</span> <span class="cb-app">App 05 (Lot 추적 + SQC)</span> — 계보 · TREND 검증
        <span class="cb-arrow">→</span> <span class="cb-app">App 12 (Spec/CTQ)</span>       — 규격 자동 비교 → OK/NG 판정
 
 <span class="cb-day">[ 5 ]</span>  출하 COA 발행
        <span class="cb-arrow">→</span> <span class="cb-app">App 08 (COA 양산)</span>       — 고객사 양식에 맞춘 PDF 자동 발행
-       <span class="cb-arrow">→</span> 한 번 입력된 데이터가 양식에 자동 채워짐
+       <span class="cb-arrow">→</span> 한 번 입력된 데이터가 양식에 자동으로 채워집니다
 
 <span class="cb-day">[ 6 ]</span>  출하 이후
-       <span class="cb-arrow">→</span> <span class="cb-app">App 10 (대시보드)</span>       — KPI·TREND 자동 반영
+       <span class="cb-arrow">→</span> <span class="cb-app">App 10 (대시보드)</span>       — KPI · TREND 자동 반영
        <span class="cb-arrow">→</span> <span class="cb-app">App 05 (Lot 추적)</span>       — 컴플레인 발생 시 즉시 역추적</pre>
 
-    <div class="quote-box"><strong>목표</strong> — 입고부터 출하 COA 발행, 그 이후 Lot 추적까지 <strong>모든 흔적이 한 시스템에 남는다</strong>.</div>
+    <div class="note-box">
+      입고부터 출하 후 사후 추적까지 모든 이력이 단일 시스템에 누적됩니다.
+    </div>
   </section>
 
-  <!-- ⑧ Trend & 보고 -->
+  <!-- ⑧ Trend·보고 -->
   <section class="section" id="trend">
     <div class="section-num">SECTION 08</div>
-    <div class="section-title">Trend & 보고 시스템 — 데이터를 잘 보는 시스템</div>
-    <div class="section-lead">데이터가 쌓이면 끝이 아님. <strong>잘 보고, 잘 활용</strong>해야 함. TREND 시각화와 정기 보고를 위한 시스템 구축.</div>
+    <div class="section-title">Trend · 보고 — 데이터를 활용하는 단계</div>
+    <div class="section-lead">
+      데이터를 쌓는 것 자체로는 의미가 크지 않습니다.
+      추세를 시각화하고 정기 보고로 연결되어야 실제 의사결정에 활용될 수 있습니다.
+    </div>
 
     <div class="col-2">
       <div class="info-card">
-        <h3>● TREND 시각화 강화</h3>
+        <h3>TREND 시각화</h3>
         <ul>
-          <li><strong>SQC 차트 고도화</strong><span class="sub">관리 한계·이탈·추세를 한눈에</span></li>
-          <li><strong>Batch Deep-Dive</strong><span class="sub">이탈 포인트 → 원인 후보 즉시 확인</span></li>
-          <li><strong>계보 + TREND 동시 조회</strong><span class="sub">이상치 발생 시 어느 단계에서 시작됐는지 추적</span></li>
+          <li><span class="em">SQC 차트 고도화</span><span class="sub">관리 한계, 이탈, 추세를 한 화면에서 확인합니다</span></li>
+          <li><span class="em">Batch Deep-Dive</span><span class="sub">이탈 포인트에서 원인 후보를 즉시 확인할 수 있습니다</span></li>
+          <li><span class="em">계보 + TREND 동시 조회</span><span class="sub">이상치 발생 시 어느 단계에서 시작되었는지 추적합니다</span></li>
         </ul>
-        <h3 style="margin-top: 14px;">● 정기 보고 자동화</h3>
+        <h3 style="margin-top: 14px;">정기 보고</h3>
         <ul>
-          <li><strong>주간 / 월간 / 연간 보고</strong><span class="sub">대시보드 데이터를 그대로 보고 자료로</span></li>
-          <li>리포트 자동 생성 → 수기 작성 시간 제거</li>
+          <li><span class="em">주간 / 월간 / 연간 보고</span><span class="sub">대시보드 데이터를 그대로 보고 자료에 활용합니다</span></li>
+          <li>리포트 자동 생성으로 수기 작성 시간을 줄입니다</li>
         </ul>
       </div>
 
       <div class="info-card">
-        <h3>● 유연한 시스템 — 표준화의 본질</h3>
+        <h3>유연한 시스템 — 설계 원칙</h3>
         <ul>
-          <li>재료별 CTQ/CTP가 <strong>다 다름</strong></li>
-          <li>COA 항목이 <strong>제품별·고객사별로 점점 다양</strong>해짐</li>
-          <li>이런 변화에 <strong>유연하게 대응</strong>하기 편한 시스템이 필요</li>
+          <li>재료별 CTQ/CTP는 모두 다릅니다</li>
+          <li>COA 항목은 제품별·고객사별로 점차 다양해지고 있습니다</li>
+          <li>이러한 변화에 부담 없이 대응할 수 있는 구조가 필요합니다</li>
         </ul>
-        <div class="quote-box" style="margin-top: 12px;">
-          엄격한 표준화가 아니라, <strong>다양성에 유연하게 대응</strong>하는 구조 — 이게 핵심 설계 원칙.
+        <div class="note-box" style="margin-top: 12px;">
+          재료마다 관리 항목이 다르고 고객사마다 요구 양식이 다른 현실을 전제로,
+          엄격한 표준화보다 변화에 유연하게 대응할 수 있는 구조를 우선했습니다.
         </div>
       </div>
     </div>
@@ -650,14 +698,20 @@ body { padding: 0; }
   <!-- ⑨ 로드맵 -->
   <section class="section" id="roadmap">
     <div class="section-num">SECTION 09</div>
-    <div class="section-title">로드맵 — 진행 중 → 이어서 → 장기</div>
-    <div class="section-lead">각 단계는 <strong>이전 단계의 데이터 위에 쌓임</strong>. 하나하나가 독립적으로 가치를 내면서, 다음 단계의 기반이 됨.</div>
+    <div class="section-title">로드맵</div>
+    <div class="section-lead">
+      각 단계는 앞 단계에서 만들어진 데이터를 활용해 한 발씩 확장됩니다.
+      각 모듈은 그 자체로도 현업에 가치가 있도록 설계됩니다.
+    </div>
 
     <div class="phase-row">
       <div class="phase-card phase-now">
         <div class="phase-label"><div class="phase-dot"></div> 진행 중</div>
         <div class="phase-name">핵심 모듈 구축</div>
-        <div class="phase-desc">소자평가 일정·OLED 분석은 운영 중. Lot 추적·SQC, 품질 대시보드, P/N Flow를 구축 중. 데이터 통합의 뼈대를 다지는 단계.</div>
+        <div class="phase-desc">
+          소자평가 일정과 OLED 분석은 운영 중입니다.
+          현재는 Lot 추적·SQC, 품질 대시보드, P/N Flow를 구축하며 데이터 통합의 뼈대를 다지고 있습니다.
+        </div>
         <div class="app-tags">
           <span class="app-tag">소자평가 Lot 일정</span>
           <span class="app-tag">OLED IVL & LT</span>
@@ -670,8 +724,11 @@ body { padding: 0; }
 
       <div class="phase-card phase-next">
         <div class="phase-label"><div class="phase-dot"></div> 이어서</div>
-        <div class="phase-name">COA 자동 발행 + 데이터 통합</div>
-        <div class="phase-desc">원재료 IQC부터 Lot 추적·대시보드까지 한 줄로 묶는 단계. 다양한 고객사·제품 양식에 유연하게 대응하는 COA 엔진 구축.</div>
+        <div class="phase-name">COA 자동화 + 데이터 통합</div>
+        <div class="phase-desc">
+          원재료 IQC부터 출하 후 Lot 추적까지 전 과정을 하나로 묶는 단계입니다.
+          다양한 고객사·제품 양식에 유연하게 대응하는 COA 엔진이 핵심 과제입니다.
+        </div>
         <div class="app-tags">
           <span class="app-tag">원재료 IQC</span>
           <span class="app-tag">Spec & CTQ/CTP</span>
@@ -684,7 +741,10 @@ body { padding: 0; }
       <div class="phase-card phase-future">
         <div class="phase-label"><div class="phase-dot"></div> 장기</div>
         <div class="phase-name">Trend 시각화 + 보고 자동화</div>
-        <div class="phase-desc">데이터를 <strong>잘 보고 잘 활용</strong>하는 단계. 주간·월간·연간 보고 자동 생성, 컴플레인 역추적, 의사결정 데이터 제공.</div>
+        <div class="phase-desc">
+          쌓인 데이터를 의사결정에 적극 활용하는 단계입니다.
+          주간·월간·연간 보고 자동 생성과 컴플레인 발생 시 신속한 역추적을 지원합니다.
+        </div>
         <div class="app-tags">
           <span class="app-tag">컴플레인 관리</span>
           <span class="app-tag">Trend 시각화 고도화</span>
@@ -697,50 +757,69 @@ body { padding: 0; }
   <!-- ⑩ 기대 효과 -->
   <section class="section" id="effect">
     <div class="section-num">SECTION 10</div>
-    <div class="section-title">기대 효과 — 사람의 역할 재정의</div>
-    <div class="section-lead">단순한 시간 단축이 아님. <strong>한 사람이 도맡아 하던 일</strong>을 시스템이 대신함으로써, 그 사람의 시간을 더 가치 있는 일에 쓸 수 있게 만드는 것이 본질.</div>
+    <div class="section-title">기대 효과</div>
+    <div class="section-lead">
+      단순히 업무 시간을 줄이는 것이 목적은 아닙니다.
+      한 명이 도맡아 처리하던 단순 취합 업무를 시스템에 맡기고,
+      사람의 시간을 분석과 판단처럼 더 가치 있는 일에 쓸 수 있도록 만드는 것이 본 시스템의 지향점입니다.
+    </div>
 
     <div class="effect-grid">
       <div class="effect-card highlight">
         <div class="ec-icon">★</div>
-        <div class="ec-title">"COA 발행 담당자"라는 역할이 사라짐</div>
-        <div class="ec-desc">파편화된 데이터를 한 사람이 모아서 양식에 채워 넣는 일이 <strong>시스템으로 대체됨</strong>. 그 인력이 더 가치 있는 분석·기획 업무로 이동 가능.</div>
+        <div class="ec-title">COA 발행 업무의 자동화</div>
+        <div class="ec-desc">
+          여러 시스템을 오가며 데이터를 모아 양식에 채우는 작업이 시스템으로 대체됩니다.
+          해당 인력은 분석·기획 업무로 재배치할 수 있습니다.
+        </div>
       </div>
 
       <div class="effect-card">
         <div class="ec-icon">⊘</div>
-        <div class="ec-title">휴먼 에러 0</div>
-        <div class="ec-desc">사람이 데이터를 타이핑하는 것, imp peak sorting, 소자평가 결과 수동 계산 — <strong>전체 시스템을 전산화</strong>하면서 휴먼 에러가 원천 제거됨.</div>
+        <div class="ec-title">휴먼 에러 감소</div>
+        <div class="ec-desc">
+          수기 타이핑, imp peak 정리, 소자평가 결과 수동 계산 등 사람이 개입하던 단계를 전산화하여
+          입력 오류를 원천적으로 줄입니다.
+        </div>
       </div>
 
       <div class="effect-card">
         <div class="ec-icon">✓</div>
         <div class="ec-title">데이터 신뢰성 향상</div>
-        <div class="ec-desc">한 번 입력된 데이터가 모든 출력에 동일하게 흐름. 같은 Lot에 대해 시스템마다 값이 다른 일이 없어짐.</div>
+        <div class="ec-desc">
+          한 번 입력된 데이터가 모든 출력에 동일하게 반영됩니다.
+          같은 Lot에 대해 시스템마다 값이 다른 상황은 발생하지 않습니다.
+        </div>
       </div>
 
       <div class="effect-card">
         <div class="ec-icon">⤴</div>
         <div class="ec-title">추적성 (Traceability)</div>
-        <div class="ec-desc">출하 후 어떤 컴플레인이 와도 <strong>원재료 IQC까지 역추적</strong> 가능. Lot 계보 + TREND가 한 시스템 안에 있음.</div>
+        <div class="ec-desc">
+          출하 후 컴플레인이 접수되었을 때 원재료 IQC 단계까지 역추적이 가능합니다.
+          Lot 계보와 TREND가 동일 시스템에 보관됩니다.
+        </div>
       </div>
 
       <div class="effect-card">
         <div class="ec-icon">⚡</div>
         <div class="ec-title">의사결정 속도 향상</div>
-        <div class="ec-desc">대시보드·SQC TREND를 <strong>실시간으로 보면서 의사결정</strong>. 자료 취합 → 분석 → 보고의 시간차가 사라짐.</div>
+        <div class="ec-desc">
+          대시보드와 SQC TREND를 실시간으로 확인하면서 의사결정이 가능합니다.
+          자료 취합부터 보고까지 발생하던 시간차가 줄어듭니다.
+        </div>
       </div>
 
       <div class="effect-card">
         <div class="ec-icon">⏱</div>
-        <div class="ec-title">시간 단축 (부수 효과)</div>
-        <div class="ec-desc">COA 발행, Lot 이력 추적, 컴플레인 원인 추적, 사전심사 자료 작성 — 모든 영역에서 <strong>획기적인 시간 단축</strong> 동반.</div>
+        <div class="ec-title">업무 시간 단축</div>
+        <div class="ec-desc">
+          COA 발행, Lot 이력 추적, 컴플레인 원인 추적, 사전심사 자료 작성 등
+          모든 영역에서 작업 시간이 단축됩니다.
+        </div>
       </div>
     </div>
 
-    <div class="quote-box" style="margin-top: 18px;">
-      <strong>핵심</strong> — 시간 단축은 결과일 뿐, 본질은 <strong>"사람이 데이터를 옮기는 일"을 시스템에게 맡기는 것</strong>. 그래서 사람은 데이터를 보고 판단하는 일에 집중할 수 있게 됨.
-    </div>
   </section>
 
   <div style="text-align: center; padding-top: 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-faint);">
