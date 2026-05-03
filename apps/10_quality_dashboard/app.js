@@ -855,8 +855,8 @@ function renderRecentResults() {
 
 function pctClass(p) {
   if (p == null) return '';
-  if (Math.abs(p - 100) <= 5) return 'pct-good';
-  if (p > 105) return 'pct-warn';
+  if (p > 105) return 'pct-excellent';
+  if (p >= 95)  return 'pct-good';
   return 'pct-bad';
 }
 
@@ -1045,6 +1045,12 @@ function refreshLevelSelect() {
 }
 
 /* ── 데이터 로드 (실시간 구독) ──────────────────────────────────────── */
+var _renderTimer = null;
+function scheduleRender() {
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(renderAll, 60);
+}
+
 function startSync() {
   DB_REF.on('value', function (snap) {
     var val = snap.val();
@@ -1056,12 +1062,12 @@ function startSync() {
     }
     STATE.items = arr;
     if (window._dashRefreshMatList) window._dashRefreshMatList();
-    renderAll();
+    scheduleRender();
   });
   RESULT_REF.on('value', function (snap) {
     STATE.results = snap.val() || {};
     refreshLevelSelect();
-    renderAll();
+    scheduleRender();
   });
 }
 

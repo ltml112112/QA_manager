@@ -58,7 +58,7 @@ QA_manager/
     │   ├── index.html                # LGD 사전심사자료 자동화 UI (GAS 클라이언트) [자동화]
     │   └── code.gs                   # Google Apps Script 백엔드
     ├── 03_hplc_dsc/
-    │   └── index.html                # HPLC/DSC Report 자동생성 [자동화]
+    │   └── index.html                # HPLC/DSC Report 크롭 → PPTX 변환 (열안정성·회수재료 리포트 전용, 데이터 저장 없음) [자동화]
     ├── 04_sdc_eval/
     │   └── index.html                # SDC 사전심사자료 자동화 (링크) [자동화]
     ├── 05_cpl_quality/
@@ -689,6 +689,12 @@ window.parent.postMessage({ type: 'oledResult', ivl: {...}, lt: {...} }, '*');
 ---
 
 ## 2. HPLC/DSC Report 자동생성 (`apps/03_hplc_dsc/index.html`)
+
+> **⚠️ 역할 범위 주의**: 이 앱은 **열안정성 테스트 또는 회수 재료에 대한 Report PDF를 크롭해 PPTX로 변환하는 도구**일 뿐이다.
+> 측정값을 Firebase에 저장하거나 품질 대시보드와 연동하는 기능은 없으며, 앞으로도 추가하지 않는다.
+>
+> **HPLC 순도·Imp peak·DSC Tm 등 공정 분석 측정값의 Firebase 저장·대시보드 연동은 별도 앱(미구현)에서 담당할 예정이다.**
+> 03번 앱을 수정해서 데이터 저장 기능을 붙이지 말 것.
 
 HPLC·DSC 통합 분석 PDF에서 그래프 영역을 자동 크롭해 PPTX 슬라이드로 변환하는 도구. 단일 HTML 파일에 CSS·HTML·JS 전부 포함.
 
