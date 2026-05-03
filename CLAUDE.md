@@ -42,7 +42,6 @@
 QA_manager/
 ├── index.html                        # 포털 허브 (shell + Firebase Auth + 사용자 관리 모달)
 ├── login.html                        # 로그인 페이지 (Firebase Email/Password Auth)
-├── register.html                     # 회원가입 페이지 — 비활성화됨 (login.html로 즉시 redirect)
 ├── _headers                          # Cloudflare Pages 캐시 정책 (HTML: no-store, 그 외: no-cache)
 ├── assets/
 │   ├── img/
@@ -92,8 +91,11 @@ QA_manager/
     │   ├── index.html                # P/N 공정 Flow 관리 (shell) [공정 이력 관리]
     │   ├── style.css
     │   └── app.js                    # 문서 CRUD + 드래그앤드롭 + Undo + Excel 출력
-    └── 16_lcms_converter/
-        └── index.html                # LC/MS Report 변환기 (Agilent PDF + Excel → 변형 PDF) [자동화]
+    ├── 16_lcms_converter/
+    │   └── index.html                # LC/MS Report 변환기 (Agilent PDF + Excel → 변형 PDF) [자동화]
+    └── 17_roadmap/
+        ├── index.html                # 포털 개발 로드맵 / 제안서 뷰어 [문서 관리, locked]
+        └── mockups/                  # 17_roadmap에서 새 탭으로 여는 화면 시안 (4개)
 ```
 
 ---
@@ -218,10 +220,10 @@ locked 탭 버튼·iframe·그룹 헤더에 `display:none` 토글 → 현재 활
 
 > **참고**: `main.js`의 `locked: true`는 사이드바 렌더링 단계(포털 안에서) 권한 제어, `auth_guard.js`의 `_AG_ADMIN_ONLY`는 직접 URL 접근(포털 밖에서) 권한 제어 — 이중 방어.
 
-### login.html / register.html
+### login.html
 
 - **`login.html`**: Firebase Email/Password 로그인 페이지. 이미 인증된 상태라면 자동으로 `index.html`로 redirect.
-- **`register.html`**: 회원가입은 비활성화되어 있음 (`<script>window.location.replace('./login.html');</script>`로 즉시 로그인 페이지로 이동). 계정은 관리자가 사용자 관리 모달에서만 생성 가능.
+- 회원가입(self-signup)은 비활성화. 계정은 관리자가 사용자 관리 모달에서만 생성 가능.
 
 ### main.js — 앱 레지스트리
 
