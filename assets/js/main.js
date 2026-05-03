@@ -184,7 +184,7 @@ var apps = [
   },
   {
     id:          'roadmap',
-    group:       '문서 관리',
+    group:       '로드맵',
     label:       '포털 개발 로드맵',
     icon:        '·',
     badge:       null,
