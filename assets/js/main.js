@@ -182,6 +182,16 @@ var apps = [
     loaderText:  '시스템 문서 & SOP 로딩 중...',
     locked:      true,
   },
+  {
+    id:          'roadmap',
+    group:       '문서 관리',
+    label:       '포털 개발 로드맵',
+    icon:        '·',
+    badge:       null,
+    src:         './apps/17_roadmap/index.html',
+    loaderText:  '로드맵 로딩 중...',
+    locked:      true,
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 

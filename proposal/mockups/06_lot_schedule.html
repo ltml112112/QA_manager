@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>예시 — 소자평가 Lot 일정 (Mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { background: var(--bg); padding: 18px 24px; }
+.example-banner {
+  position: fixed; top: 12px; right: 14px;
+  background: #f59e0b; color: #fff;
+  padding: 5px 14px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.cal-topbar { display: flex; align-items: center; gap: 8px; padding: 10px 4px 12px; flex-wrap: wrap; }
+.cal-topbar .btn { padding: 7px 14px; font-size: 12px; }
+.cal-spacer { flex: 1; }
+.cal-title-wrap { display: flex; align-items: center; gap: 10px; }
+.cal-nav-btn { background: var(--surface); border: 1px solid var(--border); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+.cal-title { font-size: 18px; font-weight: 700; color: var(--text); min-width: 130px; text-align: center; }
+
+.summary-strip { display: flex; gap: 0; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+.sum-chip { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
+.sum-chip.chip-total  { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.sum-chip.chip-synth  { background: rgba(239,68,68,0.1);  color: #ef4444; }
+.sum-chip.chip-refine { background: rgba(147,51,234,0.1); color: #9333ea; }
+.sum-chip.chip-alert  { background: rgba(239,68,68,0.14); color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.sum-chip.chip-done   { background: rgba(16,185,129,0.1); color: #10b981; }
+.sum-sep { color: var(--border); font-size: 14px; margin: 0 8px; }
+
+.legend-bar { display: flex; gap: 16px; align-items: center; font-size: 11px; color: var(--text-muted); padding: 6px 14px; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+.cal-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+.cal-dow { padding: 6px 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted); background: var(--surface-2); border-radius: 4px; }
+.cal-dow.sun { color: #ef4444; }
+.cal-dow.sat { color: #4a9eff; }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cell { min-height: 110px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 5px; position: relative; }
+.cal-cell.other-month { opacity: 0.35; }
+.cal-cell.is-today { border: 2px solid var(--accent); }
+.cell-daynum { font-size: 11px; font-weight: 700; color: var(--text); display: inline-block; padding: 1px 5px; border-radius: 3px; }
+.cal-cell.is-today .cell-daynum { background: var(--accent); color: #fff; }
+
+.lot-card {
+  border-radius: 3px;
+  padding: 2px 4px 2px 6px;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.3;
+  border-left: 3px solid;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.lot-card.dept-synth { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.2); border-left-color: #ef4444; }
+.lot-card.dept-refine { background: var(--surface-2); border-left-color: #9333ea; }
+.lot-card.is-urgent { border-style: dashed; border-left-style: solid; }
+.lot-card.is-done { opacity: 0.45; text-decoration: line-through; }
+.lot-card .mat { font-weight: 700; color: var(--text); font-family: var(--font-body); font-size: 10px; }
+.lot-card .lot-no { color: var(--text-muted); font-size: 9px; }
+.dn-badge { display: inline-block; font-size: 9px; padding: 0 4px; border-radius: 2px; font-weight: 700; font-family: var(--font-mono); margin-top: 1px; }
+.dn-badge.dn-normal { background: var(--surface-2); color: var(--text-muted); }
+.dn-badge.dn-alert { background: rgba(239,68,68,0.15); color: #ef4444; }
+.has-result { color: #f59e0b; font-size: 9px; font-weight: 700; }
+.cell-more { font-size: 9px; color: var(--accent); margin-top: 2px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="example-banner">예시 / MOCKUP — 실제 데이터 아님</div>
+
+<div class="cal-topbar">
+  <button class="btn btn-primary">📧 메일 일괄 등록</button>
+  <button class="btn btn-secondary">✏ 개별 등록</button>
+  <div class="cal-spacer"></div>
+  <div class="cal-title-wrap">
+    <button class="cal-nav-btn">‹</button>
+    <span class="cal-title">2026년 4월</span>
+    <button class="cal-nav-btn">›</button>
+  </div>
+  <button class="btn btn-secondary">오늘</button>
+  <button class="btn btn-secondary">📋 샘플</button>
+  <button class="btn btn-secondary">🔍 조회</button>
+</div>
+
+<div class="summary-strip">
+  <span class="sum-chip chip-total">진행 중 14건</span>
+  <span class="sum-sep">|</span>
+  <span class="sum-chip chip-synth">합성 5</span>
+  <span class="sum-chip chip-refine">정제/소자 9</span>
+  <span class="sum-sep">|</span>
+  <span class="sum-chip chip-alert">⚡ 시급 3</span>
+  <span class="sum-chip chip-done">완료 28</span>
+</div>
+
+<div class="legend-bar">
+  <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>합성생산</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#9333ea"></span>정제/소자이관</div>
+  <div class="legend-item"><span class="legend-dot" style="border:1.5px dashed #f59e0b;width:10px;height:10px;background:transparent"></span>시급요청</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span>완료</div>
+</div>
+
+<div class="cal-dow-row">
+  <div class="cal-dow sun">일</div>
+  <div class="cal-dow">월</div>
+  <div class="cal-dow">화</div>
+  <div class="cal-dow">수</div>
+  <div class="cal-dow">목</div>
+  <div class="cal-dow">금</div>
+  <div class="cal-dow sat">토</div>
+</div>
+
+<div class="cal-grid">
+  <!-- Week 1 -->
+  <div class="cal-cell other-month"><span class="cell-daynum">29</span></div>
+  <div class="cal-cell other-month"><span class="cell-daynum">30</span></div>
+  <div class="cal-cell other-month"><span class="cell-daynum">31</span></div>
+  <div class="cal-cell"><span class="cell-daynum">1</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">2</span>
+    <div class="lot-card dept-synth">
+      <span class="mat">LT-PHM295</span>
+      <span class="lot-no">295-26-0402-A</span>
+      <span class="dn-badge dn-normal">D+28</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">3</span></div>
+  <div class="cal-cell"><span class="cell-daynum">4</span></div>
+
+  <!-- Week 2 -->
+  <div class="cal-cell"><span class="cell-daynum">5</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">6</span>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHN410</span>
+      <span class="lot-no">410-26-0406-A</span>
+      <span class="dn-badge dn-alert">D+24</span>
+    </div>
+  </div>
+  <div class="cal-cell">
+    <span class="cell-daynum">7</span>
+    <div class="lot-card dept-synth">
+      <span class="mat">LT-PHM220</span>
+      <span class="lot-no">220-26-0407-A</span>
+      <span class="dn-badge dn-normal">D+23</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">8</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">9</span>
+    <div class="lot-card dept-refine is-done">
+      <span class="mat">LT-PEM188</span>
+      <span class="lot-no">188-26-0409-A</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">10</span></div>
+  <div class="cal-cell"><span class="cell-daynum">11</span></div>
+
+  <!-- Week 3 -->
+  <div class="cal-cell"><span class="cell-daynum">12</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">13</span>
+    <div class="lot-card dept-synth">
+      <span class="mat">LT-EBM412</span>
+      <span class="lot-no">412-26-0413-A</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">14</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">15</span>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHM301</span>
+      <span class="lot-no">301-26-0415-A</span>
+      <span class="has-result">📊 LT94 88%</span>
+    </div>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-HBL220</span>
+      <span class="lot-no">220H-26-0415-B</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">16</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">17</span>
+    <div class="lot-card dept-refine is-urgent">
+      <span class="mat">LT-PEM188</span>
+      <span class="lot-no">188-26-0417-B</span>
+      <span class="has-result">📊 LT95 99%</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">18</span></div>
+
+  <!-- Week 4 -->
+  <div class="cal-cell"><span class="cell-daynum">19</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">20</span>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHN410</span>
+      <span class="lot-no">410-26-0420-B</span>
+      <span class="has-result">📊 LT95 ★</span>
+    </div>
+    <div class="lot-card dept-synth">
+      <span class="mat">LT-PHM295</span>
+      <span class="lot-no">295-26-0420-C</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">21</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">22</span>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHM220</span>
+      <span class="lot-no">220-26-0422-A</span>
+    </div>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-EIL550</span>
+      <span class="lot-no">550-26-0422-B</span>
+    </div>
+    <div class="cell-more">+1개</div>
+  </div>
+  <div class="cal-cell">
+    <span class="cell-daynum">23</span>
+    <div class="lot-card dept-refine is-urgent">
+      <span class="mat">LT-EBM412</span>
+      <span class="lot-no">412-26-0423-A</span>
+      <span class="has-result">📊 LT94 88%</span>
+    </div>
+  </div>
+  <div class="cal-cell"><span class="cell-daynum">24</span></div>
+  <div class="cal-cell"><span class="cell-daynum">25</span></div>
+
+  <!-- Week 5 (today = 30) -->
+  <div class="cal-cell"><span class="cell-daynum">26</span></div>
+  <div class="cal-cell"><span class="cell-daynum">27</span></div>
+  <div class="cal-cell">
+    <span class="cell-daynum">28</span>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHM295</span>
+      <span class="lot-no">295-26-0428-A</span>
+    </div>
+  </div>
+  <div class="cal-cell">
+    <span class="cell-daynum">29</span>
+    <div class="lot-card dept-synth">
+      <span class="mat">LT-HBL220</span>
+      <span class="lot-no">220H-26-0429-A</span>
+    </div>
+  </div>
+  <div class="cal-cell is-today">
+    <span class="cell-daynum">30</span>
+    <div class="lot-card dept-refine is-urgent">
+      <span class="mat">LT-PHM295</span>
+      <span class="lot-no">295-26-0418-A</span>
+      <span class="dn-badge dn-alert">D+12</span>
+    </div>
+    <div class="lot-card dept-refine">
+      <span class="mat">LT-PHN410</span>
+      <span class="lot-no">410-26-0420-B</span>
+    </div>
+  </div>
+  <div class="cal-cell other-month"><span class="cell-daynum">1</span></div>
+  <div class="cal-cell other-month"><span class="cell-daynum">2</span></div>
+</div>
+</body>
+</html>

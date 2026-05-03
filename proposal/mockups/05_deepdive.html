@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>예시 — Batch Deep-Dive (Mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../assets/css/global_style.css">
+<style>
+body { background: var(--bg); padding: 30px; }
+.example-banner {
+  position: fixed; top: 12px; right: 14px;
+  background: #f59e0b; color: #fff;
+  padding: 5px 14px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.dd-wrap { max-width: 1100px; margin: 0 auto; }
+
+.dd-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+.dd-context-label { font-size: 11px; font-weight: 700; color: #f59e0b; }
+.dd-context-batch { font-size: 16px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+.dd-context-info { font-size: 12px; color: var(--text-muted); flex: 1; }
+.dd-close { background: var(--surface); border: 1px solid var(--border); padding: 5px 14px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+.dd-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 14px; }
+.dd-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.dd-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: var(--font-mono); }
+.dd-table th, .dd-table td { padding: 7px 10px; text-align: center; border: 1px solid var(--border); }
+.dd-table th { background: var(--surface-2); color: var(--accent); font-family: var(--font-body); font-size: 11px; }
+.dd-table td.item-name { text-align: left; font-weight: 600; color: var(--text); font-family: var(--font-body); background: var(--surface); }
+.dd-table td.stage-name { text-align: left; font-weight: 700; color: var(--text); font-family: var(--font-body); background: var(--surface-2); font-size: 11px; }
+.cell-ok { color: #1d6fd6; font-weight: 600; }
+.cell-ng { color: #ef4444; font-weight: 700; background: rgba(239, 68, 68, 0.06) !important; }
+.judge-ok { color: #10b981; font-weight: 700; }
+.judge-ng { color: #ef4444; font-weight: 700; }
+
+.summary-row { display: flex; gap: 12px; margin-bottom: 14px; }
+.summary-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+.summary-card.alert { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.04); }
+.summary-card .lbl { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; }
+.summary-card .val { font-size: 20px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+.summary-card.alert .val { color: #ef4444; }
+</style>
+</head>
+<body>
+<div class="example-banner">예시 / MOCKUP — 실제 데이터 아님</div>
+
+<div class="dd-wrap">
+
+  <!-- Context bar -->
+  <div class="dd-context">
+    <span class="dd-context-label">⚠ Batch Deep-Dive</span>
+    <span class="dd-context-batch">RM-2604-X2</span>
+    <span class="dd-context-info">계보: SY-2603-B1 / SY-2603-B2 → RM-2604-X2 → P1-2604-K1 → PHM295-26F-001</span>
+    <button class="dd-close">✕ 닫기</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="lbl">측정 항목 수</div>
+      <div class="val">12</div>
+    </div>
+    <div class="summary-card alert">
+      <div class="lbl">이탈 항목</div>
+      <div class="val">1 / 12</div>
+    </div>
+    <div class="summary-card">
+      <div class="lbl">평균 USL 여유</div>
+      <div class="val">23.4%</div>
+    </div>
+    <div class="summary-card">
+      <div class="lbl">측정일</div>
+      <div class="val" style="font-size:14px;">2026-04-12</div>
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div class="dd-card">
+    <div class="dd-card-header">
+      <span>측정값 상세 — RM-2604-X2 (정제원재료)</span>
+      <span style="font-size:11px;color:var(--text-muted);font-weight:500;">소수 3자리 표시</span>
+    </div>
+    <table class="dd-table">
+      <thead>
+        <tr>
+          <th style="width:160px;">측정 항목</th>
+          <th style="width:90px;">측정값</th>
+          <th>USL</th>
+          <th>LSL</th>
+          <th>UCL</th>
+          <th>LCL</th>
+          <th style="width:60px;">판정</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="stage-name" colspan="7">PH633 합성원재료(TPBC) COA</td>
+        </tr>
+        <tr>
+          <td class="item-name">순도 (%)</td>
+          <td class="cell-ok">99.124</td>
+          <td>99.500</td>
+          <td>98.000</td>
+          <td>99.300</td>
+          <td>98.500</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">Tm (℃)</td>
+          <td class="cell-ng">230.842</td>
+          <td>230.000</td>
+          <td>226.000</td>
+          <td>229.000</td>
+          <td>227.000</td>
+          <td class="judge-ng">NG</td>
+        </tr>
+        <tr>
+          <td class="item-name">잔류 용매 (ppm)</td>
+          <td class="cell-ok">28.300</td>
+          <td>50.000</td>
+          <td>—</td>
+          <td>35.000</td>
+          <td>—</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">색차 (ΔE)</td>
+          <td class="cell-ok">0.840</td>
+          <td>1.500</td>
+          <td>—</td>
+          <td>1.000</td>
+          <td>—</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">수분 (%)</td>
+          <td class="cell-ok">0.082</td>
+          <td>0.200</td>
+          <td>—</td>
+          <td>0.150</td>
+          <td>—</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="stage-name" colspan="7">PH633 정제원재료 IQC</td>
+        </tr>
+        <tr>
+          <td class="item-name">외관 (육안)</td>
+          <td class="cell-ok">PASS</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">입도 D50 (μm)</td>
+          <td class="cell-ok">12.450</td>
+          <td>15.000</td>
+          <td>8.000</td>
+          <td>13.500</td>
+          <td>9.500</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">중금속 (ppm)</td>
+          <td class="cell-ok">3.200</td>
+          <td>10.000</td>
+          <td>—</td>
+          <td>7.000</td>
+          <td>—</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+        <tr>
+          <td class="item-name">고형분 (%)</td>
+          <td class="cell-ok">98.420</td>
+          <td>—</td>
+          <td>97.000</td>
+          <td>—</td>
+          <td>97.500</td>
+          <td class="judge-ok">OK</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Notes -->
+  <div class="dd-card" style="background: rgba(239,68,68,0.04); border-color: rgba(239,68,68,0.3);">
+    <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:8px;">⚠ 이탈 분석</div>
+    <div style="font-size:12px;line-height:1.7;color:var(--text);">
+      <strong>Tm = 230.842 ℃</strong> — USL(230.0 ℃) 0.84℃ 초과.<br>
+      ▸ 동일 Lot의 합성품 SY-2603-B1, SY-2603-B2 모두 정상 범위 (228~229℃) 확인.<br>
+      ▸ 정제 공정 변수(승화 온도) 점검 필요 — App 15(P/N Flow)에서 해당 단계 작업 이력 확인.<br>
+      ▸ 후속 P1-2604-K1, PHM295-26F-001로 이전된 영향 평가 필요.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

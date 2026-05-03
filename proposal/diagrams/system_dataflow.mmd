@@ -1,0 +1,62 @@
+%% Quality Data Hub — 통합 데이터 흐름
+%% 색상 규칙: 초록=구현완료, 주황=개발예정, 회색=미래확장
+flowchart LR
+    %% ── 입력 단계 ──────────────────────────────────────
+    IQC["원자재 IQC<br/>App 13"]:::future
+    SYN["합성 Lot<br/>App 15<br/>P/N Flow"]:::done
+    REF["정제 Lot<br/>App 15"]:::done
+
+    %% ── 측정·분석 단계 ─────────────────────────────────
+    LOTSCH["Lot 이관 일정<br/>App 06"]:::done
+    OLED["OLED IVL/LT<br/>App 01"]:::done
+    HPLC["HPLC/DSC<br/>App 03"]:::done
+    LCMS["LC/MS<br/>App 16"]:::done
+
+    %% ── 통합 분석 단계 ─────────────────────────────────
+    CPL["Lot 추적 & SQC<br/>App 05"]:::done
+    DASH["품질 대시보드<br/>App 10"]:::done
+
+    %% ── 표준 정의 ──────────────────────────────────────
+    SPEC["제품 Spec & CTQ<br/>App 12"]:::future
+    EXTC["외부코드<br/>App 09"]:::future
+
+    %% ── 출력 단계 ──────────────────────────────────────
+    COA_DEV["COA 개발용<br/>App 07"]:::future
+    COA_PROD["COA 양산용<br/>App 08"]:::future
+    LGD["LGD 사전심사<br/>App 02"]:::done
+    SDC["SDC 사전심사<br/>App 04"]:::wip
+
+    %% ── 역추적 (Phase 3) ──────────────────────────────
+    COMP["컴플레인<br/>App 11"]:::future
+
+    %% ── 흐름 연결 ──────────────────────────────────────
+    IQC -->|입고 데이터| SYN
+    SYN -->|공정 이력| REF
+    REF -->|이관 등록| LOTSCH
+    LOTSCH -->|결과 입력 embed| OLED
+    OLED -->|IVL/LT 결과| CPL
+    HPLC -->|분석 데이터| CPL
+    LCMS -->|분석 데이터| CPL
+    REF -->|품질 측정값| CPL
+
+    CPL -->|Batch별 측정| DASH
+    OLED -.->|oled_results| DASH
+
+    SPEC -->|관리한계·항목| CPL
+    SPEC -->|COA 항목| COA_PROD
+    SPEC -->|판정 기준| IQC
+
+    CPL -->|규격 충족 데이터| COA_PROD
+    CPL -->|개발 데이터| COA_DEV
+    EXTC -->|고객 코드 변환| COA_PROD
+
+    CPL -->|소재 정보| LGD
+    CPL -->|소재 정보| SDC
+
+    COMP -.->|Lot 번호| CPL
+    CPL -.->|계보 역추적| COMP
+
+    %% ── 스타일 ────────────────────────────────────────
+    classDef done   fill:#10b981,stroke:#059669,color:#fff,stroke-width:2px
+    classDef wip    fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef future fill:#9ca3af,stroke:#6b7280,color:#fff,stroke-width:2px
