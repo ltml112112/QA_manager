@@ -1,30 +1,13 @@
 (function () {
 'use strict';
 
-/* ── 테마 동기화 ─────────────────────────────────────────────────────── */
-function applyTheme(t) {
-  document.documentElement.dataset.theme = t;
-  localStorage.setItem('qa_theme', t);
-}
-applyTheme(localStorage.getItem('qa_theme') || 'dark');
-window.addEventListener('message', function (e) {
-  if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-});
-
-/* ── Firebase 초기화 ─────────────────────────────────────────────────── */
-var firebaseConfig = {
-  apiKey:            "AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc",
-  authDomain:        "qa-manager-9c145.firebaseapp.com",
-  databaseURL:       "https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "qa-manager-9c145",
-  storageBucket:     "qa-manager-9c145.firebasestorage.app",
-  messagingSenderId: "1037146076792",
-  appId:             "1:1037146076792:web:b8ddcdb31d527d2d545f8d"
-};
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+/* ── Firebase 초기화 (공통 설정 사용) ────────────────────────────────
+   테마 동기화·Firebase config는 index.html에서 공통 모듈 로드.
+──────────────────────────────────────────────────────────────────── */
+QA_initFirebase();
 var _db        = firebase.database();
-var DB_REF     = _db.ref('lot_schedule');
-var RESULT_REF = _db.ref('oled_results');
+var DB_REF     = _db.ref(QA_DB_PATHS.lotSchedule);
+var RESULT_REF = _db.ref(QA_DB_PATHS.oledResults);
 
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var STATE = {

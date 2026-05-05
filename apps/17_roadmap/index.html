@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../assets/css/global_style.css">
+<!-- 공통 모듈 (테마 — 17번은 라이트 기본) -->
+<script>window.QA_THEME_DEFAULT = 'light';</script>
+<script src="../../assets/js/theme-sync.js"></script>
 <style>
 body { padding: 0; }
 .rd-wrap { max-width: 1080px; margin: 0 auto; padding: 28px 32px 80px; }
@@ -827,17 +830,6 @@ body { padding: 0; }
   </div>
 
 </div>
-<script>
-(function() {
-  function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'light');
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
-</script>
+<!-- 테마 동기화는 head의 theme-sync.js가 담당 -->
 </body>
 </html>

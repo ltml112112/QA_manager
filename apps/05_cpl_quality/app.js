@@ -2,17 +2,7 @@
    CPL 통합 품질 & 이력 관리 시스템
    ══════════════════════════════════════════════════════════════ */
 
-/* ── 테마 동기화 ── */
-(function() {
-  function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
+/* ── 테마 동기화는 index.html의 theme-sync.js가 담당 ── */
 
 /* ── Mermaid 초기화 ── */
 

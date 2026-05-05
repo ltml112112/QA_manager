@@ -423,22 +423,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- 공통 설정 (Firebase config·DB 경로·도메인/관리자 화이트리스트) -->
+<script src="./assets/js/firebase-config.js"></script>
 <script>
 (function () {
-  var firebaseConfig = {
-    apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
-    authDomain:        'qa-manager-9c145.firebaseapp.com',
-    databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
-    projectId:         'qa-manager-9c145',
-    storageBucket:     'qa-manager-9c145.firebasestorage.app',
-    messagingSenderId: '1037146076792',
-    appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
-  };
+  var firebaseConfig  = window.QA_FIREBASE_CONFIG;
+  var ALLOWED_DOMAIN  = window.QA_AUTH.allowedDomain;
+  var ADMIN_EMAILS    = window.QA_AUTH.adminEmails;
 
-  var ALLOWED_DOMAIN  = '@ltml.co.kr';
-  var ADMIN_EMAILS    = ['jhbaik@ltml.co.kr'];
-
-  firebase.initializeApp(firebaseConfig);
+  QA_initFirebase();
   var auth = firebase.auth();
   // firebase-database-compat.js 로드 실패 등을 대비해 try-catch
   var db;
@@ -503,7 +496,7 @@
           var role   = existingData ? existingData.role
                      : (ADMIN_EMAILS.indexOf(lEmail) !== -1) ? 'admin' : 'user';
           if (db) {
-            return db.ref('portal_users/' + user.uid)
+            return db.ref(window.QA_DB_PATHS.portalUsers + '/' + user.uid)
               .set({ role: role, email: user.email, createdAt: existingData ? (existingData.createdAt || Date.now()) : Date.now() })
               .then(function() { return role; });
           }
@@ -634,7 +627,7 @@
       return;
     }
 
-    var userRef = db.ref('portal_users/' + user.uid);
+    var userRef = db.ref(window.QA_DB_PATHS.portalUsers + '/' + user.uid);
 
     // Firebase RTDB WebSocket 연결 실패 시 promise가 영원히 pending될 수 있음
     // → 5초 타임아웃으로 강제 진입
@@ -740,7 +733,7 @@
           secAuth.signOut();
           var entry = { role: role, email: email, createdAt: Date.now(), mustChangePw: true };
           if (window._portalDb) {
-            return window._portalDb.ref('portal_users/' + uid).set(entry)
+            return window._portalDb.ref(window.QA_DB_PATHS.portalUsers + '/' + uid).set(entry)
               .then(function () { results.push({ email: email, ok: true, uid: uid }); next(); });
           }
           results.push({ email: email, ok: true, uid: uid });
