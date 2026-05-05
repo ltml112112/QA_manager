@@ -38,7 +38,10 @@
   var SDK_VER  = '10.12.0';
   var SDK_BASE = 'https://www.gstatic.com/firebasejs/' + SDK_VER + '/';
 
-  var FIREBASE_CONFIG = {
+  /* firebase-config.js가 먼저 로드돼 있으면 그 설정을 쓰고,
+     아니면 fallback으로 인라인 정의 사용. 이 가드는 외부 도메인 iframe
+     공격 등 비정상 환경에서도 동작해야 하므로 자체 fallback 보유. */
+  var FIREBASE_CONFIG = window.QA_FIREBASE_CONFIG || {
     apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
     authDomain:        'qa-manager-9c145.firebaseapp.com',
     databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
@@ -47,6 +50,7 @@
     messagingSenderId: '1037146076792',
     appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
   };
+  var PORTAL_USERS_PATH = (window.QA_DB_PATHS && window.QA_DB_PATHS.portalUsers) || 'portal_users';
 
   /* ── 로딩 오버레이 ─────────────────────────────────────────────────── */
   var _style = document.createElement('style');
@@ -197,7 +201,7 @@
         _blocked('권한 확인 시간 초과.');
       }, 5000);
 
-      _db.ref('portal_users/' + user.uid + '/role').once('value')
+      _db.ref(PORTAL_USERS_PATH + '/' + user.uid + '/role').once('value')
         .then(function (snap) {
           clearTimeout(_dbTimer);
           if (snap.val() === 'admin') {

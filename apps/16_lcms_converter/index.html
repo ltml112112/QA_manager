@@ -11,6 +11,10 @@
 
 <link rel="stylesheet" href="../../assets/css/global_style.css">
 
+<!-- 공통 모듈 (테마 — 16번은 라이트 기본) -->
+<script>window.QA_THEME_DEFAULT = 'light';</script>
+<script src="../../assets/js/theme-sync.js"></script>
+<script src="../../assets/js/utils.js"></script>
 <script>window._AG_ADMIN_ONLY = true;</script>
 <script src="../../assets/js/auth_guard.js"></script>
 
@@ -559,17 +563,7 @@ table.fmt-tbl th {
 </div>
 
 <script>
-/* ── 테마 동기화 (포털 표준 IIFE) ───────────────────── */
-(function () {
-  function applyTheme(t) {
-    document.documentElement.dataset.theme = t;
-    localStorage.setItem('qa_theme', t);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'light');
-  window.addEventListener('message', function (e) {
-    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
+/* 테마 동기화는 head의 theme-sync.js가 담당 (라이트 기본) */
 
 /* ── PDF.js 워커 ─────────────────────────────────── */
 pdfjsLib.GlobalWorkerOptions.workerSrc =

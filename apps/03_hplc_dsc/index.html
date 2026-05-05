@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../../assets/css/global_style.css">
+<!-- 공통 모듈 (테마·유틸) -->
+<script src="../../assets/js/theme-sync.js"></script>
+<script src="../../assets/js/utils.js"></script>
 <script>window._AG_ADMIN_ONLY = true;</script>
 <script src="../../assets/js/auth_guard.js"></script>
 
@@ -1402,16 +1405,7 @@ btnDl.addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 });
 
-(function() {
-  function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
+/* 테마 동기화는 head의 theme-sync.js가 담당 */
 </script>
 </body>
 </html>

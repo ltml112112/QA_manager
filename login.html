@@ -248,18 +248,11 @@ body {
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<!-- 공통 설정 (Firebase config 단일 소스) -->
+<script src="./assets/js/firebase-config.js"></script>
 <script>
 (function () {
-  var firebaseConfig = {
-    apiKey:            'AIzaSyAk9PGqBHxiG9fVwVZZg6ZGBOWaaSAXOBc',
-    authDomain:        'qa-manager-9c145.firebaseapp.com',
-    databaseURL:       'https://qa-manager-9c145-default-rtdb.asia-southeast1.firebasedatabase.app',
-    projectId:         'qa-manager-9c145',
-    storageBucket:     'qa-manager-9c145.firebasestorage.app',
-    messagingSenderId: '1037146076792',
-    appId:             '1:1037146076792:web:b8ddcdb31d527d2d545f8d'
-  };
-  firebase.initializeApp(firebaseConfig);
+  QA_initFirebase();
   var auth = firebase.auth();
 
   var checking = document.getElementById('loginChecking');
