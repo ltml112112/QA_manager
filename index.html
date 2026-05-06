@@ -331,6 +331,92 @@
 .um-result-err { color: var(--portal-danger); font-weight: 700; font-size: 13px; }
 .um-result-email { flex: 1; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--portal-text); }
 .um-result-msg  { font-size: 11px; color: var(--portal-text-muted); }
+/* ── 사용자 관리 모달 — 탭 ────────────────────────────────────── */
+.um-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--portal-border);
+  padding: 0 20px;
+  gap: 4px;
+}
+.um-tab {
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--portal-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.um-tab:hover { color: var(--portal-text); }
+.um-tab.um-tab-active { color: var(--portal-accent); border-bottom-color: var(--portal-accent); }
+/* ── 사용자 관리 모달 — 사용자 목록 ─────────────────────────── */
+.um-user-list {
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.um-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--portal-border);
+  gap: 12px;
+}
+.um-user-item:last-child { border-bottom: none; }
+.um-user-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.um-user-email {
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--portal-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.um-user-created { font-size: 10px; color: var(--portal-text-muted); }
+.um-user-pw-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--portal-warning);
+}
+.um-user-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.um-user-role {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.um-user-role.role-admin { background: var(--portal-accent); color: #fff; }
+.um-user-role.role-user {
+  background: var(--portal-surface-2);
+  color: var(--portal-text-muted);
+  border: 1px solid var(--portal-border);
+}
+.um-role-btn {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--portal-border);
+  background: transparent;
+  color: var(--portal-text-muted);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.um-role-btn:hover:not(:disabled) { background: var(--portal-surface-2); color: var(--portal-text); }
+.um-role-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.um-list-msg {
+  text-align: center;
+  padding: 28px;
+  font-size: 13px;
+  color: var(--portal-text-muted);
+}
 </style>
 </head>
 <body>
@@ -382,12 +468,18 @@
 
 <!-- 사용자 관리 모달 (관리자 전용) -->
 <div class="um-overlay" id="umOverlay" style="display:none;">
-  <div class="um-modal">
+  <div class="um-modal" style="width:min(560px,100vw - 32px);">
     <div class="um-header">
-      <span class="um-title">👥 사용자 계정 생성</span>
+      <span class="um-title">👥 사용자 관리</span>
       <button class="um-close" id="umClose">✕</button>
     </div>
-    <div class="um-body">
+    <!-- 탭 -->
+    <div class="um-tabs">
+      <button class="um-tab um-tab-active" id="umTabCreate" data-panel="umPanelCreate">계정 생성</button>
+      <button class="um-tab" id="umTabList" data-panel="umPanelList">사용자 목록</button>
+    </div>
+    <!-- 패널 1: 계정 생성 -->
+    <div id="umPanelCreate" class="um-body">
       <div>
         <label class="um-label">이메일 주소 (한 줄에 하나씩)</label>
         <textarea class="um-textarea" id="umEmails" placeholder="kim@ltml.co.kr&#10;park@ltml.co.kr&#10;lee@ltml.co.kr"></textarea>
@@ -411,6 +503,12 @@
       </div>
       <button class="um-btn" id="umCreateBtn">계정 생성</button>
       <div id="umResults"></div>
+    </div>
+    <!-- 패널 2: 사용자 목록 -->
+    <div id="umPanelList" class="um-body" style="display:none;">
+      <div id="umUserListWrap">
+        <div class="um-list-msg">탭을 열면 목록을 불러옵니다.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -502,7 +600,7 @@
           }
           return Promise.resolve(role);
         })
-        .then(function(role) { openPortal(role, user.email); })
+        .then(function(role) { openPortal(role, user.email, user.uid); })
         .catch(function(err) {
           btn.disabled = false; btn.textContent = '비밀번호 변경 후 접속';
           if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
@@ -555,9 +653,10 @@
   }
 
   /* 인증 완료 후 포털 열기 (중복 방지) */
-  function openPortal(role, email) {
+  function openPortal(role, email, uid) {
     if (_portalReady) return;
     _portalReady = true;
+    window._currentUserUid = uid || null;
 
     document.getElementById('userEmailText').textContent = email;
     var badge = document.getElementById('userRoleBadge');
@@ -623,7 +722,7 @@
     // DB를 사용할 수 없으면 기본 역할로 바로 열기
     if (!db) {
       var fallbackRole = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
-      openPortal(fallbackRole, userEmail);
+      openPortal(fallbackRole, userEmail, user.uid);
       return;
     }
 
@@ -634,7 +733,7 @@
     var _dbTimer = setTimeout(function () {
       if (!_portalReady) {
         var role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
-        openPortal(role, userEmail);
+        openPortal(role, userEmail, user.uid);
       }
     }, 5000);
 
@@ -656,13 +755,13 @@
         return;
       }
 
-      openPortal(role, userEmail);
+      openPortal(role, userEmail, user.uid);
     }).catch(function () {
       // DB 조회 실패(권한 거부 등) 시 기본 역할로 포털 열기
       clearTimeout(_dbTimer);
       if (_portalReady) return;
       var role = (ADMIN_EMAILS.indexOf(email) !== -1) ? 'admin' : 'user';
-      openPortal(role, userEmail);
+      openPortal(role, userEmail, user.uid);
     });
   });
 
@@ -681,8 +780,30 @@
   var createBtn = document.getElementById('umCreateBtn');
   var resultsEl = document.getElementById('umResults');
 
+  /* ── 탭 전환 ────────────────────────────────────────────────── */
+  var tabs   = document.querySelectorAll('.um-tab');
+  var panels = { umPanelCreate: document.getElementById('umPanelCreate'),
+                 umPanelList:   document.getElementById('umPanelList') };
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) { t.classList.remove('um-tab-active'); });
+      tab.classList.add('um-tab-active');
+      Object.keys(panels).forEach(function (k) { panels[k].style.display = 'none'; });
+      var panelId = tab.dataset.panel;
+      panels[panelId].style.display = '';
+      if (panelId === 'umPanelList') loadUserList();
+    });
+  });
+
+  /* ── 모달 열기 / 닫기 ────────────────────────────────────────── */
   document.getElementById('userMgmtBtn').addEventListener('click', function () {
     resultsEl.innerHTML = '';
+    // 항상 '계정 생성' 탭으로 시작
+    tabs.forEach(function (t) { t.classList.remove('um-tab-active'); });
+    document.getElementById('umTabCreate').classList.add('um-tab-active');
+    Object.keys(panels).forEach(function (k) { panels[k].style.display = 'none'; });
+    panels.umPanelCreate.style.display = '';
     overlay.style.display = 'flex';
     document.getElementById('umEmails').focus();
   });
@@ -692,6 +813,84 @@
   }
   document.getElementById('umClose').addEventListener('click', closeModal);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+
+  /* ── 사용자 목록 로드 ──────────────────────────────────────── */
+  function loadUserList() {
+    var wrap = document.getElementById('umUserListWrap');
+    wrap.innerHTML = '<div class="um-list-msg">불러오는 중...</div>';
+    if (!window._portalDb) {
+      wrap.innerHTML = '<div class="um-list-msg">DB에 연결되지 않았습니다.</div>';
+      return;
+    }
+    window._portalDb.ref(window.QA_DB_PATHS.portalUsers).once('value')
+      .then(function (snap) {
+        var users = snap.val() || {};
+        var entries = Object.keys(users).map(function (uid) {
+          return { uid: uid, data: users[uid] };
+        });
+        if (!entries.length) {
+          wrap.innerHTML = '<div class="um-list-msg">등록된 사용자가 없습니다.</div>';
+          return;
+        }
+        // 생성일 내림차순 정렬
+        entries.sort(function (a, b) {
+          return (b.data.createdAt || 0) - (a.data.createdAt || 0);
+        });
+        var html = '<div class="um-user-list">';
+        entries.forEach(function (entry) {
+          var uid  = entry.uid;
+          var d    = entry.data;
+          var role = d.role || 'user';
+          var email = d.email || '(이메일 없음)';
+          var isAdmin    = role === 'admin';
+          var isSelf     = uid === window._currentUserUid;
+          var dateStr    = d.createdAt
+            ? new Date(d.createdAt).toLocaleDateString('ko-KR', { year:'numeric', month:'2-digit', day:'2-digit' })
+            : '';
+          html += '<div class="um-user-item">'
+            + '<div class="um-user-info">'
+            + '<span class="um-user-email">' + email + '</span>'
+            + '<span class="um-user-created">'
+            + dateStr
+            + (d.mustChangePw ? ' &nbsp;<span class="um-user-pw-tag">비밀번호 미변경</span>' : '')
+            + '</span>'
+            + '</div>'
+            + '<div class="um-user-actions">'
+            + '<span class="um-user-role ' + (isAdmin ? 'role-admin' : 'role-user') + '">'
+            + (isAdmin ? '관리자' : '사용자') + '</span>'
+            + '<button class="um-role-btn" data-uid="' + uid + '" data-role="' + role + '"'
+            + (isSelf ? ' disabled title="자신의 역할은 변경할 수 없습니다"' : '') + '>'
+            + (isAdmin ? '사용자로 변경' : '관리자로 변경')
+            + '</button>'
+            + '</div>'
+            + '</div>';
+        });
+        html += '</div>';
+        wrap.innerHTML = html;
+        // 역할 변경 버튼 이벤트
+        wrap.querySelectorAll('.um-role-btn:not([disabled])').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var newRole = btn.dataset.role === 'admin' ? 'user' : 'admin';
+            changeUserRole(btn.dataset.uid, newRole, btn);
+          });
+        });
+      })
+      .catch(function (err) {
+        wrap.innerHTML = '<div class="um-list-msg">오류: ' + err.message + '</div>';
+      });
+  }
+
+  function changeUserRole(uid, newRole, btn) {
+    btn.disabled = true;
+    btn.textContent = '변경 중...';
+    window._portalDb.ref(window.QA_DB_PATHS.portalUsers + '/' + uid + '/role')
+      .set(newRole)
+      .then(function () { loadUserList(); })
+      .catch(function (err) {
+        alert('역할 변경 실패: ' + err.message);
+        loadUserList();
+      });
+  }
 
   createBtn.addEventListener('click', function () {
     var raw  = document.getElementById('umEmails').value;
