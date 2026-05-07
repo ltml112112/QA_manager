@@ -2,7 +2,7 @@
 
 > Last updated: 2026-05-07
 
-`main.js`의 `apps` 배열이 포털 전체 탭 구성을 정의하고, `renderApps()`/`switchTab()`가 iframe lazy-load로 17개 앱 동시 Firebase 부팅 throttle을 막는다.
+`main.js`의 `apps` 배열이 포털 전체 탭 구성을 정의하고, `renderApps()`/`switchTab()`가 iframe lazy-load로 20개 앱 동시 Firebase 부팅 throttle을 막는다.
 
 ---
 
@@ -10,7 +10,7 @@
 
 `main.js`의 `renderApps()`는 모든 iframe을 만들지만 **첫 활성 탭만 src를 즉시 부여**, 나머지는 `iframe.dataset.src`에 보관. `switchTab()` 호출 시 `ensureIframeLoaded(id)`가 처음 클릭된 iframe에만 src를 설정 → **동시 Firebase 인스턴스 1~2개로 제한**.
 
-이 메커니즘 깨뜨리면 17+개 iframe 동시 부팅으로 listen throttle 재발 (Race B). `main.js` 수정 시 다음 두 곳 동시에 신경 쓸 것:
+이 메커니즘 깨뜨리면 20+개 iframe 동시 부팅으로 listen throttle 재발 (Race B). `main.js` 수정 시 다음 두 곳 동시에 신경 쓸 것:
 
 ```javascript
 // renderApps() 내부
