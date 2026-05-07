@@ -1034,8 +1034,17 @@ function scheduleRender() {
   _renderTimer = setTimeout(renderAll, 60);
 }
 
-function startSync() {
+/* ── 실시간 부착 (error cb + backoff 재부착) ─────────────────────────
+   PERMISSION_DENIED가 silent하게 listener를 죽이는 것을 방지. 인증 race
+   상황(IDB 하이드레이션 전 listen)에서 cancel 시 QA_whenAuthReady로
+   대기 후 재부착. backoff 1s → 2s → 4s → 8s.
+──────────────────────────────────────────────────────────────────── */
+var _itemsRetryMs   = 1000;
+var _resultsRetryMs = 1000;
+
+function attachItems() {
   DB_REF.on('value', function (snap) {
+    _itemsRetryMs = 1000;
     var val = snap.val();
     var arr = [];
     if (val && typeof val === 'object' && !Array.isArray(val)) {
@@ -1046,21 +1055,44 @@ function startSync() {
     STATE.items = arr;
     if (window._dashRefreshMatList) window._dashRefreshMatList();
     scheduleRender();
-  });
-  RESULT_REF.on('value', function (snap) {
-    STATE.results = snap.val() || {};
-    refreshLevelSelect();
-    scheduleRender();
+  }, function (err) {
+    console.warn('[dashboard] items listener cancelled:', err && err.code);
+    DB_REF.off('value');
+    var wait = Math.min(_itemsRetryMs, 8000);
+    _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
+    setTimeout(function () { QA_whenAuthReady(attachItems); }, wait);
   });
 }
 
-/* ── 진입 ────────────────────────────────────────────────────────────── */
+function attachResults() {
+  RESULT_REF.on('value', function (snap) {
+    _resultsRetryMs = 1000;
+    STATE.results = snap.val() || {};
+    refreshLevelSelect();
+    scheduleRender();
+  }, function (err) {
+    console.warn('[dashboard] results listener cancelled:', err && err.code);
+    RESULT_REF.off('value');
+    var wait = Math.min(_resultsRetryMs, 8000);
+    _resultsRetryMs = Math.min(_resultsRetryMs * 2, 8000);
+    setTimeout(function () { QA_whenAuthReady(attachResults); }, wait);
+  });
+}
+
+function startSync() {
+  attachItems();
+  attachResults();
+}
+
+/* ── 진입 ──────────────────────────────────────────────────────────────
+   Auth ready 까지 기다린 뒤 sync 시작 — iframe IDB 하이드레이션 race 방지.
+──────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   bindControls();
   initMonthRangeDefaults();
   updateMonthRangeVisibility();
   refreshLevelSelect();
-  startSync();
+  QA_whenAuthReady(startSync);
 });
 
 })();

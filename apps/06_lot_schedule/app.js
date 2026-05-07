@@ -121,50 +121,80 @@ function removeItem(id) {
   DB_REF.child(id).remove();
 }
 
-/* ── 실시간 동기화 ───────────────────────────────────────────────────── */
-var _syncStarted = false;
-function setupRealtimeSync() {
-  if (_syncStarted) return;
-  _syncStarted = true;
-  DB_REF.once('value', function (snap) {
-    var data = snap.val();
+/* ── 실시간 동기화 ─────────────────────────────────────────────────────
+   Auth가 IndexedDB에서 복원되기 전에 listener를 부착하면
+   PERMISSION_DENIED로 cancel 되고 silent하게 죽음. QA_whenAuthReady로
+   auth 발화 후 부착하고, error cb에서 backoff로 재부착.
+   _itemsAttached 플래그는 첫 success snapshot 도착 시점에 set →
+   실패하면 재진입 가능.
+──────────────────────────────────────────────────────────────────── */
+var _itemsAttached = false;
+var _itemsRetryMs  = 1000;  // 1s → 2s → 4s → 8s (max 8s)
 
-    if (data === null) {
-      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
-      var legacy = [];
-      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
-      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
-
-    } else if (Array.isArray(data)) {
-      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
-      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
-      DB_REF.set(_arrToObj(data.filter(Boolean)));
-      // 마이그레이션 후 리스너가 새 데이터를 자동 수신하므로 별도 처리 불필요
+function attachItemsListener() {
+  DB_REF.on('value', function (s) {
+    _itemsAttached = true;
+    _itemsRetryMs  = 1000;  // 성공 시 backoff 리셋
+    var val = s.val();
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
+    } else if (Array.isArray(val)) {
+      window._cachedItems = val.filter(Boolean);
+    } else {
+      window._cachedItems = [];
     }
-
-    // 실시간 구독 시작 (변경 즉시 재렌더)
-    DB_REF.on('value', function (s) {
-      var val = s.val();
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        // 정상 객체 포맷 — 값 배열로 변환
-        window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
-      } else if (Array.isArray(val)) {
-        // 마이그레이션 직전 순간 혹은 예외 상황 대비
-        window._cachedItems = val.filter(Boolean);
-      } else {
-        window._cachedItems = [];
-      }
-      renderCalendar();
-    });
+    renderCalendar();
+  }, function (err) {
+    // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
+    console.warn('[lot_schedule] items listener cancelled:', err && err.code);
+    DB_REF.off('value');
+    var wait = Math.min(_itemsRetryMs, 8000);
+    _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
+    setTimeout(function () {
+      QA_whenAuthReady(attachItemsListener);
+    }, wait);
   });
 }
 
+function setupRealtimeSync() {
+  // 마이그레이션 체크는 best-effort — 실패해도 listener 부착은 진행
+  DB_REF.once('value').then(function (snap) {
+    var data = snap.val();
+    if (data === null) {
+      var legacy = [];
+      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
+      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
+    } else if (Array.isArray(data)) {
+      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
+      DB_REF.set(_arrToObj(data.filter(Boolean)));
+    }
+  }).catch(function (err) {
+    console.warn('[lot_schedule] 마이그레이션 체크 실패 (listener는 계속):', err && err.code);
+  });
+  attachItemsListener();
+}
+
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
-function setupResultsSync() {
-  RESULT_REF.on('value', function(snap) {
+var _resultsRetryMs = 1000;
+
+function attachResultsListener() {
+  RESULT_REF.on('value', function (snap) {
+    _resultsRetryMs = 1000;
     window._cachedResults = snap.val() || {};
     renderCalendar();
+  }, function (err) {
+    console.warn('[lot_schedule] results listener cancelled:', err && err.code);
+    RESULT_REF.off('value');
+    var wait = Math.min(_resultsRetryMs, 8000);
+    _resultsRetryMs = Math.min(_resultsRetryMs * 2, 8000);
+    setTimeout(function () {
+      QA_whenAuthReady(attachResultsListener);
+    }, wait);
   });
+}
+
+function setupResultsSync() {
+  attachResultsListener();
 }
 
 function loadResult(lotId) {
@@ -1623,10 +1653,14 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
   renderCalendar();
 }, { passive: false });
 
-/* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+/* ── 초기 렌더 ─────────────────────────────────────────────────────────
+   Auth ready 까지 기다려서 sync 시작 — iframe IDB 하이드레이션 race 방지.
+──────────────────────────────────────────────────────────────────── */
 setFormDefaults();
-setupRealtimeSync();
-setupResultsSync();
+QA_whenAuthReady(function () {
+  setupRealtimeSync();
+  setupResultsSync();
+});
 
 /* ════════════════════════════════════════════════════════════════════════
    메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서

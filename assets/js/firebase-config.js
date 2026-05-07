@@ -50,4 +50,35 @@
     }
     return firebase;
   };
+
+  /* ── 헬퍼: 인증 준비 후 콜백 (타임아웃 fallback 포함) ────────────────
+     iframe에서 SDK가 IndexedDB로부터 세션 복원하기 전에 RTDB 리스너를
+     부착하면 PERMISSION_DENIED로 리스너가 취소되어 영구 실패함.
+     첫 non-null user 도착 시점에 cb를 호출. 단 5초 내 user가 안 오면
+     일단 cb를 발화시켜 영구 hang 되지 않도록 보장 (이후 RTDB error cb
+     쪽에서 재시도). cb는 정확히 1회만 호출됨.
+
+     사용 예:
+       QA_whenAuthReady(function () {
+         DB_REF.on('value', successCb, errorCb);
+       });
+  ──────────────────────────────────────────────────────────────────── */
+  root.QA_whenAuthReady = function (cb, timeoutMs) {
+    if (typeof firebase === 'undefined' || !firebase.auth) { cb(null); return; }
+    var auth = firebase.auth();
+    var fired = false;
+    function fire(u) {
+      if (fired) return;
+      fired = true;
+      try { if (typeof unsub === 'function') unsub(); } catch (e) {}
+      cb(u || null);
+    }
+    if (auth.currentUser) { fire(auth.currentUser); return; }
+    var unsub = auth.onAuthStateChanged(function (u) {
+      if (u) fire(u);
+      // null 발화는 무시 — IndexedDB 복원 전 일시적 null 일 수 있음
+    });
+    // hang 방지 — 시간 내에 user가 안 오면 일단 발화
+    setTimeout(function () { fire(null); }, timeoutMs || 5000);
+  };
 })(window);

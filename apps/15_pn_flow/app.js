@@ -7,19 +7,13 @@
 QA_initFirebase();
 var DB = firebase.database().ref(QA_DB_PATHS.pnFlowDocs);
 
-/* ── 현재 사용자 & 초기 로드 ─────────────────────── */
+/* ── 현재 사용자 & 초기 로드 ───────────────────────
+   _currentUser는 auth 변화 추적용으로만 사용. DB 리스너 부착은
+   QA_whenAuthReady에서 별도로 시작 (null 발화로 listener가 붙어
+   PERMISSION_DENIED로 영구 죽는 것 방지).
+─────────────────────────────────────────────────── */
 var _currentUser = null;
-var _loadStarted = false;
-firebase.auth().onAuthStateChanged(function(u) {
-  _currentUser = u;
-  // DB 리스너는 첫 auth 콜백 이후 1회만 붙임
-  // — auth 미해결 상태에서 on('value')를 붙이면 PERMISSION_DENIED로 리스너가
-  //   취소되거나 빈 스냅샷이 _firstLoad를 소모해 실제 데이터가 늦게 반영됨
-  if (!_loadStarted) {
-    _loadStarted = true;
-    load();
-  }
-});
+firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
 
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
@@ -187,8 +181,10 @@ function normDoc(d) {
   return d;
 }
 
+var _loadRetryMs = 1000;
 function load() {
   DB.on('value', function(snap) {
+    _loadRetryMs = 1000;  // 성공 시 backoff 리셋
     var incoming = snap.val() || {};
 
     if (_firstLoad) {
@@ -238,8 +234,24 @@ function load() {
     } else if (!STATE.editKey) {
       render();
     }
+  }, function(err) {
+    // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
+    console.warn('[pn_flow] DB listener cancelled:', err && err.code);
+    DB.off('value');
+    var wait = Math.min(_loadRetryMs, 8000);
+    _loadRetryMs = Math.min(_loadRetryMs * 2, 8000);
+    setTimeout(function() {
+      QA_whenAuthReady(load);
+    }, wait);
   });
 }
+
+/* ── 인증 준비 후 DB 부착 ────────────────────────
+   onAuthStateChanged 직접 사용 시 첫 발화가 null이면 listener가
+   permission denied로 영구 죽음. QA_whenAuthReady가 first non-null
+   user 또는 5초 timeout 후 발화.
+─────────────────────────────────────────────────── */
+QA_whenAuthReady(load);
 
 /* ── 뮤테이터 ───────────────────────────────────── */
 window.APP = {
