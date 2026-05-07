@@ -54,9 +54,17 @@
   /* ── 헬퍼: 인증 준비 후 콜백 (타임아웃 fallback 포함) ────────────────
      iframe에서 SDK가 IndexedDB로부터 세션 복원하기 전에 RTDB 리스너를
      부착하면 PERMISSION_DENIED로 리스너가 취소되어 영구 실패함.
-     첫 non-null user 도착 시점에 cb를 호출. 단 5초 내 user가 안 오면
-     일단 cb를 발화시켜 영구 hang 되지 않도록 보장 (이후 RTDB error cb
-     쪽에서 재시도). cb는 정확히 1회만 호출됨.
+
+     동작:
+       1. onAuthStateChanged 첫 non-null user 발화까지 대기
+          (currentUser shortcut 사용 안 함 — SDK 내부 auth state machine이
+           초기화 완료된 시점에만 onAuthStateChanged가 발화하므로 더 안정적)
+       2. getIdToken(false)로 ID 토큰을 명시적으로 가져옴 — 이 promise가
+          resolve된 시점에는 SDK가 auth를 RTDB WebSocket connection에
+          전파했음이 보장됨 (race 차단의 핵심)
+       3. cb 호출 — 이후 DB 호출은 안전
+       4. timeoutMs(기본 5초) 내에 1·2가 끝나지 않으면 cb(null)로 fallback —
+          영구 hang 방지. 이후 RTDB error cb 쪽에서 backoff 재시도
 
      사용 예:
        QA_whenAuthReady(function () {
@@ -67,18 +75,26 @@
     if (typeof firebase === 'undefined' || !firebase.auth) { cb(null); return; }
     var auth = firebase.auth();
     var fired = false;
+    var hardTimer;
+    var unsub;
+
     function fire(u) {
       if (fired) return;
       fired = true;
+      clearTimeout(hardTimer);
       try { if (typeof unsub === 'function') unsub(); } catch (e) {}
-      cb(u || null);
+      if (!u) { cb(null); return; }
+      // ID 토큰 가져오기 — auth가 RTDB connection에 전파될 때까지 대기
+      u.getIdToken(false).then(function () { cb(u); })
+                        .catch(function () { cb(u); });
     }
-    if (auth.currentUser) { fire(auth.currentUser); return; }
-    var unsub = auth.onAuthStateChanged(function (u) {
+
+    // onAuthStateChanged는 등록 직후 1회 발화 (auth 상태 결정된 후).
+    // currentUser shortcut 사용 안 함 — SDK 내부 동기화 보장이 우선.
+    unsub = auth.onAuthStateChanged(function (u) {
       if (u) fire(u);
-      // null 발화는 무시 — IndexedDB 복원 전 일시적 null 일 수 있음
     });
-    // hang 방지 — 시간 내에 user가 안 오면 일단 발화
-    setTimeout(function () { fire(null); }, timeoutMs || 5000);
+
+    hardTimer = setTimeout(function () { fire(null); }, timeoutMs || 5000);
   };
 })(window);

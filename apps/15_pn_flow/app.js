@@ -181,10 +181,20 @@ function normDoc(d) {
   return d;
 }
 
-var _loadRetryMs = 1000;
+var _loadRetryMs = 500;
+var _loadHangTimer = null;
 function load() {
+  // silent hang 안전망 — 8초 내 첫 snapshot 미도착 시 재부착
+  if (_loadHangTimer) clearTimeout(_loadHangTimer);
+  _loadHangTimer = setTimeout(function() {
+    console.warn('[pn_flow] DB: 8s 내 첫 snapshot 미도착, 재부착');
+    DB.off('value');
+    setTimeout(function() { QA_whenAuthReady(load); }, 500);
+  }, 8000);
+
   DB.on('value', function(snap) {
-    _loadRetryMs = 1000;  // 성공 시 backoff 리셋
+    if (_loadHangTimer) { clearTimeout(_loadHangTimer); _loadHangTimer = null; }
+    _loadRetryMs = 500;  // 성공 시 backoff 리셋
     var incoming = snap.val() || {};
 
     if (_firstLoad) {
@@ -235,6 +245,7 @@ function load() {
       render();
     }
   }, function(err) {
+    if (_loadHangTimer) { clearTimeout(_loadHangTimer); _loadHangTimer = null; }
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
     console.warn('[pn_flow] DB listener cancelled:', err && err.code);
     DB.off('value');

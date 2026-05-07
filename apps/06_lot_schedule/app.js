@@ -124,17 +124,28 @@ function removeItem(id) {
 /* ── 실시간 동기화 ─────────────────────────────────────────────────────
    Auth가 IndexedDB에서 복원되기 전에 listener를 부착하면
    PERMISSION_DENIED로 cancel 되고 silent하게 죽음. QA_whenAuthReady로
-   auth 발화 후 부착하고, error cb에서 backoff로 재부착.
-   _itemsAttached 플래그는 첫 success snapshot 도착 시점에 set →
-   실패하면 재진입 가능.
+   auth+토큰 발화 후 부착하고, error cb에서 backoff로 재부착.
+
+   추가 안전망: 첫 snapshot이 8초 내 안 오면 silent hang으로 간주하고
+   강제 재부착 (success/error 둘 다 안 발화하는 SDK 상태 대비).
+
+   backoff: 500ms → 1s → 2s → 4s → 8s (max 8s)
 ──────────────────────────────────────────────────────────────────── */
-var _itemsAttached = false;
-var _itemsRetryMs  = 1000;  // 1s → 2s → 4s → 8s (max 8s)
+var _itemsRetryMs = 500;
+var _itemsHangTimer = null;
 
 function attachItemsListener() {
+  // silent hang 안전망 — 8초 내 첫 snapshot 미도착 시 재부착
+  if (_itemsHangTimer) clearTimeout(_itemsHangTimer);
+  _itemsHangTimer = setTimeout(function () {
+    console.warn('[lot_schedule] items: 8s 내 첫 snapshot 미도착, 재부착');
+    DB_REF.off('value');
+    setTimeout(function () { QA_whenAuthReady(attachItemsListener); }, 500);
+  }, 8000);
+
   DB_REF.on('value', function (s) {
-    _itemsAttached = true;
-    _itemsRetryMs  = 1000;  // 성공 시 backoff 리셋
+    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
+    _itemsRetryMs = 500;  // 성공 시 backoff 리셋
     var val = s.val();
     if (val && typeof val === 'object' && !Array.isArray(val)) {
       window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
@@ -145,6 +156,7 @@ function attachItemsListener() {
     }
     renderCalendar();
   }, function (err) {
+    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
     console.warn('[lot_schedule] items listener cancelled:', err && err.code);
     DB_REF.off('value');
@@ -175,14 +187,24 @@ function setupRealtimeSync() {
 }
 
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
-var _resultsRetryMs = 1000;
+var _resultsRetryMs = 500;
+var _resultsHangTimer = null;
 
 function attachResultsListener() {
+  if (_resultsHangTimer) clearTimeout(_resultsHangTimer);
+  _resultsHangTimer = setTimeout(function () {
+    console.warn('[lot_schedule] results: 8s 내 첫 snapshot 미도착, 재부착');
+    RESULT_REF.off('value');
+    setTimeout(function () { QA_whenAuthReady(attachResultsListener); }, 500);
+  }, 8000);
+
   RESULT_REF.on('value', function (snap) {
-    _resultsRetryMs = 1000;
+    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
+    _resultsRetryMs = 500;
     window._cachedResults = snap.val() || {};
     renderCalendar();
   }, function (err) {
+    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
     console.warn('[lot_schedule] results listener cancelled:', err && err.code);
     RESULT_REF.off('value');
     var wait = Math.min(_resultsRetryMs, 8000);
