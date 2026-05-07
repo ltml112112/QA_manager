@@ -14,6 +14,17 @@ var RESULT_REF  = _db.ref(QA_DB_PATHS.oledResults);  // {lotId: {savedAt, ivl, l
 var _currentUser = null;
 firebase.auth().onAuthStateChanged(function (u) { _currentUser = u; });
 
+/* ── WebSocket 연결 상태 진단 (.info/connected) ─────────────────────
+   Firebase 특수 경로 — auth 불필요, 네트워크 연결 상태만 반환.
+   true 발화 안 되면 WebSocket 자체가 안 열리는 환경 문제 (방화벽/확장).
+──────────────────────────────────────────────────────────────────── */
+(function () {
+  var connT0 = Date.now();
+  firebase.database().ref('.info/connected').on('value', function (s) {
+    console.log('[lot_schedule] .info/connected:', s.val(), { ms: Date.now() - connT0 });
+  });
+})();
+
 /** 현재 사용자 정보를 감사 추적 객체로 반환 */
 function _byInfo() {
   if (!_currentUser) return null;
@@ -121,50 +132,133 @@ function removeItem(id) {
   DB_REF.child(id).remove();
 }
 
-/* ── 실시간 동기화 ───────────────────────────────────────────────────── */
-var _syncStarted = false;
-function setupRealtimeSync() {
-  if (_syncStarted) return;
-  _syncStarted = true;
-  DB_REF.once('value', function (snap) {
-    var data = snap.val();
+/* ── 실시간 동기화 ─────────────────────────────────────────────────────
+   Auth가 IndexedDB에서 복원되기 전에 listener를 부착하면
+   PERMISSION_DENIED로 cancel 되고 silent하게 죽음. QA_whenAuthReady로
+   auth+토큰 발화 후 부착하고, error cb에서 backoff로 재부착.
 
-    if (data === null) {
-      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
-      var legacy = [];
-      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
-      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
+   로딩 UI: 첫 snapshot 도착 시 #loadingOverlay 제거. error cb에서
+   "재연결 중..." 표시. 사용자가 빈 화면을 보고 새로고침하지 않도록.
 
-    } else if (Array.isArray(data)) {
-      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
-      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
-      DB_REF.set(_arrToObj(data.filter(Boolean)));
-      // 마이그레이션 후 리스너가 새 데이터를 자동 수신하므로 별도 처리 불필요
+   주의: silent hang 안전망(8s timeout 후 강제 재부착)은 의도적으로
+   제거함. WebSocket cold setup이 8초보다 오래 걸리는 환경(Singapore
+   region, 17개 iframe 동시 부팅 등)에서 안전망이 connection을 매번
+   죽여 영원히 안 살아남는 loop 발생. SDK 자체 retry + error cb로 충분.
+
+   backoff: 500ms → 1s → 2s → 4s → 8s
+──────────────────────────────────────────────────────────────────── */
+var _itemsRetryMs = 500;
+var _itemsT0 = null;       // attach 시각 (진단용)
+var _itemsStuckTimer = null;  // 30s 후 stuck UI 표시
+
+function _setLoadingState(state, msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (!overlay) return;
+  if (state === 'hide') { overlay.style.display = 'none'; return; }
+  overlay.style.display = '';
+  var txt = overlay.querySelector('.lo-text');
+  if (txt) txt.textContent = msg || '데이터 로딩 중...';
+  overlay.classList.toggle('lo-retry', state === 'retry');
+  overlay.classList.toggle('lo-stuck', state === 'stuck');
+  // stuck 상태에선 "다시 시도" 버튼 표시
+  var btn = overlay.querySelector('.lo-retry-btn');
+  if (btn) btn.style.display = (state === 'stuck') ? '' : 'none';
+}
+
+function _clearStuckTimer() {
+  if (_itemsStuckTimer) { clearTimeout(_itemsStuckTimer); _itemsStuckTimer = null; }
+}
+
+function attachItemsListener() {
+  _itemsT0 = Date.now();
+  console.log('[lot_schedule] items: .on(value) 부착');
+  // 30초 후에도 응답 없으면 stuck UI 표시 (사용자에게 다시 시도 버튼 노출)
+  _clearStuckTimer();
+  _itemsStuckTimer = setTimeout(function () {
+    console.warn('[lot_schedule] items: 30s 응답 없음, stuck UI 표시');
+    _setLoadingState('stuck', '연결이 지연되고 있습니다');
+  }, 30000);
+
+  DB_REF.on('value', function (s) {
+    _clearStuckTimer();
+    console.log('[lot_schedule] items: 첫 snapshot 도착', { ms: Date.now() - _itemsT0 });
+    _setLoadingState('hide');
+    _itemsRetryMs = 500;  // 성공 시 backoff 리셋
+    var val = s.val();
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
+    } else if (Array.isArray(val)) {
+      window._cachedItems = val.filter(Boolean);
+    } else {
+      window._cachedItems = [];
     }
-
-    // 실시간 구독 시작 (변경 즉시 재렌더)
-    DB_REF.on('value', function (s) {
-      var val = s.val();
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        // 정상 객체 포맷 — 값 배열로 변환
-        window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
-      } else if (Array.isArray(val)) {
-        // 마이그레이션 직전 순간 혹은 예외 상황 대비
-        window._cachedItems = val.filter(Boolean);
-      } else {
-        window._cachedItems = [];
-      }
-      renderCalendar();
-    });
+    renderCalendar();
+  }, function (err) {
+    _clearStuckTimer();
+    // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
+    console.warn('[lot_schedule] items listener cancelled:', err && err.code, { ms: Date.now() - _itemsT0 });
+    _setLoadingState('retry', '연결 재시도 중...');
+    DB_REF.off('value');
+    var wait = Math.min(_itemsRetryMs, 8000);
+    _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
+    setTimeout(function () {
+      QA_whenAuthReady(attachItemsListener);
+    }, wait);
   });
 }
 
+/* 사용자가 stuck UI에서 "다시 시도" 클릭 시 강제 재부착 */
+window._lotScheduleManualRetry = function () {
+  console.log('[lot_schedule] 사용자 수동 재시도');
+  _clearStuckTimer();
+  _setLoadingState('loading', '데이터 로딩 중...');
+  try { DB_REF.off('value'); } catch (e) {}
+  try { RESULT_REF.off('value'); } catch (e) {}
+  QA_whenAuthReady(function () {
+    attachItemsListener();
+    attachResultsListener();
+  });
+};
+
+function setupRealtimeSync() {
+  // 마이그레이션 체크는 best-effort — 실패해도 listener 부착은 진행
+  DB_REF.once('value').then(function (snap) {
+    var data = snap.val();
+    if (data === null) {
+      var legacy = [];
+      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
+      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
+    } else if (Array.isArray(data)) {
+      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
+      DB_REF.set(_arrToObj(data.filter(Boolean)));
+    }
+  }).catch(function (err) {
+    console.warn('[lot_schedule] 마이그레이션 체크 실패 (listener는 계속):', err && err.code);
+  });
+  attachItemsListener();
+}
+
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
-function setupResultsSync() {
-  RESULT_REF.on('value', function(snap) {
+var _resultsRetryMs = 500;
+
+function attachResultsListener() {
+  RESULT_REF.on('value', function (snap) {
+    _resultsRetryMs = 500;
     window._cachedResults = snap.val() || {};
     renderCalendar();
+  }, function (err) {
+    console.warn('[lot_schedule] results listener cancelled:', err && err.code);
+    RESULT_REF.off('value');
+    var wait = Math.min(_resultsRetryMs, 8000);
+    _resultsRetryMs = Math.min(_resultsRetryMs * 2, 8000);
+    setTimeout(function () {
+      QA_whenAuthReady(attachResultsListener);
+    }, wait);
   });
+}
+
+function setupResultsSync() {
+  attachResultsListener();
 }
 
 function loadResult(lotId) {
@@ -1623,10 +1717,14 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
   renderCalendar();
 }, { passive: false });
 
-/* ── 초기 렌더 ───────────────────────────────────────────────────────── */
+/* ── 초기 렌더 ─────────────────────────────────────────────────────────
+   Auth ready 까지 기다려서 sync 시작 — iframe IDB 하이드레이션 race 방지.
+──────────────────────────────────────────────────────────────────── */
 setFormDefaults();
-setupRealtimeSync();
-setupResultsSync();
+QA_whenAuthReady(function () {
+  setupRealtimeSync();
+  setupResultsSync();
+});
 
 /* ════════════════════════════════════════════════════════════════════════
    메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서

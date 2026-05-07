@@ -50,4 +50,76 @@
     }
     return firebase;
   };
+
+  /* ── 헬퍼: 인증 준비 후 콜백 (타임아웃 fallback 포함) ────────────────
+     iframe에서 SDK가 IndexedDB로부터 세션 복원하기 전에 RTDB 리스너를
+     부착하면 PERMISSION_DENIED로 리스너가 취소되어 영구 실패함.
+
+     동작:
+       1. onAuthStateChanged 첫 non-null user 발화까지 대기
+          (currentUser shortcut 사용 안 함 — SDK 내부 auth state machine이
+           초기화 완료된 시점에만 onAuthStateChanged가 발화하므로 더 안정적)
+       2. getIdToken(false)로 ID 토큰을 명시적으로 가져옴 — 이 promise가
+          resolve된 시점에는 SDK가 auth를 RTDB WebSocket connection에
+          전파했음이 보장됨 (race 차단의 핵심)
+       3. cb 호출 — 이후 DB 호출은 안전
+       4. timeoutMs(기본 5초) 내에 1·2가 끝나지 않으면 cb(null)로 fallback —
+          영구 hang 방지. 이후 RTDB error cb 쪽에서 backoff 재시도
+
+     사용 예:
+       QA_whenAuthReady(function () {
+         DB_REF.on('value', successCb, errorCb);
+       });
+  ──────────────────────────────────────────────────────────────────── */
+  root.QA_whenAuthReady = function (cb, timeoutMs) {
+    if (typeof firebase === 'undefined' || !firebase.auth) { cb(null); return; }
+    var auth = firebase.auth();
+    var fired = false;
+    var cbCalled = false;
+    var hardTimer;
+    var unsub;
+    var t0 = Date.now();
+
+    function safeCb(u) {
+      if (cbCalled) return;
+      cbCalled = true;
+      console.log('[QA_whenAuthReady] cb 발화', { ms: Date.now() - t0, hasUser: !!u });
+      cb(u);
+    }
+
+    function fire(u) {
+      if (fired) return;
+      fired = true;
+      clearTimeout(hardTimer);
+      try { if (typeof unsub === 'function') unsub(); } catch (e) {}
+      if (!u) {
+        console.warn('[QA_whenAuthReady] timeout/null fallback firing — auth 미해결', { ms: Date.now() - t0 });
+        safeCb(null);
+        return;
+      }
+      // ID 토큰 가져오기 — auth가 RTDB connection에 전파될 때까지 대기.
+      // getIdToken은 토큰 만료 시 서버 갱신을 시도하는데, 네트워크 문제로
+      // hang 가능 → 자체 3초 timeout 으로 보호.
+      var tokenTimer = setTimeout(function () {
+        console.warn('[QA_whenAuthReady] getIdToken 3s timeout, 그래도 진행', { ms: Date.now() - t0 });
+        safeCb(u);
+      }, 3000);
+      u.getIdToken(false).then(function () {
+        clearTimeout(tokenTimer);
+        safeCb(u);
+      }).catch(function (e) {
+        clearTimeout(tokenTimer);
+        console.warn('[QA_whenAuthReady] getIdToken 실패:', e && e.code);
+        safeCb(u);
+      });
+    }
+
+    // onAuthStateChanged는 등록 직후 1회 발화 (auth 상태 결정된 후).
+    // currentUser shortcut 사용 안 함 — SDK 내부 동기화 보장이 우선.
+    unsub = auth.onAuthStateChanged(function (u) {
+      if (u) fire(u);
+    });
+
+    hardTimer = setTimeout(function () { fire(null); }, timeoutMs || 5000);
+  };
 })(window);

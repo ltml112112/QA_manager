@@ -329,12 +329,27 @@ function renderApps(role) {
     iframe.title = app.label;
     if (app.sandbox) { iframe.setAttribute('sandbox', app.sandbox); }
     iframe.addEventListener('load', function () { hideLoader(app.id); });
-    iframe.src = app.src;
+    // ── Lazy-load ─────────────────────────────────────────────────────
+    // 17개 iframe 동시 부팅 시 각 iframe이 자기 Firebase WebSocket을 열어
+    // RTDB 서버 측 동시 listen 큐가 초과되어 일부 listener가 silent하게
+    // 응답을 못 받는 경우 발생. 활성 탭만 즉시 로드하고 나머지는 사용자가
+    // 클릭하는 시점에 src 설정 → 동시 connection 1개로 제한.
+    iframe.dataset.src = app.src;
+    if (isFirst) iframe.src = app.src;
 
     wrap.appendChild(loader);
     wrap.appendChild(iframe);
     frameArea.appendChild(wrap);
   });
+}
+
+/* iframe src를 lazy하게 설정 (한 번만) — switchTab 호출 시 사용 */
+function ensureIframeLoaded(id) {
+  var iframe = document.getElementById('iframe-' + id);
+  if (!iframe) return;
+  if (!iframe.src && iframe.dataset.src) {
+    iframe.src = iframe.dataset.src;
+  }
 }
 
 // ── 탭 전환 ──────────────────────────────────────────────────────────────────
@@ -349,6 +364,8 @@ function switchTab(id, btn) {
   btn.classList.add('active');
   btn.setAttribute('aria-selected', 'true');
   document.getElementById('tab-' + id).classList.add('active');
+  // 처음 활성화되는 iframe이면 src를 lazy로 설정
+  ensureIframeLoaded(id);
 }
 
 // ── 로더 숨기기 ──────────────────────────────────────────────────────────────

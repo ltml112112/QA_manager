@@ -9,6 +9,17 @@ var _db        = firebase.database();
 var DB_REF     = _db.ref(QA_DB_PATHS.lotSchedule);
 var RESULT_REF = _db.ref(QA_DB_PATHS.oledResults);
 
+/* ── WebSocket 연결 상태 진단 (.info/connected) ─────────────────────
+   Firebase 특수 경로 — auth 불필요, 네트워크 연결 상태만 반환.
+   true 발화 안 되면 WebSocket 자체가 안 열리는 환경 문제.
+──────────────────────────────────────────────────────────────────── */
+(function () {
+  var connT0 = Date.now();
+  _db.ref('.info/connected').on('value', function (s) {
+    console.log('[dashboard] .info/connected:', s.val(), { ms: Date.now() - connT0 });
+  });
+})();
+
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var STATE = {
   items:     [],          // lot_schedule 전체
@@ -1034,8 +1045,49 @@ function scheduleRender() {
   _renderTimer = setTimeout(renderAll, 60);
 }
 
-function startSync() {
+/* ── 실시간 부착 (error cb + backoff 재부착) ─────────────────────────
+   PERMISSION_DENIED가 silent하게 listener를 죽이는 것을 방지.
+   인증 race 상황(IDB 하이드레이션 전 listen)에서 cancel 시
+   QA_whenAuthReady로 대기 후 재부착.
+   첫 snapshot 도착 시 #loadingOverlay 제거 (items 기준).
+   backoff 500ms → 1s → 2s → 4s → 8s.
+──────────────────────────────────────────────────────────────────── */
+var _itemsRetryMs   = 500;
+var _resultsRetryMs = 500;
+var _itemsT0 = null;
+var _itemsStuckTimer = null;
+
+function _setLoadingState(state, msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (!overlay) return;
+  if (state === 'hide') { overlay.style.display = 'none'; return; }
+  overlay.style.display = '';
+  var txt = overlay.querySelector('.lo-text');
+  if (txt) txt.textContent = msg || '데이터 로딩 중...';
+  overlay.classList.toggle('lo-retry', state === 'retry');
+  overlay.classList.toggle('lo-stuck', state === 'stuck');
+  var btn = overlay.querySelector('.lo-retry-btn');
+  if (btn) btn.style.display = (state === 'stuck') ? '' : 'none';
+}
+
+function _clearItemsStuckTimer() {
+  if (_itemsStuckTimer) { clearTimeout(_itemsStuckTimer); _itemsStuckTimer = null; }
+}
+
+function attachItems() {
+  _itemsT0 = Date.now();
+  console.log('[dashboard] items: .on(value) 부착');
+  _clearItemsStuckTimer();
+  _itemsStuckTimer = setTimeout(function () {
+    console.warn('[dashboard] items: 30s 응답 없음, stuck UI 표시');
+    _setLoadingState('stuck', '연결이 지연되고 있습니다');
+  }, 30000);
+
   DB_REF.on('value', function (snap) {
+    _clearItemsStuckTimer();
+    console.log('[dashboard] items: 첫 snapshot 도착', { ms: Date.now() - _itemsT0 });
+    _setLoadingState('hide');
+    _itemsRetryMs = 500;
     var val = snap.val();
     var arr = [];
     if (val && typeof val === 'object' && !Array.isArray(val)) {
@@ -1046,21 +1098,58 @@ function startSync() {
     STATE.items = arr;
     if (window._dashRefreshMatList) window._dashRefreshMatList();
     scheduleRender();
-  });
-  RESULT_REF.on('value', function (snap) {
-    STATE.results = snap.val() || {};
-    refreshLevelSelect();
-    scheduleRender();
+  }, function (err) {
+    _clearItemsStuckTimer();
+    console.warn('[dashboard] items listener cancelled:', err && err.code, { ms: Date.now() - _itemsT0 });
+    _setLoadingState('retry', '연결 재시도 중...');
+    DB_REF.off('value');
+    var wait = Math.min(_itemsRetryMs, 8000);
+    _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
+    setTimeout(function () { QA_whenAuthReady(attachItems); }, wait);
   });
 }
 
-/* ── 진입 ────────────────────────────────────────────────────────────── */
+window._dashboardManualRetry = function () {
+  console.log('[dashboard] 사용자 수동 재시도');
+  _clearItemsStuckTimer();
+  _setLoadingState('loading', '데이터 로딩 중...');
+  try { DB_REF.off('value'); } catch (e) {}
+  try { RESULT_REF.off('value'); } catch (e) {}
+  QA_whenAuthReady(function () {
+    attachItems();
+    attachResults();
+  });
+};
+
+function attachResults() {
+  RESULT_REF.on('value', function (snap) {
+    _resultsRetryMs = 500;
+    STATE.results = snap.val() || {};
+    refreshLevelSelect();
+    scheduleRender();
+  }, function (err) {
+    console.warn('[dashboard] results listener cancelled:', err && err.code);
+    RESULT_REF.off('value');
+    var wait = Math.min(_resultsRetryMs, 8000);
+    _resultsRetryMs = Math.min(_resultsRetryMs * 2, 8000);
+    setTimeout(function () { QA_whenAuthReady(attachResults); }, wait);
+  });
+}
+
+function startSync() {
+  attachItems();
+  attachResults();
+}
+
+/* ── 진입 ──────────────────────────────────────────────────────────────
+   Auth ready 까지 기다린 뒤 sync 시작 — iframe IDB 하이드레이션 race 방지.
+──────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
   bindControls();
   initMonthRangeDefaults();
   updateMonthRangeVisibility();
   refreshLevelSelect();
-  startSync();
+  QA_whenAuthReady(startSync);
 });
 
 })();

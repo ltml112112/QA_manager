@@ -12,6 +12,16 @@
 </head>
 <body>
 
+<!-- 데이터 로딩 오버레이 (첫 snapshot 도착 시 JS가 제거) -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="lo-spinner"></div>
+  <div class="lo-text">데이터 로딩 중...</div>
+  <button type="button" class="lo-retry-btn" style="display:none"
+    onclick="window._pnFlowManualRetry && window._pnFlowManualRetry()">
+    다시 시도
+  </button>
+</div>
+
 <!-- ── LIST VIEW ─────────────────────────────────────────────── -->
 <div id="v-list">
   <header class="pf-topbar">
