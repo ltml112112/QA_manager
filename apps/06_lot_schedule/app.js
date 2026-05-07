@@ -145,10 +145,8 @@ function setupRealtimeSync() {
       }
       renderCalendar();
     }, function (err) {
-      console.error('[lot_schedule] 실시간 구독 취소됨, 재연결 예약:', err && err.code);
-      setTimeout(function () {
-        if (firebase.auth().currentUser) attachLive();
-      }, 2000);
+      console.error('[lot_schedule] 실시간 구독 취소됨, 재연결 대기:', err && err.code);
+      setTimeout(function () { QA_whenAuthReady(attachLive); }, 2000);
     });
   }
 
@@ -179,10 +177,8 @@ function setupResultsSync() {
       window._cachedResults = snap.val() || {};
       renderCalendar();
     }, function (err) {
-      console.error('[lot_schedule] 결과 구독 취소됨, 재연결 예약:', err && err.code);
-      setTimeout(function () {
-        if (firebase.auth().currentUser) attachResults();
-      }, 2000);
+      console.error('[lot_schedule] 결과 구독 취소됨, 재연결 대기:', err && err.code);
+      setTimeout(function () { QA_whenAuthReady(attachResults); }, 2000);
     });
   }
   attachResults();

@@ -169,6 +169,7 @@ function save() {
 window.addEventListener('beforeunload', flushSave);
 
 var _firstLoad = true;
+var _dbListening = false; // DB.on listener가 현재 살아있는지 추적
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
 var SEED_VER = 5;
 
@@ -190,6 +191,8 @@ function normDoc(d) {
 }
 
 function load() {
+  if (_dbListening) return; // 이미 살아있는 리스너가 있으면 중복 부착 방지
+  _dbListening = true;
   DB.on('value', function(snap) {
     var incoming = snap.val() || {};
 
@@ -241,13 +244,19 @@ function load() {
       render();
     }
   }, function (err) {
-    // listener가 PERMISSION_DENIED 등으로 취소된 경우 auth 복원 확인 후 재부착
-    console.error('[pn_flow] 실시간 구독 취소됨, 재연결 예약:', err && err.code);
-    setTimeout(function () {
-      if (firebase.auth().currentUser) load();
-    }, 2000);
+    // listener 취소 시 — auth가 준비되면 자동 재연결 (2초 후 QA_whenAuthReady로 대기)
+    _dbListening = false;
+    console.error('[pn_flow] 실시간 구독 취소됨, 재연결 대기:', err && err.code);
+    setTimeout(function () { QA_whenAuthReady(load); }, 2000);
   });
 }
+
+// 탭 전환 시 포털에서 'tabActivated' 메시지를 받으면 리스너 상태 점검
+window.addEventListener('message', function (e) {
+  if (e.data && e.data.type === 'tabActivated' && !_dbListening) {
+    QA_whenAuthReady(load);
+  }
+});
 
 /* ── 뮤테이터 ───────────────────────────────────── */
 window.APP = {
