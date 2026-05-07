@@ -12,7 +12,7 @@
 
 iframe SDK가 IndexedDB로부터 세션 복원 전에 `.on('value')` 부착 시 PERMISSION_DENIED로 listener cancel. error cb 미등록이면 silent하게 죽고, `_syncStarted` 같은 시도-시점 flag 때문에 재시도도 차단됨.
 
-### Race B — 17개 iframe 동시 부팅 throttle
+### Race B — 다중 iframe(20+개) 동시 부팅 throttle
 
 모든 iframe이 동시에 Firebase WebSocket 열면 RTDB 서버 측 listen 큐가 throttle되어 일부 listener가 응답 자체를 못 받음 (success/error 둘 다 안 발화).
 

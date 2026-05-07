@@ -38,7 +38,7 @@
 }
 ```
 
-> 이 변수들은 `html[data-theme="dark"]`에서 **재정의되지 않음** → 다크 모드로 전환해도 사이드바는 항상 라이트.
+> 사이드바는 항상 라이트 고정 — 앱 콘텐츠 변수(`--bg` 등)와 격리됨.
 
 ### 1-B. 사이드바 너비
 
@@ -75,25 +75,9 @@
 }
 ```
 
-> 현재 기본 테마는 **라이트 모드** 기준으로 설정되어 있음.
+> **라이트 단일 테마**. 다크 모드는 사용하지 않음.
 
-### 1-D. 다크 모드 (미구현)
-
-현재 `global_style.css`에는 다크 모드 오버라이드 블록이 **존재하지 않음**. 각 앱의 `<html data-theme="dark">` 선언과 테마 동기화 IIFE만 남아 있어 사실상 라이트 테마만 동작함.
-
-필요 시 섹션 3-B 뒤에 다음 블록을 추가:
-
-```css
-html[data-theme="dark"] {
-  --bg:      #0f1117;
-  --surface: #1a1f2e;
-  /* ... 나머지 변수 오버라이드 */
-}
-```
-
-> **주의**: 여기서 `--portal-*` 변수는 절대 추가하지 않음. 추가하는 순간 다크 모드에서 사이드바도 어두워짐.
-
-### 1-E. 구형 변수명 Aliases → 섹션 3-C
+### 1-D. 구형 변수명 Aliases → 섹션 3-C
 
 `global_style.css` 섹션 3-C에는 각 앱이 기존에 쓰던 구형 변수명(`--bdr`, `--tx`, `--ink`, `--primary`, `--error`, `--card`, `--panel` 등)이 신형 변수의 alias로 정의되어 있음. 기존 앱 코드를 수정하지 않고도 동작하도록 유지하는 호환 레이어.
 
@@ -167,24 +151,8 @@ html[data-theme="dark"] {
 
 ---
 
-## 4. 테마 동기화
+## 4. 테마 정책
 
-- 포털 사이드바(`.sidebar`)는 **항상 라이트** — `--portal-*` 변수로 격리되어 테마 전환에 영향받지 않음
-- 탭 콘텐츠(iframe 내부)만 라이트/다크 전환
-- **현재 상태**: 테마 전환 버튼 미구현. `main.js`에 `postMessage` 전송 코드 없음
-- **구현 시**: 포털이 `postMessage({ type: 'setTheme', theme })` 전송 → 각 앱이 수신
-
-각 앱에 아래 수신 코드가 있어야 테마 동기화가 작동함 (현재 모든 앱에 포함되어 있음):
-
-```javascript
-(function() {
-  function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem('qa_theme', theme);
-  }
-  applyTheme(localStorage.getItem('qa_theme') || 'dark');
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'setTheme') applyTheme(e.data.theme);
-  });
-})();
-```
+- **라이트 단일 테마.** 다크 모드 미지원.
+- 포털 사이드바(`.sidebar`)는 `--portal-*` 변수로, 앱 콘텐츠는 `--bg/--surface/--accent` 등(`:root`)으로 분리되어 있음.
+- 일부 기존 앱 HTML에 `<html data-theme="dark">` 속성이나 테마 동기화 IIFE가 남아 있을 수 있으나, 매칭되는 다크 CSS가 없으므로 **사실상 no-op**. 신규 앱에는 추가하지 말 것.

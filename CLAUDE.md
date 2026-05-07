@@ -8,7 +8,7 @@
 
 ## ⚠️ 작업 전 필독 (Critical Rules)
 
-1. **`main.js` iframe lazy-load 단순화 금지** — 17개 iframe 동시 부팅 throttle 방지용. `iframe.dataset.src` + `if (isFirst) iframe.src` 분리 구조와 `switchTab()`의 `ensureIframeLoaded(id)` 호출은 절대 단순화하지 말 것. 자세히는 `@docs/architecture/iframe-loading.md`
+1. **`main.js` iframe lazy-load 단순화 금지** — 20개 iframe 동시 부팅 throttle 방지용. `iframe.dataset.src` + `if (isFirst) iframe.src` 분리 구조와 `switchTab()`의 `ensureIframeLoaded(id)` 호출은 절대 단순화하지 말 것. 자세히는 `@docs/architecture/iframe-loading.md`
 2. **RTDB 신규 앱은 반드시 `QA_whenAuthReady` 패턴** — 직접 `onAuthStateChanged` + `.on('value')` 사용 금지. errorCb 미등록 시 silent death + 빈 화면 영구 고착 발생. `@docs/architecture/firebase-rtdb.md`
 3. **`global_style.css` `:root` 변수 변경 시 02번 LGD 앱 인라인도 동기화 필수** — GAS URL 서빙으로 상대경로 안 먹음. 양쪽 동시 수정 + GAS 재배포. `@docs/architecture/design-system.md`
 4. **IVL 결과 색상(blue/red/purple) 하드코딩 유지** — 의미 있는 분석 결과 색상이므로 CSS 변수로 변경 금지. `@docs/apps/01-oled.md` 6절
@@ -22,6 +22,8 @@
 
 - 18·19·20번 측정 데이터 관리 앱 설계 진행 (Firebase 스키마 확정 단계). `@docs/apps/wip-placeholders.md` 4절
 - 05번 앱 Firebase 연동 개편 대기 (20번 구현 후 진행)
+
+> **전체 미결 작업·향후 STAGE 계획**: `@TODO.md` 참고 (성능·통신 표준화·리팩토링·측정 앱 구현·운영 강화)
 
 ---
 
@@ -110,11 +112,11 @@ Firebase Auth(Email/Password) + RTDB `portal_users/{uid}` 역할 정보로 admin
 **상세**: `@docs/architecture/firebase-rtdb.md`
 
 ### iframe Lazy-Load
-`main.js`의 `renderApps()`는 모든 iframe DOM을 만들지만 첫 활성 탭만 src 즉시 부여, 나머지는 `iframe.dataset.src`에 보관. `switchTab()` 시점에 `ensureIframeLoaded(id)`로 src 부여 → 17개 동시 Firebase 부팅 throttle 차단. `apps` 배열 스키마도 여기 참고.
+`main.js`의 `renderApps()`는 모든 iframe DOM을 만들지만 첫 활성 탭만 src 즉시 부여, 나머지는 `iframe.dataset.src`에 보관. `switchTab()` 시점에 `ensureIframeLoaded(id)`로 src 부여 → 20개 동시 Firebase 부팅 throttle 차단. `apps` 배열 스키마도 여기 참고.
 **상세**: `@docs/architecture/iframe-loading.md`
 
 ### 디자인 시스템
-`global_style.css` 8개 섹션. 사이드바 색상은 `--portal-*` 변수(섹션 3-A, 다크 모드 영향 없음), 앱 콘텐츠는 `--bg/--surface/--accent` 등(섹션 3-B). 페이지 타이틀은 좌측 세로 바 패턴(`.page-title`). 02번 LGD 앱만 GAS 서빙 fallback으로 인라인 CSS 유지.
+`global_style.css` 8개 섹션. 사이드바 색상은 `--portal-*` 변수(섹션 3-A), 앱 콘텐츠는 `--bg/--surface/--accent` 등(섹션 3-B). **라이트 단일 테마** — 다크 모드 미사용. 페이지 타이틀은 좌측 세로 바 패턴(`.page-title`). 02번 LGD 앱만 GAS 서빙 fallback으로 인라인 CSS 유지.
 **상세**: `@docs/architecture/design-system.md`
 
 ---
@@ -139,7 +141,7 @@ Firebase Auth(Email/Password) + RTDB `portal_users/{uid}` 역할 정보로 admin
 | 브랜치 | 내용 |
 |--------|------|
 | `claude/refactor-claude-docs-bzqXb` | CLAUDE.md를 슬림 지도(~15KB) + `docs/` 분할 구조로 리팩토링. 보안 규칙 정정, Critical Rules 박스, Glossary 추가 |
-| `claude/fix-firebase-data-loading-YJgdV` | Firebase RTDB 첫 진입 데이터 로딩 race + 17개 iframe 동시 부팅 throttle 수정 — `main.js` lazy-load + `QA_whenAuthReady` + error cb 재부착 + 로딩 오버레이 + 30s stuck UI (#129) |
+| `claude/fix-firebase-data-loading-YJgdV` | Firebase RTDB 첫 진입 데이터 로딩 race + 다중 iframe 동시 부팅 throttle 수정 — `main.js` lazy-load + `QA_whenAuthReady` + error cb 재부착 + 로딩 오버레이 + 30s stuck UI (#129) |
 | `claude/department-sorting-distinction-fHBNk` | `06_lot_schedule` 전체 기능 개발 — 부서 구분 로직·메일 파싱·배치 그룹화·UI 개편·검색 |
 | `claude/setup-firebase-project-yydA7` | `06_lot_schedule` Firebase Realtime Database 연동 — 실시간 다중 사용자 동기화 |
 
@@ -174,6 +176,5 @@ Firebase Auth(Email/Password) + RTDB `portal_users/{uid}` 역할 정보로 admin
 
 ## 추가 참고 — 도구별 공통 사항
 
-- **iframe 내부 동작**: 각 앱은 `<html data-theme="dark">` + 테마 동기화 IIFE 포함. `postMessage({ type: 'setTheme', theme })` 수신 처리.
 - **CSS 중복 방지**: `:root` 변수, reset, `body` 기본 스타일, `.card`, `.btn`, `.form-input` 등은 `global_style.css`가 제공. 앱 `<style>`에 다시 쓰지 말 것 (02번 LGD 예외).
 - **구형 변수명 호환**: `global_style.css` 섹션 3-C에 `--bdr`, `--tx`, `--ink`, `--primary`, `--error` 등 alias 정의 — 기존 앱 코드 수정 없이 동작.
