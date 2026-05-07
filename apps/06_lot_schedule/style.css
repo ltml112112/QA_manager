@@ -244,23 +244,6 @@ html, body {
   transition: background .15s, border-color .15s, color .15s;
 }
 .btn-search:hover { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
-.btn-refresh {
-  padding: 0 10px;
-  height: 36px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  font-family: var(--font-body);
-  transition: background .15s, border-color .15s, color .15s, transform .3s;
-  flex-shrink: 0;
-}
-.btn-refresh:hover { background: var(--surface-2); border-color: var(--accent); color: var(--accent); }
-.btn-refresh.spinning { animation: _refresh-spin .7s linear infinite; pointer-events: none; }
-@keyframes _refresh-spin { to { transform: rotate(360deg); } }
 
 
 /* ── 달력 본문 영역 ──────────────────────────────────────────────────── */

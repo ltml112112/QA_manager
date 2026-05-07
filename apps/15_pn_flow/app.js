@@ -12,11 +12,9 @@ var _currentUser = null;
 var _loadStarted = false;
 firebase.auth().onAuthStateChanged(function(u) {
   _currentUser = u;
-  // DB 리스너는 첫 non-null user 콜백 이후 1회만 붙임
-  // — auth 미해결 상태(u=null)에서 on('value')를 붙이면 PERMISSION_DENIED로
-  //   리스너가 취소되어 auth 복원 후에도 데이터가 안 들어오는 영구 실패가 발생.
-  //   따라서 user가 실제로 들어온 시점까지 반드시 대기.
-  if (!u) return;
+  // DB 리스너는 첫 auth 콜백 이후 1회만 붙임
+  // — auth 미해결 상태에서 on('value')를 붙이면 PERMISSION_DENIED로 리스너가
+  //   취소되거나 빈 스냅샷이 _firstLoad를 소모해 실제 데이터가 늦게 반영됨
   if (!_loadStarted) {
     _loadStarted = true;
     load();
@@ -169,7 +167,6 @@ function save() {
 window.addEventListener('beforeunload', flushSave);
 
 var _firstLoad = true;
-var _dbListening = false; // DB.on listener가 현재 살아있는지 추적
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
 var SEED_VER = 5;
 
@@ -191,8 +188,6 @@ function normDoc(d) {
 }
 
 function load() {
-  if (_dbListening) return; // 이미 살아있는 리스너가 있으면 중복 부착 방지
-  _dbListening = true;
   DB.on('value', function(snap) {
     var incoming = snap.val() || {};
 
@@ -243,41 +238,12 @@ function load() {
     } else if (!STATE.editKey) {
       render();
     }
-  }, function (err) {
-    // listener 취소 시 — auth가 준비되면 자동 재연결 (2초 후 QA_whenAuthReady로 대기)
-    _dbListening = false;
-    console.error('[pn_flow] 실시간 구독 취소됨, 재연결 대기:', err && err.code);
-    setTimeout(function () { QA_whenAuthReady(load); }, 2000);
-  });
-}
-
-// 탭 전환 시 포털에서 'tabActivated' 메시지를 받으면 리스너 상태 점검
-window.addEventListener('message', function (e) {
-  if (e.data && e.data.type === 'tabActivated' && !_dbListening) {
-    QA_whenAuthReady(load);
-  }
-});
-
-/* ── 수동 새로고침 ──────────────────────────────── */
-function manualRefresh() {
-  var btn = document.getElementById('btnRefresh');
-  if (btn) btn.classList.add('spinning');
-  DB.off('value');
-  _dbListening = false;
-  _firstLoad = true;
-  var done = false;
-  var stop = function () { if (!done) { done = true; if (btn) btn.classList.remove('spinning'); } };
-  setTimeout(stop, 3000);
-  QA_whenAuthReady(function () {
-    load();
-    DB.once('value').then(stop).catch(stop);
   });
 }
 
 /* ── 뮤테이터 ───────────────────────────────────── */
 window.APP = {
   onSearchInput: function() { renderList(); },
-  manualRefresh: manualRefresh,
   initSortable: function() {
     if (typeof Sortable === 'undefined') return;
     var docBody = document.getElementById('doc-body');

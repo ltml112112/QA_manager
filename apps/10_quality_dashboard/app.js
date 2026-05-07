@@ -877,7 +877,7 @@ function bindControls() {
   });
 
   // 새로고침
-  document.getElementById('btnRefresh').addEventListener('click', dashManualRefresh);
+  document.getElementById('btnRefresh').addEventListener('click', renderAll);
 
   // 월 범위 input
   var fromEl = document.getElementById('fromMonth');
@@ -1034,7 +1034,7 @@ function scheduleRender() {
   _renderTimer = setTimeout(renderAll, 60);
 }
 
-function attachItems() {
+function startSync() {
   DB_REF.on('value', function (snap) {
     var val = snap.val();
     var arr = [];
@@ -1046,40 +1046,11 @@ function attachItems() {
     STATE.items = arr;
     if (window._dashRefreshMatList) window._dashRefreshMatList();
     scheduleRender();
-  }, function (err) {
-    console.error('[dashboard] lot_schedule 구독 취소됨, 재연결 대기:', err && err.code);
-    setTimeout(function () { QA_whenAuthReady(attachItems); }, 2000);
   });
-}
-
-function attachResults() {
   RESULT_REF.on('value', function (snap) {
     STATE.results = snap.val() || {};
     refreshLevelSelect();
     scheduleRender();
-  }, function (err) {
-    console.error('[dashboard] oled_results 구독 취소됨, 재연결 대기:', err && err.code);
-    setTimeout(function () { QA_whenAuthReady(attachResults); }, 2000);
-  });
-}
-
-function startSync() {
-  attachItems();
-  attachResults();
-}
-
-function dashManualRefresh() {
-  var btn = document.getElementById('btnRefresh');
-  if (btn) btn.classList.add('spinning');
-  DB_REF.off('value');
-  RESULT_REF.off('value');
-  var done = false;
-  var stop = function () { if (!done) { done = true; if (btn) btn.classList.remove('spinning'); } };
-  setTimeout(stop, 3000);
-  QA_whenAuthReady(function () {
-    attachItems();
-    attachResults();
-    DB_REF.once('value').then(stop).catch(stop);
   });
 }
 
@@ -1089,8 +1060,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initMonthRangeDefaults();
   updateMonthRangeVisibility();
   refreshLevelSelect();
-  // auth 복원 후에만 RTDB 리스너 부착 (race condition 방지)
-  QA_whenAuthReady(startSync);
+  startSync();
 });
 
 })();
