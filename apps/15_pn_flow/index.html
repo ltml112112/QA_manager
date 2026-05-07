@@ -18,6 +18,7 @@
     <h1 class="pf-app-title">P/N 공정 Flow 관리</h1>
     <div style="display:flex;gap:12px;align-items:center;">
       <input id="list-search" type="search" placeholder="제목, 소재, 작성자 검색..." class="pf-inp" style="min-width: 220px;" oninput="APP.onSearchInput()">
+      <button class="btn btn-secondary pf-refresh-btn" id="btnRefresh" title="데이터 새로고침" onclick="APP.manualRefresh()">↻</button>
       <button class="btn btn-primary" onclick="APP.newDoc()">+ 새 문서</button>
     </div>
   </header>

@@ -99,6 +99,11 @@ body {
   background: var(--surface-2);
   transform: rotate(180deg);
 }
+.dash-btn-refresh.spinning {
+  animation: _dash-spin .7s linear infinite;
+  pointer-events: none;
+}
+@keyframes _dash-spin { to { transform: rotate(360deg); } }
 
 /* ── KPI 카드 ─────────────────────────────────────────── */
 .kpi-row {

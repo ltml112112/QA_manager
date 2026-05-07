@@ -514,3 +514,7 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-lot-header   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pf-step         { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+.pf-refresh-btn { padding: 0 10px; font-size: 16px; line-height: 1; flex-shrink: 0; transition: transform .3s; }
+.pf-refresh-btn.spinning { animation: _pf-spin .7s linear infinite; pointer-events: none; }
+@keyframes _pf-spin { to { transform: rotate(360deg); } }
