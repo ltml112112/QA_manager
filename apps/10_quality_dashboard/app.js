@@ -1035,23 +1035,39 @@ function scheduleRender() {
 }
 
 function startSync() {
-  DB_REF.on('value', function (snap) {
-    var val = snap.val();
-    var arr = [];
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      arr = Object.values(val).filter(function (v) { return v && v.id; });
-    } else if (Array.isArray(val)) {
-      arr = val.filter(Boolean);
-    }
-    STATE.items = arr;
-    if (window._dashRefreshMatList) window._dashRefreshMatList();
-    scheduleRender();
-  });
-  RESULT_REF.on('value', function (snap) {
-    STATE.results = snap.val() || {};
-    refreshLevelSelect();
-    scheduleRender();
-  });
+  function attachItems() {
+    DB_REF.on('value', function (snap) {
+      var val = snap.val();
+      var arr = [];
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        arr = Object.values(val).filter(function (v) { return v && v.id; });
+      } else if (Array.isArray(val)) {
+        arr = val.filter(Boolean);
+      }
+      STATE.items = arr;
+      if (window._dashRefreshMatList) window._dashRefreshMatList();
+      scheduleRender();
+    }, function (err) {
+      console.error('[dashboard] lot_schedule 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachItems();
+      }, 2000);
+    });
+  }
+  function attachResults() {
+    RESULT_REF.on('value', function (snap) {
+      STATE.results = snap.val() || {};
+      refreshLevelSelect();
+      scheduleRender();
+    }, function (err) {
+      console.error('[dashboard] oled_results 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachResults();
+      }, 2000);
+    });
+  }
+  attachItems();
+  attachResults();
 }
 
 /* ── 진입 ────────────────────────────────────────────────────────────── */
@@ -1060,7 +1076,8 @@ document.addEventListener('DOMContentLoaded', function () {
   initMonthRangeDefaults();
   updateMonthRangeVisibility();
   refreshLevelSelect();
-  startSync();
+  // auth 복원 후에만 RTDB 리스너 부착 (race condition 방지)
+  QA_whenAuthReady(startSync);
 });
 
 })();

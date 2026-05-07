@@ -50,4 +50,22 @@
     }
     return firebase;
   };
+
+  /* ── 헬퍼: 인증 완료(=non-null user) 후에만 콜백 실행 ───────────────
+     iframe에서 SDK가 IndexedDB로부터 세션 복원하기 전에 RTDB 리스너를
+     부착하면 PERMISSION_DENIED로 리스너가 취소되어 auth 복원 후에도
+     데이터가 안 들어오는 영구 실패가 발생함.
+     이 헬퍼로 첫 non-null user를 기다린 뒤 DB 호출을 시작해야 안전.
+  ──────────────────────────────────────────────────────────────────── */
+  root.QA_whenAuthReady = function (cb) {
+    if (typeof firebase === 'undefined' || !firebase.auth) return;
+    var auth = firebase.auth();
+    if (auth.currentUser) { cb(auth.currentUser); return; }
+    var unsub = auth.onAuthStateChanged(function (u) {
+      if (u) {
+        if (typeof unsub === 'function') unsub();
+        cb(u);
+      }
+    });
+  };
 })(window);

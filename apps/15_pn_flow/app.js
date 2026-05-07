@@ -12,9 +12,11 @@ var _currentUser = null;
 var _loadStarted = false;
 firebase.auth().onAuthStateChanged(function(u) {
   _currentUser = u;
-  // DB 리스너는 첫 auth 콜백 이후 1회만 붙임
-  // — auth 미해결 상태에서 on('value')를 붙이면 PERMISSION_DENIED로 리스너가
-  //   취소되거나 빈 스냅샷이 _firstLoad를 소모해 실제 데이터가 늦게 반영됨
+  // DB 리스너는 첫 non-null user 콜백 이후 1회만 붙임
+  // — auth 미해결 상태(u=null)에서 on('value')를 붙이면 PERMISSION_DENIED로
+  //   리스너가 취소되어 auth 복원 후에도 데이터가 안 들어오는 영구 실패가 발생.
+  //   따라서 user가 실제로 들어온 시점까지 반드시 대기.
+  if (!u) return;
   if (!_loadStarted) {
     _loadStarted = true;
     load();
@@ -238,6 +240,12 @@ function load() {
     } else if (!STATE.editKey) {
       render();
     }
+  }, function (err) {
+    // listener가 PERMISSION_DENIED 등으로 취소된 경우 auth 복원 확인 후 재부착
+    console.error('[pn_flow] 실시간 구독 취소됨, 재연결 예약:', err && err.code);
+    setTimeout(function () {
+      if (firebase.auth().currentUser) load();
+    }, 2000);
   });
 }
 
