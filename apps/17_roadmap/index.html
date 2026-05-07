@@ -274,27 +274,6 @@ body { padding: 0; }
 }
 .status-item.si-wip .si-tag { background: rgba(245,158,11,0.10); color: #b45309; }
 
-/* ── 목업 카드 ── */
-.mockup-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px 18px; text-decoration: none;
-  color: inherit; display: flex; flex-direction: column; gap: 6px;
-  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
-  cursor: pointer;
-}
-.mockup-card:hover {
-  box-shadow: 0 4px 16px rgba(190,0,57,0.10);
-  border-color: var(--accent); transform: translateY(-2px);
-}
-.mockup-badge {
-  display: inline-flex; gap: 4px; font-size: 10px; font-weight: 700;
-  padding: 2px 8px; border-radius: 4px; width: fit-content; letter-spacing: 0.04em;
-  background: var(--surface-2); color: var(--text-muted);
-}
-.mockup-title { font-size: 14px; font-weight: 700; color: var(--text); }
-.mockup-desc { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
-.mockup-link { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
-
 /* ── 코드 블록 (시나리오) ── */
 .code-block {
   background: #1e1a1b; color: #e8d0d4; padding: 16px 20px;
@@ -363,13 +342,12 @@ body { padding: 0; }
     <a href="#problem">① 배경</a>
     <a href="#vision">② 비전</a>
     <a href="#current">③ 현황</a>
-    <a href="#screens">④ 화면</a>
-    <a href="#hub">⑤ 데이터 흐름</a>
-    <a href="#coa">⑥ COA 자동화</a>
-    <a href="#scenario">⑦ 시나리오</a>
-    <a href="#trend">⑧ Trend·보고</a>
-    <a href="#roadmap">⑨ 로드맵</a>
-    <a href="#effect">⑩ 기대 효과</a>
+    <a href="#hub">④ 데이터 흐름</a>
+    <a href="#coa">⑤ COA 자동화</a>
+    <a href="#scenario">⑥ 시나리오</a>
+    <a href="#trend">⑦ Trend·보고</a>
+    <a href="#roadmap">⑧ 로드맵</a>
+    <a href="#effect">⑨ 기대 효과</a>
   </nav>
 
   <!-- 헤더 -->
@@ -497,45 +475,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ④ 화면 -->
-  <section class="section" id="screens">
-    <div class="section-num">SECTION 04</div>
-    <div class="section-title">주요 화면 시안</div>
-    <div class="section-lead">
-      각 카드를 클릭하면 실제 화면 또는 목표 디자인 시안이 새 탭에서 열립니다.
-    </div>
-
-    <div class="card-grid">
-      <a class="mockup-card" href="./mockups/10_dashboard.html" target="_blank" rel="noopener">
-        <span class="mockup-badge">App 10</span>
-        <div class="mockup-title">품질 대시보드</div>
-        <div class="mockup-desc">KPI, 차트, 진행 중 소재 목록, 최신 결과 테이블. 주간·월간·연간 보고에 활용됩니다.</div>
-        <div class="mockup-link">→ mockups/10_dashboard.html</div>
-      </a>
-      <a class="mockup-card" href="./mockups/06_lot_schedule.html" target="_blank" rel="noopener">
-        <span class="mockup-badge">App 06</span>
-        <div class="mockup-title">소자평가 Lot 일정</div>
-        <div class="mockup-desc">월별 캘린더와 합성·정제 Lot 카드. D+N 표시, 시급 표시, OLED 결과 배지를 포함합니다.</div>
-        <div class="mockup-link">→ mockups/06_lot_schedule.html</div>
-      </a>
-      <a class="mockup-card" href="./mockups/05_genealogy.html" target="_blank" rel="noopener">
-        <span class="mockup-badge">App 05</span>
-        <div class="mockup-title">Lot 계보도 + SPC TREND</div>
-        <div class="mockup-desc">합성품에서 정제원재료, 1차품, 완제품으로 이어지는 계보와 공정별 SPC 차트를 함께 확인합니다.</div>
-        <div class="mockup-link">→ mockups/05_genealogy.html</div>
-      </a>
-      <a class="mockup-card" href="./mockups/15_pn_flow.html" target="_blank" rel="noopener">
-        <span class="mockup-badge">App 15</span>
-        <div class="mockup-title">P/N 공정 Flow 편집기</div>
-        <div class="mockup-desc">드래그앤드롭 기반 공정 빌더. 개발재료의 여러 공정 방법을 기록·비교하는 데 활용됩니다.</div>
-        <div class="mockup-link">→ mockups/15_pn_flow.html</div>
-      </a>
-    </div>
-  </section>
-
-  <!-- ⑤ 데이터 흐름 -->
+  <!-- ④ 데이터 흐름 -->
   <section class="section" id="hub">
-    <div class="section-num">SECTION 05</div>
+    <div class="section-num">SECTION 04</div>
     <div class="section-title">데이터 흐름 — 입력에서 활용까지</div>
     <div class="section-lead">
       출하 시 사용되는 COA, 사후 Lot 추적, 경영 보고용 대시보드가 신뢰성을 가지려면
@@ -577,9 +519,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ⑥ COA 자동화 -->
+  <!-- ⑤ COA 자동화 -->
   <section class="section" id="coa">
-    <div class="section-num">SECTION 06</div>
+    <div class="section-num">SECTION 05</div>
     <div class="section-title">COA 자동 발행 — 다양한 양식 대응</div>
     <div class="section-lead">
       최근 고객사별로 요청되는 COA 양식이 다양해지고, 포함되어야 할 측정 항목 또한 빠르게 늘어나고 있습니다.
@@ -622,9 +564,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ⑦ 시나리오 -->
+  <!-- ⑥ 시나리오 -->
   <section class="section" id="scenario">
-    <div class="section-num">SECTION 07</div>
+    <div class="section-num">SECTION 06</div>
     <div class="section-title">통합 시나리오 — Lot ANA0101 출하까지</div>
     <div class="section-lead">
       구축이 완료되었을 때 하나의 Lot이 입고부터 출하·사후 추적까지 어떻게 시스템에 기록되는지 보여주는 시나리오입니다.
@@ -657,9 +599,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ⑧ Trend·보고 -->
+  <!-- ⑦ Trend·보고 -->
   <section class="section" id="trend">
-    <div class="section-num">SECTION 08</div>
+    <div class="section-num">SECTION 07</div>
     <div class="section-title">Trend · 보고 — 데이터를 활용하는 단계</div>
     <div class="section-lead">
       데이터를 쌓는 것 자체로는 의미가 크지 않습니다.
@@ -696,9 +638,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ⑨ 로드맵 -->
+  <!-- ⑧ 로드맵 -->
   <section class="section" id="roadmap">
-    <div class="section-num">SECTION 09</div>
+    <div class="section-num">SECTION 08</div>
     <div class="section-title">로드맵</div>
     <div class="phase-row">
       <div class="phase-card phase-now">
@@ -749,9 +691,9 @@ body { padding: 0; }
     </div>
   </section>
 
-  <!-- ⑩ 기대 효과 -->
+  <!-- ⑨ 기대 효과 -->
   <section class="section" id="effect">
-    <div class="section-num">SECTION 10</div>
+    <div class="section-num">SECTION 09</div>
     <div class="section-title">기대 효과</div>
     <div class="section-lead">
       단순히 업무 시간을 줄이는 것이 목적은 아닙니다.
