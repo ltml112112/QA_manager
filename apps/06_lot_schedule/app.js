@@ -129,37 +129,46 @@ function removeItem(id) {
   → 추가로 listener cancel 콜백을 등록해 일시적 권한 오류 시 재부착.
 */
 var _syncStarted = false;
+
+function attachLive() {
+  DB_REF.on('value', function (s) {
+    var val = s.val();
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
+    } else if (Array.isArray(val)) {
+      window._cachedItems = val.filter(Boolean);
+    } else {
+      window._cachedItems = [];
+    }
+    renderCalendar();
+  }, function (err) {
+    console.error('[lot_schedule] 실시간 구독 취소됨, 재연결 대기:', err && err.code);
+    setTimeout(function () { QA_whenAuthReady(attachLive); }, 2000);
+  });
+}
+
+function attachResults() {
+  RESULT_REF.on('value', function (snap) {
+    window._cachedResults = snap.val() || {};
+    renderCalendar();
+  }, function (err) {
+    console.error('[lot_schedule] 결과 구독 취소됨, 재연결 대기:', err && err.code);
+    setTimeout(function () { QA_whenAuthReady(attachResults); }, 2000);
+  });
+}
+
 function setupRealtimeSync() {
   if (_syncStarted) return;
   _syncStarted = true;
-
-  function attachLive() {
-    DB_REF.on('value', function (s) {
-      var val = s.val();
-      if (val && typeof val === 'object' && !Array.isArray(val)) {
-        window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
-      } else if (Array.isArray(val)) {
-        window._cachedItems = val.filter(Boolean);
-      } else {
-        window._cachedItems = [];
-      }
-      renderCalendar();
-    }, function (err) {
-      console.error('[lot_schedule] 실시간 구독 취소됨, 재연결 대기:', err && err.code);
-      setTimeout(function () { QA_whenAuthReady(attachLive); }, 2000);
-    });
-  }
 
   // 1회 마이그레이션 체크 — 실패해도 live listener 부착은 진행
   DB_REF.once('value').then(function (snap) {
     var data = snap.val();
     if (data === null) {
-      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
       var legacy = [];
       try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
       if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
     } else if (Array.isArray(data)) {
-      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
       console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
       DB_REF.set(_arrToObj(data.filter(Boolean)));
     }
@@ -172,16 +181,24 @@ function setupRealtimeSync() {
 
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
 function setupResultsSync() {
-  function attachResults() {
-    RESULT_REF.on('value', function (snap) {
-      window._cachedResults = snap.val() || {};
-      renderCalendar();
-    }, function (err) {
-      console.error('[lot_schedule] 결과 구독 취소됨, 재연결 대기:', err && err.code);
-      setTimeout(function () { QA_whenAuthReady(attachResults); }, 2000);
-    });
-  }
   attachResults();
+}
+
+/* ── 수동 새로고침 ───────────────────────────────────────────────────── */
+function manualRefresh() {
+  var btn = document.getElementById('btnRefresh');
+  if (btn) btn.classList.add('spinning');
+  DB_REF.off('value');
+  RESULT_REF.off('value');
+  QA_whenAuthReady(function () {
+    attachLive();
+    attachResults();
+    // 첫 snapshot 도착 후 스피닝 제거 (최대 3초)
+    var done = false;
+    var stop = function () { if (!done) { done = true; if (btn) btn.classList.remove('spinning'); } };
+    DB_REF.once('value').then(stop).catch(stop);
+    setTimeout(stop, 3000);
+  });
 }
 
 function loadResult(lotId) {
@@ -855,6 +872,7 @@ function runModalSearch() {
 }
 
 document.getElementById('btnOpenSearch').addEventListener('click', openSearchModal);
+document.getElementById('btnRefresh').addEventListener('click', manualRefresh);
 document.getElementById('btnModalDoSearch').addEventListener('click', runModalSearch);
 document.getElementById('modalSearchInput').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') runModalSearch();
