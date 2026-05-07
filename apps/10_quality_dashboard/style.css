@@ -648,3 +648,18 @@ select.filter-input {
 .loading-overlay.lo-retry .lo-spinner { border-top-color: var(--warning, #f59e0b); }
 .loading-overlay.lo-retry .lo-text    { color: var(--warning, #f59e0b); }
 @keyframes lo-spin { to { transform: rotate(360deg); } }
+.loading-overlay.lo-stuck .lo-spinner { border-top-color: var(--danger, #ef4444); }
+.loading-overlay.lo-stuck .lo-text    { color: var(--danger, #ef4444); }
+.loading-overlay .lo-retry-btn {
+  margin-top: 8px;
+  padding: 8px 18px;
+  background: var(--accent, #be0039);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.loading-overlay .lo-retry-btn:hover { background: var(--accent-hover, #d4004a); }

@@ -75,8 +75,17 @@
     if (typeof firebase === 'undefined' || !firebase.auth) { cb(null); return; }
     var auth = firebase.auth();
     var fired = false;
+    var cbCalled = false;
     var hardTimer;
     var unsub;
+    var t0 = Date.now();
+
+    function safeCb(u) {
+      if (cbCalled) return;
+      cbCalled = true;
+      console.log('[QA_whenAuthReady] cb 발화', { ms: Date.now() - t0, hasUser: !!u });
+      cb(u);
+    }
 
     function fire(u) {
       if (fired) return;
@@ -84,16 +93,25 @@
       clearTimeout(hardTimer);
       try { if (typeof unsub === 'function') unsub(); } catch (e) {}
       if (!u) {
-        console.warn('[QA_whenAuthReady] timeout/null fallback firing — auth 미해결');
-        cb(null);
+        console.warn('[QA_whenAuthReady] timeout/null fallback firing — auth 미해결', { ms: Date.now() - t0 });
+        safeCb(null);
         return;
       }
-      // ID 토큰 가져오기 — auth가 RTDB connection에 전파될 때까지 대기
-      u.getIdToken(false).then(function () { cb(u); })
-                        .catch(function (e) {
-                          console.warn('[QA_whenAuthReady] getIdToken 실패:', e && e.code);
-                          cb(u);
-                        });
+      // ID 토큰 가져오기 — auth가 RTDB connection에 전파될 때까지 대기.
+      // getIdToken은 토큰 만료 시 서버 갱신을 시도하는데, 네트워크 문제로
+      // hang 가능 → 자체 3초 timeout 으로 보호.
+      var tokenTimer = setTimeout(function () {
+        console.warn('[QA_whenAuthReady] getIdToken 3s timeout, 그래도 진행', { ms: Date.now() - t0 });
+        safeCb(u);
+      }, 3000);
+      u.getIdToken(false).then(function () {
+        clearTimeout(tokenTimer);
+        safeCb(u);
+      }).catch(function (e) {
+        clearTimeout(tokenTimer);
+        console.warn('[QA_whenAuthReady] getIdToken 실패:', e && e.code);
+        safeCb(u);
+      });
     }
 
     // onAuthStateChanged는 등록 직후 1회 발화 (auth 상태 결정된 후).

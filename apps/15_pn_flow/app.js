@@ -182,9 +182,12 @@ function normDoc(d) {
 }
 
 var _loadRetryMs = 500;
+var _loadT0 = null;
+var _loadStuckTimer = null;
 
 /* ── 로딩 오버레이 토글 ───────────────────────────
    첫 snapshot 도착 시 #loadingOverlay 제거. error cb에서 "재연결 중..."
+   30s 응답 없으면 stuck UI + 다시 시도 버튼.
 ─────────────────────────────────────────────────── */
 function _setLoadingState(state, msg) {
   var overlay = document.getElementById('loadingOverlay');
@@ -194,10 +197,27 @@ function _setLoadingState(state, msg) {
   var txt = overlay.querySelector('.lo-text');
   if (txt) txt.textContent = msg || '데이터 로딩 중...';
   overlay.classList.toggle('lo-retry', state === 'retry');
+  overlay.classList.toggle('lo-stuck', state === 'stuck');
+  var btn = overlay.querySelector('.lo-retry-btn');
+  if (btn) btn.style.display = (state === 'stuck') ? '' : 'none';
+}
+
+function _clearStuckTimer() {
+  if (_loadStuckTimer) { clearTimeout(_loadStuckTimer); _loadStuckTimer = null; }
 }
 
 function load() {
+  _loadT0 = Date.now();
+  console.log('[pn_flow] DB.on(value) 부착');
+  _clearStuckTimer();
+  _loadStuckTimer = setTimeout(function() {
+    console.warn('[pn_flow] 30s 응답 없음, stuck UI 표시');
+    _setLoadingState('stuck', '연결이 지연되고 있습니다');
+  }, 30000);
+
   DB.on('value', function(snap) {
+    _clearStuckTimer();
+    console.log('[pn_flow] 첫 snapshot 도착', { ms: Date.now() - _loadT0 });
     _setLoadingState('hide');
     _loadRetryMs = 500;  // 성공 시 backoff 리셋
     var incoming = snap.val() || {};
@@ -250,8 +270,9 @@ function load() {
       render();
     }
   }, function(err) {
+    _clearStuckTimer();
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
-    console.warn('[pn_flow] DB listener cancelled:', err && err.code);
+    console.warn('[pn_flow] DB listener cancelled:', err && err.code, { ms: Date.now() - _loadT0 });
     _setLoadingState('retry', '연결 재시도 중...');
     DB.off('value');
     var wait = Math.min(_loadRetryMs, 8000);
@@ -261,6 +282,14 @@ function load() {
     }, wait);
   });
 }
+
+window._pnFlowManualRetry = function () {
+  console.log('[pn_flow] 사용자 수동 재시도');
+  _clearStuckTimer();
+  _setLoadingState('loading', '데이터 로딩 중...');
+  try { DB.off('value'); } catch (e) {}
+  QA_whenAuthReady(load);
+};
 
 /* ── 인증 준비 후 DB 부착 ────────────────────────
    onAuthStateChanged 직접 사용 시 첫 발화가 null이면 listener가

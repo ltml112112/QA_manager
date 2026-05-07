@@ -28,6 +28,10 @@
 <div id="loadingOverlay" class="loading-overlay">
   <div class="lo-spinner"></div>
   <div class="lo-text">데이터 로딩 중...</div>
+  <button type="button" class="lo-retry-btn" style="display:none"
+    onclick="window._dashboardManualRetry && window._dashboardManualRetry()">
+    다시 시도
+  </button>
 </div>
 
 <div class="dash-layout">

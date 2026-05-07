@@ -1043,6 +1043,8 @@ function scheduleRender() {
 ──────────────────────────────────────────────────────────────────── */
 var _itemsRetryMs   = 500;
 var _resultsRetryMs = 500;
+var _itemsT0 = null;
+var _itemsStuckTimer = null;
 
 function _setLoadingState(state, msg) {
   var overlay = document.getElementById('loadingOverlay');
@@ -1052,10 +1054,27 @@ function _setLoadingState(state, msg) {
   var txt = overlay.querySelector('.lo-text');
   if (txt) txt.textContent = msg || '데이터 로딩 중...';
   overlay.classList.toggle('lo-retry', state === 'retry');
+  overlay.classList.toggle('lo-stuck', state === 'stuck');
+  var btn = overlay.querySelector('.lo-retry-btn');
+  if (btn) btn.style.display = (state === 'stuck') ? '' : 'none';
+}
+
+function _clearItemsStuckTimer() {
+  if (_itemsStuckTimer) { clearTimeout(_itemsStuckTimer); _itemsStuckTimer = null; }
 }
 
 function attachItems() {
+  _itemsT0 = Date.now();
+  console.log('[dashboard] items: .on(value) 부착');
+  _clearItemsStuckTimer();
+  _itemsStuckTimer = setTimeout(function () {
+    console.warn('[dashboard] items: 30s 응답 없음, stuck UI 표시');
+    _setLoadingState('stuck', '연결이 지연되고 있습니다');
+  }, 30000);
+
   DB_REF.on('value', function (snap) {
+    _clearItemsStuckTimer();
+    console.log('[dashboard] items: 첫 snapshot 도착', { ms: Date.now() - _itemsT0 });
     _setLoadingState('hide');
     _itemsRetryMs = 500;
     var val = snap.val();
@@ -1069,7 +1088,8 @@ function attachItems() {
     if (window._dashRefreshMatList) window._dashRefreshMatList();
     scheduleRender();
   }, function (err) {
-    console.warn('[dashboard] items listener cancelled:', err && err.code);
+    _clearItemsStuckTimer();
+    console.warn('[dashboard] items listener cancelled:', err && err.code, { ms: Date.now() - _itemsT0 });
     _setLoadingState('retry', '연결 재시도 중...');
     DB_REF.off('value');
     var wait = Math.min(_itemsRetryMs, 8000);
@@ -1077,6 +1097,18 @@ function attachItems() {
     setTimeout(function () { QA_whenAuthReady(attachItems); }, wait);
   });
 }
+
+window._dashboardManualRetry = function () {
+  console.log('[dashboard] 사용자 수동 재시도');
+  _clearItemsStuckTimer();
+  _setLoadingState('loading', '데이터 로딩 중...');
+  try { DB_REF.off('value'); } catch (e) {}
+  try { RESULT_REF.off('value'); } catch (e) {}
+  QA_whenAuthReady(function () {
+    attachItems();
+    attachResults();
+  });
+};
 
 function attachResults() {
   RESULT_REF.on('value', function (snap) {

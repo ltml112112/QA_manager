@@ -137,6 +137,8 @@ function removeItem(id) {
    backoff: 500ms → 1s → 2s → 4s → 8s
 ──────────────────────────────────────────────────────────────────── */
 var _itemsRetryMs = 500;
+var _itemsT0 = null;       // attach 시각 (진단용)
+var _itemsStuckTimer = null;  // 30s 후 stuck UI 표시
 
 function _setLoadingState(state, msg) {
   var overlay = document.getElementById('loadingOverlay');
@@ -146,10 +148,29 @@ function _setLoadingState(state, msg) {
   var txt = overlay.querySelector('.lo-text');
   if (txt) txt.textContent = msg || '데이터 로딩 중...';
   overlay.classList.toggle('lo-retry', state === 'retry');
+  overlay.classList.toggle('lo-stuck', state === 'stuck');
+  // stuck 상태에선 "다시 시도" 버튼 표시
+  var btn = overlay.querySelector('.lo-retry-btn');
+  if (btn) btn.style.display = (state === 'stuck') ? '' : 'none';
+}
+
+function _clearStuckTimer() {
+  if (_itemsStuckTimer) { clearTimeout(_itemsStuckTimer); _itemsStuckTimer = null; }
 }
 
 function attachItemsListener() {
+  _itemsT0 = Date.now();
+  console.log('[lot_schedule] items: .on(value) 부착');
+  // 30초 후에도 응답 없으면 stuck UI 표시 (사용자에게 다시 시도 버튼 노출)
+  _clearStuckTimer();
+  _itemsStuckTimer = setTimeout(function () {
+    console.warn('[lot_schedule] items: 30s 응답 없음, stuck UI 표시');
+    _setLoadingState('stuck', '연결이 지연되고 있습니다');
+  }, 30000);
+
   DB_REF.on('value', function (s) {
+    _clearStuckTimer();
+    console.log('[lot_schedule] items: 첫 snapshot 도착', { ms: Date.now() - _itemsT0 });
     _setLoadingState('hide');
     _itemsRetryMs = 500;  // 성공 시 backoff 리셋
     var val = s.val();
@@ -162,8 +183,9 @@ function attachItemsListener() {
     }
     renderCalendar();
   }, function (err) {
+    _clearStuckTimer();
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
-    console.warn('[lot_schedule] items listener cancelled:', err && err.code);
+    console.warn('[lot_schedule] items listener cancelled:', err && err.code, { ms: Date.now() - _itemsT0 });
     _setLoadingState('retry', '연결 재시도 중...');
     DB_REF.off('value');
     var wait = Math.min(_itemsRetryMs, 8000);
@@ -173,6 +195,19 @@ function attachItemsListener() {
     }, wait);
   });
 }
+
+/* 사용자가 stuck UI에서 "다시 시도" 클릭 시 강제 재부착 */
+window._lotScheduleManualRetry = function () {
+  console.log('[lot_schedule] 사용자 수동 재시도');
+  _clearStuckTimer();
+  _setLoadingState('loading', '데이터 로딩 중...');
+  try { DB_REF.off('value'); } catch (e) {}
+  try { RESULT_REF.off('value'); } catch (e) {}
+  QA_whenAuthReady(function () {
+    attachItemsListener();
+    attachResultsListener();
+  });
+};
 
 function setupRealtimeSync() {
   // 마이그레이션 체크는 best-effort — 실패해도 listener 부착은 진행
