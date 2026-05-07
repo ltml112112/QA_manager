@@ -15,6 +15,17 @@ var DB = firebase.database().ref(QA_DB_PATHS.pnFlowDocs);
 var _currentUser = null;
 firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
 
+/* ── WebSocket 연결 상태 진단 (.info/connected) ────────
+   Firebase 특수 경로 — auth 불필요, 네트워크 레벨 연결 상태만 반환.
+   이게 true 안 뜨면 WebSocket 자체가 안 열리는 환경 문제.
+─────────────────────────────────────────────────── */
+(function () {
+  var connT0 = Date.now();
+  firebase.database().ref('.info/connected').on('value', function (s) {
+    console.log('[pn_flow] .info/connected:', s.val(), { ms: Date.now() - connT0 });
+  });
+})();
+
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
   wet: ['Si pass', 'Column', 'DCB', 'CF', 'MC/Hex', 'Act/Hex', 'EA/Hex', 'Tol/Act/Hex', 'DCB/Act/Hex', '결정화', '재결정', '고운'],

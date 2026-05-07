@@ -14,6 +14,17 @@ var RESULT_REF  = _db.ref(QA_DB_PATHS.oledResults);  // {lotId: {savedAt, ivl, l
 var _currentUser = null;
 firebase.auth().onAuthStateChanged(function (u) { _currentUser = u; });
 
+/* ── WebSocket 연결 상태 진단 (.info/connected) ─────────────────────
+   Firebase 특수 경로 — auth 불필요, 네트워크 연결 상태만 반환.
+   true 발화 안 되면 WebSocket 자체가 안 열리는 환경 문제 (방화벽/확장).
+──────────────────────────────────────────────────────────────────── */
+(function () {
+  var connT0 = Date.now();
+  firebase.database().ref('.info/connected').on('value', function (s) {
+    console.log('[lot_schedule] .info/connected:', s.val(), { ms: Date.now() - connT0 });
+  });
+})();
+
 /** 현재 사용자 정보를 감사 추적 객체로 반환 */
 function _byInfo() {
   if (!_currentUser) return null;

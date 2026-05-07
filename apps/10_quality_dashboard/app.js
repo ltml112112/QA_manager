@@ -9,6 +9,17 @@ var _db        = firebase.database();
 var DB_REF     = _db.ref(QA_DB_PATHS.lotSchedule);
 var RESULT_REF = _db.ref(QA_DB_PATHS.oledResults);
 
+/* ── WebSocket 연결 상태 진단 (.info/connected) ─────────────────────
+   Firebase 특수 경로 — auth 불필요, 네트워크 연결 상태만 반환.
+   true 발화 안 되면 WebSocket 자체가 안 열리는 환경 문제.
+──────────────────────────────────────────────────────────────────── */
+(function () {
+  var connT0 = Date.now();
+  _db.ref('.info/connected').on('value', function (s) {
+    console.log('[dashboard] .info/connected:', s.val(), { ms: Date.now() - connT0 });
+  });
+})();
+
 /* ── 상태 ────────────────────────────────────────────────────────────── */
 var STATE = {
   items:     [],          // lot_schedule 전체
