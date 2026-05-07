@@ -122,49 +122,70 @@ function removeItem(id) {
 }
 
 /* ── 실시간 동기화 ───────────────────────────────────────────────────── */
+/*
+  주의: auth 미해결 상태에서 DB 리스너를 부착하면 PERMISSION_DENIED로
+  취소되어 이후 auth가 복원돼도 자동 재연결되지 않음.
+  → 진입 시 QA_whenAuthReady로 user 보장 후 호출.
+  → 추가로 listener cancel 콜백을 등록해 일시적 권한 오류 시 재부착.
+*/
 var _syncStarted = false;
 function setupRealtimeSync() {
   if (_syncStarted) return;
   _syncStarted = true;
-  DB_REF.once('value', function (snap) {
-    var data = snap.val();
 
-    if (data === null) {
-      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
-      var legacy = [];
-      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
-      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
-
-    } else if (Array.isArray(data)) {
-      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
-      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
-      DB_REF.set(_arrToObj(data.filter(Boolean)));
-      // 마이그레이션 후 리스너가 새 데이터를 자동 수신하므로 별도 처리 불필요
-    }
-
-    // 실시간 구독 시작 (변경 즉시 재렌더)
+  function attachLive() {
     DB_REF.on('value', function (s) {
       var val = s.val();
       if (val && typeof val === 'object' && !Array.isArray(val)) {
-        // 정상 객체 포맷 — 값 배열로 변환
         window._cachedItems = Object.values(val).filter(function (v) { return v && v.id; });
       } else if (Array.isArray(val)) {
-        // 마이그레이션 직전 순간 혹은 예외 상황 대비
         window._cachedItems = val.filter(Boolean);
       } else {
         window._cachedItems = [];
       }
       renderCalendar();
+    }, function (err) {
+      console.error('[lot_schedule] 실시간 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachLive();
+      }, 2000);
     });
+  }
+
+  // 1회 마이그레이션 체크 — 실패해도 live listener 부착은 진행
+  DB_REF.once('value').then(function (snap) {
+    var data = snap.val();
+    if (data === null) {
+      // Firebase 비어있으면 localStorage 구 데이터 마이그레이션
+      var legacy = [];
+      try { legacy = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch (e) {}
+      if (legacy.length > 0) DB_REF.set(_arrToObj(legacy));
+    } else if (Array.isArray(data)) {
+      // 구 배열 포맷 감지 → 객체 포맷으로 1회 자동 마이그레이션
+      console.log('[lot_schedule] 구 배열 포맷 감지, 객체 포맷으로 마이그레이션 중...');
+      DB_REF.set(_arrToObj(data.filter(Boolean)));
+    }
+  }).catch(function (err) {
+    console.error('[lot_schedule] 마이그레이션 체크 실패 (live listener는 계속):', err && err.code);
   });
+
+  attachLive();
 }
 
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
 function setupResultsSync() {
-  RESULT_REF.on('value', function(snap) {
-    window._cachedResults = snap.val() || {};
-    renderCalendar();
-  });
+  function attachResults() {
+    RESULT_REF.on('value', function (snap) {
+      window._cachedResults = snap.val() || {};
+      renderCalendar();
+    }, function (err) {
+      console.error('[lot_schedule] 결과 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachResults();
+      }, 2000);
+    });
+  }
+  attachResults();
 }
 
 function loadResult(lotId) {
@@ -1625,8 +1646,11 @@ document.querySelector('.cal-main').addEventListener('wheel', function(e) {
 
 /* ── 초기 렌더 ───────────────────────────────────────────────────────── */
 setFormDefaults();
-setupRealtimeSync();
-setupResultsSync();
+// auth 복원이 끝난 뒤에만 RTDB 리스너 부착 (race condition 방지).
+QA_whenAuthReady(function () {
+  setupRealtimeSync();
+  setupResultsSync();
+});
 
 /* ════════════════════════════════════════════════════════════════════════
    메일 붙여넣기 팝업 — 드래그/붙여넣기 + HTML 파서
