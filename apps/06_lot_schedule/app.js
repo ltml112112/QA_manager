@@ -126,25 +126,31 @@ function removeItem(id) {
    PERMISSION_DENIED로 cancel 되고 silent하게 죽음. QA_whenAuthReady로
    auth+토큰 발화 후 부착하고, error cb에서 backoff로 재부착.
 
-   추가 안전망: 첫 snapshot이 8초 내 안 오면 silent hang으로 간주하고
-   강제 재부착 (success/error 둘 다 안 발화하는 SDK 상태 대비).
+   로딩 UI: 첫 snapshot 도착 시 #loadingOverlay 제거. error cb에서
+   "재연결 중..." 표시. 사용자가 빈 화면을 보고 새로고침하지 않도록.
 
-   backoff: 500ms → 1s → 2s → 4s → 8s (max 8s)
+   주의: silent hang 안전망(8s timeout 후 강제 재부착)은 의도적으로
+   제거함. WebSocket cold setup이 8초보다 오래 걸리는 환경(Singapore
+   region, 17개 iframe 동시 부팅 등)에서 안전망이 connection을 매번
+   죽여 영원히 안 살아남는 loop 발생. SDK 자체 retry + error cb로 충분.
+
+   backoff: 500ms → 1s → 2s → 4s → 8s
 ──────────────────────────────────────────────────────────────────── */
 var _itemsRetryMs = 500;
-var _itemsHangTimer = null;
+
+function _setLoadingState(state, msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (!overlay) return;
+  if (state === 'hide') { overlay.style.display = 'none'; return; }
+  overlay.style.display = '';
+  var txt = overlay.querySelector('.lo-text');
+  if (txt) txt.textContent = msg || '데이터 로딩 중...';
+  overlay.classList.toggle('lo-retry', state === 'retry');
+}
 
 function attachItemsListener() {
-  // silent hang 안전망 — 8초 내 첫 snapshot 미도착 시 재부착
-  if (_itemsHangTimer) clearTimeout(_itemsHangTimer);
-  _itemsHangTimer = setTimeout(function () {
-    console.warn('[lot_schedule] items: 8s 내 첫 snapshot 미도착, 재부착');
-    DB_REF.off('value');
-    setTimeout(function () { QA_whenAuthReady(attachItemsListener); }, 500);
-  }, 8000);
-
   DB_REF.on('value', function (s) {
-    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
+    _setLoadingState('hide');
     _itemsRetryMs = 500;  // 성공 시 backoff 리셋
     var val = s.val();
     if (val && typeof val === 'object' && !Array.isArray(val)) {
@@ -156,9 +162,9 @@ function attachItemsListener() {
     }
     renderCalendar();
   }, function (err) {
-    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
     console.warn('[lot_schedule] items listener cancelled:', err && err.code);
+    _setLoadingState('retry', '연결 재시도 중...');
     DB_REF.off('value');
     var wait = Math.min(_itemsRetryMs, 8000);
     _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
@@ -188,23 +194,13 @@ function setupRealtimeSync() {
 
 /* ── OLED 결과 실시간 동기화 ─────────────────────────────────────────── */
 var _resultsRetryMs = 500;
-var _resultsHangTimer = null;
 
 function attachResultsListener() {
-  if (_resultsHangTimer) clearTimeout(_resultsHangTimer);
-  _resultsHangTimer = setTimeout(function () {
-    console.warn('[lot_schedule] results: 8s 내 첫 snapshot 미도착, 재부착');
-    RESULT_REF.off('value');
-    setTimeout(function () { QA_whenAuthReady(attachResultsListener); }, 500);
-  }, 8000);
-
   RESULT_REF.on('value', function (snap) {
-    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
     _resultsRetryMs = 500;
     window._cachedResults = snap.val() || {};
     renderCalendar();
   }, function (err) {
-    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
     console.warn('[lot_schedule] results listener cancelled:', err && err.code);
     RESULT_REF.off('value');
     var wait = Math.min(_resultsRetryMs, 8000);

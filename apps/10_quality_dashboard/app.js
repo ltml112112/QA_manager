@@ -1034,28 +1034,29 @@ function scheduleRender() {
   _renderTimer = setTimeout(renderAll, 60);
 }
 
-/* ── 실시간 부착 (error cb + backoff 재부착 + hang 안전망) ───────────
+/* ── 실시간 부착 (error cb + backoff 재부착) ─────────────────────────
    PERMISSION_DENIED가 silent하게 listener를 죽이는 것을 방지.
    인증 race 상황(IDB 하이드레이션 전 listen)에서 cancel 시
-   QA_whenAuthReady로 대기 후 재부착. 또한 success/error 둘 다 발화
-   안 하는 silent hang을 8초 안전망으로 detection.
+   QA_whenAuthReady로 대기 후 재부착.
+   첫 snapshot 도착 시 #loadingOverlay 제거 (items 기준).
    backoff 500ms → 1s → 2s → 4s → 8s.
 ──────────────────────────────────────────────────────────────────── */
 var _itemsRetryMs   = 500;
 var _resultsRetryMs = 500;
-var _itemsHangTimer   = null;
-var _resultsHangTimer = null;
+
+function _setLoadingState(state, msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (!overlay) return;
+  if (state === 'hide') { overlay.style.display = 'none'; return; }
+  overlay.style.display = '';
+  var txt = overlay.querySelector('.lo-text');
+  if (txt) txt.textContent = msg || '데이터 로딩 중...';
+  overlay.classList.toggle('lo-retry', state === 'retry');
+}
 
 function attachItems() {
-  if (_itemsHangTimer) clearTimeout(_itemsHangTimer);
-  _itemsHangTimer = setTimeout(function () {
-    console.warn('[dashboard] items: 8s 내 첫 snapshot 미도착, 재부착');
-    DB_REF.off('value');
-    setTimeout(function () { QA_whenAuthReady(attachItems); }, 500);
-  }, 8000);
-
   DB_REF.on('value', function (snap) {
-    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
+    _setLoadingState('hide');
     _itemsRetryMs = 500;
     var val = snap.val();
     var arr = [];
@@ -1068,8 +1069,8 @@ function attachItems() {
     if (window._dashRefreshMatList) window._dashRefreshMatList();
     scheduleRender();
   }, function (err) {
-    if (_itemsHangTimer) { clearTimeout(_itemsHangTimer); _itemsHangTimer = null; }
     console.warn('[dashboard] items listener cancelled:', err && err.code);
+    _setLoadingState('retry', '연결 재시도 중...');
     DB_REF.off('value');
     var wait = Math.min(_itemsRetryMs, 8000);
     _itemsRetryMs = Math.min(_itemsRetryMs * 2, 8000);
@@ -1078,21 +1079,12 @@ function attachItems() {
 }
 
 function attachResults() {
-  if (_resultsHangTimer) clearTimeout(_resultsHangTimer);
-  _resultsHangTimer = setTimeout(function () {
-    console.warn('[dashboard] results: 8s 내 첫 snapshot 미도착, 재부착');
-    RESULT_REF.off('value');
-    setTimeout(function () { QA_whenAuthReady(attachResults); }, 500);
-  }, 8000);
-
   RESULT_REF.on('value', function (snap) {
-    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
     _resultsRetryMs = 500;
     STATE.results = snap.val() || {};
     refreshLevelSelect();
     scheduleRender();
   }, function (err) {
-    if (_resultsHangTimer) { clearTimeout(_resultsHangTimer); _resultsHangTimer = null; }
     console.warn('[dashboard] results listener cancelled:', err && err.code);
     RESULT_REF.off('value');
     var wait = Math.min(_resultsRetryMs, 8000);

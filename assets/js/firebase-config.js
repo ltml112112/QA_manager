@@ -83,10 +83,17 @@
       fired = true;
       clearTimeout(hardTimer);
       try { if (typeof unsub === 'function') unsub(); } catch (e) {}
-      if (!u) { cb(null); return; }
+      if (!u) {
+        console.warn('[QA_whenAuthReady] timeout/null fallback firing — auth 미해결');
+        cb(null);
+        return;
+      }
       // ID 토큰 가져오기 — auth가 RTDB connection에 전파될 때까지 대기
       u.getIdToken(false).then(function () { cb(u); })
-                        .catch(function () { cb(u); });
+                        .catch(function (e) {
+                          console.warn('[QA_whenAuthReady] getIdToken 실패:', e && e.code);
+                          cb(u);
+                        });
     }
 
     // onAuthStateChanged는 등록 직후 1회 발화 (auth 상태 결정된 후).

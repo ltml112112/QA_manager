@@ -182,18 +182,23 @@ function normDoc(d) {
 }
 
 var _loadRetryMs = 500;
-var _loadHangTimer = null;
-function load() {
-  // silent hang 안전망 — 8초 내 첫 snapshot 미도착 시 재부착
-  if (_loadHangTimer) clearTimeout(_loadHangTimer);
-  _loadHangTimer = setTimeout(function() {
-    console.warn('[pn_flow] DB: 8s 내 첫 snapshot 미도착, 재부착');
-    DB.off('value');
-    setTimeout(function() { QA_whenAuthReady(load); }, 500);
-  }, 8000);
 
+/* ── 로딩 오버레이 토글 ───────────────────────────
+   첫 snapshot 도착 시 #loadingOverlay 제거. error cb에서 "재연결 중..."
+─────────────────────────────────────────────────── */
+function _setLoadingState(state, msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (!overlay) return;
+  if (state === 'hide') { overlay.style.display = 'none'; return; }
+  overlay.style.display = '';
+  var txt = overlay.querySelector('.lo-text');
+  if (txt) txt.textContent = msg || '데이터 로딩 중...';
+  overlay.classList.toggle('lo-retry', state === 'retry');
+}
+
+function load() {
   DB.on('value', function(snap) {
-    if (_loadHangTimer) { clearTimeout(_loadHangTimer); _loadHangTimer = null; }
+    _setLoadingState('hide');
     _loadRetryMs = 500;  // 성공 시 backoff 리셋
     var incoming = snap.val() || {};
 
@@ -245,9 +250,9 @@ function load() {
       render();
     }
   }, function(err) {
-    if (_loadHangTimer) { clearTimeout(_loadHangTimer); _loadHangTimer = null; }
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
     console.warn('[pn_flow] DB listener cancelled:', err && err.code);
+    _setLoadingState('retry', '연결 재시도 중...');
     DB.off('value');
     var wait = Math.min(_loadRetryMs, 8000);
     _loadRetryMs = Math.min(_loadRetryMs * 2, 8000);
