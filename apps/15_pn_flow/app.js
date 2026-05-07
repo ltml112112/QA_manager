@@ -258,26 +258,9 @@ window.addEventListener('message', function (e) {
   }
 });
 
-/* ── 수동 새로고침 ──────────────────────────────── */
-function manualRefresh() {
-  var btn = document.getElementById('btnRefresh');
-  if (btn) btn.classList.add('spinning');
-  DB.off('value');
-  _dbListening = false;
-  _firstLoad = true;
-  var done = false;
-  var stop = function () { if (!done) { done = true; if (btn) btn.classList.remove('spinning'); } };
-  setTimeout(stop, 3000);
-  QA_whenAuthReady(function () {
-    load();
-    DB.once('value').then(stop).catch(stop);
-  });
-}
-
 /* ── 뮤테이터 ───────────────────────────────────── */
 window.APP = {
   onSearchInput: function() { renderList(); },
-  manualRefresh: manualRefresh,
   initSortable: function() {
     if (typeof Sortable === 'undefined') return;
     var docBody = document.getElementById('doc-body');
