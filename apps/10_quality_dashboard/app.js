@@ -1048,8 +1048,10 @@ function startSync() {
       if (window._dashRefreshMatList) window._dashRefreshMatList();
       scheduleRender();
     }, function (err) {
-      console.error('[dashboard] lot_schedule 구독 취소됨, 재연결 대기:', err && err.code);
-      setTimeout(function () { QA_whenAuthReady(attachItems); }, 2000);
+      console.error('[dashboard] lot_schedule 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachItems();
+      }, 2000);
     });
   }
   function attachResults() {
@@ -1058,8 +1060,10 @@ function startSync() {
       refreshLevelSelect();
       scheduleRender();
     }, function (err) {
-      console.error('[dashboard] oled_results 구독 취소됨, 재연결 대기:', err && err.code);
-      setTimeout(function () { QA_whenAuthReady(attachResults); }, 2000);
+      console.error('[dashboard] oled_results 구독 취소됨, 재연결 예약:', err && err.code);
+      setTimeout(function () {
+        if (firebase.auth().currentUser) attachResults();
+      }, 2000);
     });
   }
   attachItems();

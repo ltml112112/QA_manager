@@ -349,12 +349,6 @@ function switchTab(id, btn) {
   btn.classList.add('active');
   btn.setAttribute('aria-selected', 'true');
   document.getElementById('tab-' + id).classList.add('active');
-
-  // 활성화된 iframe에 탭 전환 알림 — 리스너가 죽어있으면 재연결 기회
-  var iframe = document.getElementById('iframe-' + id);
-  if (iframe && iframe.contentWindow) {
-    try { iframe.contentWindow.postMessage({ type: 'tabActivated' }, '*'); } catch (e) {}
-  }
 }
 
 // ── 로더 숨기기 ──────────────────────────────────────────────────────────────
