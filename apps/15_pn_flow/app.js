@@ -28,10 +28,10 @@ firebase.auth().onAuthStateChanged(function(u) { _currentUser = u; });
 
 /* ── 상수 ───────────────────────────────────────── */
 var CHIP_MAP = {
-  wet: ['Si pass', 'Column', 'DCB', 'CF', 'MC/Hex', 'Act/Hex', 'EA/Hex', 'Tol/Act/Hex', 'DCB/Act/Hex', '결정화', '재결정', '고운'],
+  wet: ['Si pass', 'Column', 'DCB', 'CF', 'MC/Hex', 'Act/Hex', 'EA/Hex', 'Tol/Act/Hex', 'DCB/Act/Hex', 'DCB/ACT', '결정화', '재결정', '고운'],
   subl: ['충주', '용인', '4,5-zone 수득', '6,7-zone 불순물 제거작업', '6,7-zone 취합', '소자평가 fail'],
   react: ['DMA', 'MeOH/H2O', '결정화'],
-  solid: ['MeOH/H2O', '결정화'],
+  solid: ['MeOH/H2O', '결정화', '고체 여과 후 건조', '농축 및 고체 여과 후 건조', '건조'],
   collect: []
 };
 
@@ -174,6 +174,7 @@ window.addEventListener('beforeunload', flushSave);
 var _firstLoad = true;
 var SEED_ID  = 'phn295-example'; // 고정 ID — 버전 바꾸면 자동 갱신
 var SEED_VER = 5;
+var E1884_ID = 'e1884-initial-flow'; // E1884 초기 문서 — 없을 때만 생성
 
 /* ── Firebase 배열 정규화 ─────────────────────────
    Firebase RTDB는 배열을 {"0":..,"1":..} 객체로 저장.
@@ -250,6 +251,14 @@ function load() {
         doc._seed = SEED_VER;
         STATE.docs[SEED_ID] = doc;
         DB.child(SEED_ID).set(doc);
+      }
+
+      // E1884 초기 문서 — 없을 때만 생성 (사용자 편집 내용 보존)
+      if (!STATE.docs[E1884_ID]) {
+        var e1884doc = buildE1884();
+        e1884doc.id = E1884_ID;
+        STATE.docs[E1884_ID] = e1884doc;
+        DB.child(E1884_ID).set(e1884doc);
       }
 
       render();
@@ -1094,6 +1103,30 @@ function buildSeed() {
     author: '백지홍',
     date: '2026-04-21',
     sections: [ps, ns]
+  });
+}
+
+function buildE1884() {
+  function S(t, detail, tag, loc) { return mkStep(t, { detail: detail||'', tag: tag||null, location: loc||'' }); }
+  var sec = mkSec('S');
+  sec.lots = [
+    Object.assign(mkLot(''), { steps: [
+      S('react',  ''),
+      S('solid',  '고체 여과 후 건조'),
+      S('wet',    'Si pass'),
+      S('solid',  '농축 및 고체 여과 후 건조'),
+      S('wet',    'DCB/ACT 재결정'),
+      S('wet',    'DCB/ACT 재결정'),
+      S('solid',  '건조'),
+      S('subl',   '')
+    ]})
+  ];
+  return mkDoc({
+    title: 'E1884 공정 Flow',
+    material: 'E1884',
+    author: '',
+    date: todayStr(),
+    sections: [sec]
   });
 }
 
