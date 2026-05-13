@@ -112,7 +112,7 @@ function stepLbl(s, n) {
 /* ── 팩토리 ────────────────────────────────────── */
 function mkDoc(o) { return Object.assign({id:uid(),title:'새 Flow',material:'',author:'',date:todayStr(),sections:[]},o); }
 function mkSec(t) { return {id:uid(),type:t||'P',lots:[]}; }
-function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[],finalQty:null,unit:'g',refines:[]}; }
+function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[],refines:[]}; }
 function mkStep(t,o) { return Object.assign({id:uid(),type:t||'wet',detail:'',tag:null,location:'',date:'',operator:''},o); }
 function mkRefine(o) { return Object.assign({id:uid(),name:'',qty:null,unit:'g'},o||{}); }
 
@@ -128,9 +128,9 @@ function lotStatus(lot) {
   return 'progress';
 }
 
-/* ── Lot 재고 ───────────────────────────────────
-   STAGE 2: stock = finalQty − Σ(출하 components.qty[정규화]).
-   shipment.deleted=true는 제외. component.unit 다르면 grams로 정규화 후 lot.unit으로 환산.
+/* ── 재고/출하 — 정제 Batch 기반 ────────────────────
+   stock = refine.qty − Σ(출하 components.qty[정규화]).
+   shipment.deleted=true 제외. component.unit ≠ refine.unit이면 grams 거쳐 환산.
 ─────────────────────────────────────────────────── */
 var UNIT_TO_G = { mg: 0.001, g: 1, kg: 1000 };
 
@@ -141,7 +141,8 @@ function convertQty(qty, fromUnit, toUnit) {
   return qty * fr / tr;
 }
 
-function lotConsumed(lotId, lotUnit) {
+/* 정제 Batch가 소비된 총량 (refine.unit 기준) */
+function refineConsumed(refineId, refineUnit) {
   var total = 0;
   var ships = STATE.shipments || {};
   Object.keys(ships).forEach(function(sid) {
@@ -149,16 +150,16 @@ function lotConsumed(lotId, lotUnit) {
     if (!sh || sh.deleted) return;
     var comps = Array.isArray(sh.components) ? sh.components : (sh.components ? Object.values(sh.components) : []);
     comps.forEach(function(c) {
-      if (c && c.lotId === lotId) {
-        total += convertQty(c.qty, c.unit || 'g', lotUnit || 'g');
+      if (c && c.refineId === refineId) {
+        total += convertQty(c.qty, c.unit || 'g', refineUnit || 'g');
       }
     });
   });
   return total;
 }
 
-/* Lot이 포함된 비-삭제 출하 목록 — STAGE 3 역방향 링크용 */
-function lotShipments(lotId) {
+/* 정제 Batch가 포함된 비-삭제 출하 목록 — 역방향 링크용 */
+function refineShipments(refineId) {
   var out = [];
   var ships = STATE.shipments || {};
   Object.keys(ships).forEach(function(sid) {
@@ -166,27 +167,25 @@ function lotShipments(lotId) {
     if (!sh || sh.deleted) return;
     var comps = Array.isArray(sh.components) ? sh.components : (sh.components ? Object.values(sh.components) : []);
     comps.forEach(function(c) {
-      if (c && c.lotId === lotId) {
+      if (c && c.refineId === refineId) {
         out.push({ shipId: sid, sh: sh, qty: c.qty, unit: c.unit || 'g' });
       }
     });
   });
-  // 일자 desc
   out.sort(function(a,b){ return (b.sh.date||'').localeCompare(a.sh.date||''); });
   return out;
 }
 
-function lotStock(lot) {
-  var fq = (lot && typeof lot.finalQty === 'number') ? lot.finalQty : null;
-  var unit = (lot && lot.unit) || 'g';
-  var hasQty = fq !== null && !isNaN(fq);
-  if (!hasQty) return { stock: null, finalQty: null, unit: unit, hasQty: false, consumed: 0, ratio: 0 };
-  var consumed = lotConsumed(lot.id, unit);
-  var stock = fq - consumed;
-  // 음수 가드 (이상치 — 단위 변경 등으로 발생 가능)
+function refineStock(refine) {
+  var rq = (refine && typeof refine.qty === 'number') ? refine.qty : null;
+  var unit = (refine && refine.unit) || 'g';
+  var hasQty = rq !== null && !isNaN(rq);
+  if (!hasQty) return { stock: null, qty: null, unit: unit, hasQty: false, consumed: 0, ratio: 0 };
+  var consumed = refineConsumed(refine.id, unit);
+  var stock = rq - consumed;
   if (stock < 0) stock = 0;
-  var ratio = fq > 0 ? stock / fq : 0;
-  return { stock: stock, finalQty: fq, unit: unit, hasQty: true, consumed: consumed, ratio: ratio };
+  var ratio = rq > 0 ? stock / rq : 0;
+  return { stock: stock, qty: rq, unit: unit, hasQty: true, consumed: consumed, ratio: ratio };
 }
 
 function fmtQty(n, unit) {
@@ -461,10 +460,12 @@ function loadShipments() {
       }
       STATE.shipments[id] = sh;
     });
-    // 재고 배지 갱신 — 현재 보고 있는 doc의 모든 Lot
+    // 재고 배지 갱신 — 현재 보고 있는 doc의 모든 정제 Batch
     if (STATE.currentId && getDoc()) {
       (getDoc().sections || []).forEach(function(s) {
-        (s.lots || []).forEach(function(l) { renderLotStock(l.id); });
+        (s.lots || []).forEach(function(l) {
+          (l.refines || []).forEach(function(r) { renderRefineStock(r.id); });
+        });
       });
     }
     // 출하 모달이 열려 있으면 다시 그리기
@@ -633,8 +634,6 @@ window.APP = {
       id: uid(),
       name: (src.name || '') + ' (복제)',
       subName: src.subName || '',
-      finalQty: (typeof src.finalQty === 'number') ? src.finalQty : null,
-      unit: src.unit || 'g',
       steps: (src.steps || []).map(function(st) {
         return Object.assign({}, st, { id: uid() });
       }),
@@ -676,25 +675,7 @@ window.APP = {
     var l = findLot(lid); if(l) l.name=val;
     save();
   },
-  updateLotQty: function(lid, val) {
-    var l = findLot(lid); if(!l) return;
-    var trimmed = String(val).trim();
-    if (trimmed === '') { l.finalQty = null; }
-    else {
-      var n = Number(trimmed);
-      if (isNaN(n) || n < 0) return; // 음수 무시
-      l.finalQty = n;
-    }
-    save();
-    renderLotStock(lid);
-  },
-  updateLotUnit: function(lid, val) {
-    var l = findLot(lid); if(!l) return;
-    l.unit = val || 'g';
-    save();
-    renderLotStock(lid);
-  },
-  /* 정제 Batch (refines) — 합성 Batch(Lot) 내 정제 산출 기록 */
+  /* 정제 Batch (refines) — 합성 Batch(Lot) 내 정제 산출물 잔량 */
   addRefine: function(lid) {
     var l = findLot(lid); if(!l) return;
     if (!Array.isArray(l.refines)) l.refines = [];
@@ -720,13 +701,14 @@ window.APP = {
         if (isNaN(n) || n < 0) return; // 음수 거부
         r.qty = n;
       }
+      renderRefineStock(rid);
     } else if (field === 'unit') {
       r.unit = val || 'g';
+      renderRefineStock(rid);
     } else {
       r[field] = val;
     }
     save();
-    // DOM은 이미 oninput으로 값이 반영됨 — full render 호출 안 함(blur 방지)
   },
   // updateLotSub removed
   onMetaChange: function() {
@@ -833,7 +815,7 @@ window.APP = {
       if (hd && field === 'shipName') hd.textContent = sh.shipName || '(이름 없음)';
     }
   },
-  /* 일괄 추가 — 그리드의 모든 입력 행에서 qty>0인 항목 수집·검증·일괄 push */
+  /* 일괄 추가 — 정제 Batch 행에서 qty>0인 것 수집·검증·일괄 push */
   addShipComponentsBatch: function(shId) {
     var sh = STATE.shipments[shId]; if(!sh) return;
     var rows = document.querySelectorAll('.pf-pick-table tbody tr.pf-pick-row');
@@ -847,18 +829,20 @@ window.APP = {
       if (!raw) continue;
       var qty = Number(raw);
       if (isNaN(qty) || qty <= 0) continue;
-      var docId = tr.dataset.docId, sectionId = tr.dataset.secId, lotId = tr.dataset.lotId;
+      var docId = tr.dataset.docId, sectionId = tr.dataset.secId, lotId = tr.dataset.lotId, refineId = tr.dataset.refineId;
       var doc = STATE.docs[docId];
       var sec = doc && (doc.sections||[]).find(function(s){return s.id===sectionId;});
       var lot = sec && (sec.lots||[]).find(function(l){return l.id===lotId;});
-      if (!doc || !sec || !lot) { errors.push('알 수 없는 Lot ('+(lotId||'')+')'); continue; }
-      var lotU = lot.unit || 'g';
-      var available = (lot.finalQty || 0) - lotConsumed(lotId, lotU);
+      var refine = lot && (lot.refines||[]).find(function(r){return r.id===refineId;});
+      if (!doc || !sec || !lot || !refine) { errors.push('알 수 없는 정제 Batch ('+(refineId||'')+')'); continue; }
+      var rU = refine.unit || 'g';
+      var available = (refine.qty || 0) - refineConsumed(refineId, rU);
       if (qty > available + 1e-6) {
-        errors.push('['+sec.type+'] '+(lot.name||'(이름 없음)')+' — 입력 '+fmtQty(qty, lotU)+' > 가용 '+fmtQty(available, lotU));
+        errors.push('['+sec.type+'] '+(refine.name||lot.name||'(이름 없음)')+' — 입력 '+fmtQty(qty, rU)+' > 가용 '+fmtQty(available, rU));
         continue;
       }
-      picks.push({ docId: docId, sectionId: sectionId, lotId: lotId, qty: qty, unit: lotU, lot: lot, sec: sec, doc: doc });
+      picks.push({ docId: docId, sectionId: sectionId, lotId: lotId, refineId: refineId,
+                   qty: qty, unit: rU, refine: refine, lot: lot, sec: sec, doc: doc });
     }
     if (errors.length) {
       alert('가용 재고 초과·오류 행 (해당 행만 누락):\n\n' + errors.join('\n'));
@@ -873,8 +857,10 @@ window.APP = {
         docId: p.docId,
         sectionId: p.sectionId,
         lotId: p.lotId,
+        refineId: p.refineId,
         qty: p.qty,
         unit: p.unit,
+        refineNameSnapshot: p.refine.name || '',
         lotNameSnapshot: p.lot.name || '',
         sectionTypeSnapshot: p.sec.type || '',
         docTitleSnapshot: p.doc.title || '',
@@ -898,56 +884,60 @@ window.APP = {
     renderShipModal();
   },
   /* ── 드릴다운: 컴포넌트 → 해당 공정 Lot으로 점프 ────────
-     모달 닫고 docId의 문서를 열고 lotId 카드로 스크롤 + 하이라이트.
-     해당 섹션/Lot이 접혀있으면 자동으로 펼침.
+     모달 닫고 docId의 문서를 열고 lotId 카드로 스크롤. refineId가 있으면
+     해당 정제 Batch 행도 하이라이트.
   ─────────────────────────────────────────────────── */
-  jumpToLot: function(docId, sectionId, lotId, ev) {
+  jumpToLot: function(docId, sectionId, lotId, refineId, ev) {
     if (ev) ev.stopPropagation();
     var doc = STATE.docs[docId];
     if (!doc) { alert('원본 문서를 찾을 수 없습니다.'); return; }
     var sec = (doc.sections||[]).find(function(s){return s.id===sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===lotId;});
     if (!sec || !lot) { alert('원본 Lot이 삭제되었거나 이동되었습니다.'); return; }
-    // 섹션/Lot 펼치기
     STATE.collapsedSecs.delete(sectionId);
     STATE.collapsedLots.delete(lotId);
-    // 모달 닫고 문서 열기
     STATE.ship.open = false;
     renderShipModal();
     STATE.currentId = docId;
     STATE.editKey = null;
     render();
-    // 다음 tick에 스크롤 + 하이라이트
     setTimeout(function() {
       var el = document.querySelector('.pf-lot-col[data-lot-id="'+lotId+'"]');
       if (!el) return;
       try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
       el.classList.remove('pf-lot-highlight');
-      // reflow trick — restart animation
       void el.offsetWidth;
       el.classList.add('pf-lot-highlight');
+      // 정제 batch 행 추가 하이라이트
+      if (refineId) {
+        var row = el.querySelector('[data-refine-row-id="'+refineId+'"]');
+        if (row) {
+          row.classList.remove('pf-refine-highlight');
+          void row.offsetWidth;
+          row.classList.add('pf-refine-highlight');
+          setTimeout(function(){ row && row.classList.remove('pf-refine-highlight'); }, 2400);
+        }
+      }
       setTimeout(function() { el && el.classList.remove('pf-lot-highlight'); }, 2400);
     }, 50);
   },
-  toggleLotHistory: function(lotId, ev) {
+  /* 정제 Batch 출하이력 popover 토글 */
+  toggleRefineHistory: function(refineId, ev) {
     if (ev) ev.stopPropagation();
-    // 다른 lot의 popover 모두 닫기
     document.querySelectorAll('.pf-lot-hist-pop.pf-open').forEach(function(p) {
-      if (p.dataset.lotId !== lotId) p.classList.remove('pf-open');
+      if (p.dataset.refineId !== refineId) p.classList.remove('pf-open');
     });
-    var pop = document.querySelector('.pf-lot-hist-pop[data-lot-id="'+lotId+'"]');
+    var pop = document.querySelector('.pf-lot-hist-pop[data-refine-id="'+refineId+'"]');
     if (!pop) return;
     if (pop.classList.contains('pf-open')) {
       pop.classList.remove('pf-open');
       return;
     }
-    // 위치 계산 — viewport 좌표로 fixed. 부모 overflow 영향 회피.
     var btn = ev && (ev.currentTarget || ev.target);
     if (btn && btn.getBoundingClientRect) {
       var rect = btn.getBoundingClientRect();
-      var popW = 280; // 추정 폭 (CSS min-width 240, max 320)
+      var popW = 280;
       var left = rect.left;
-      // 우측 클립 방지
       if (left + popW > window.innerWidth - 8) left = Math.max(8, window.innerWidth - popW - 8);
       pop.style.top = (rect.bottom + 4) + 'px';
       pop.style.left = left + 'px';
@@ -973,14 +963,15 @@ window.APP = {
     var doc = STATE.docs[c.docId];
     var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
-    if (lot) {
+    var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
+    if (refine) {
       // 자기 자신 제외하고 가용 재고 계산
-      var lotU = lot.unit || 'g';
-      var consumedExceptSelf = lotConsumed(c.lotId, lotU) - convertQty(c.qty, c.unit || 'g', lotU);
-      var available = (lot.finalQty || 0) - consumedExceptSelf;
-      var qtyInLotU = convertQty(qty, c.unit || 'g', lotU);
-      if (qtyInLotU > available + 1e-6) {
-        alert('가용 재고('+fmtQty(available, lotU)+')를 초과합니다.');
+      var rU = refine.unit || 'g';
+      var consumedExceptSelf = refineConsumed(c.refineId, rU) - convertQty(c.qty, c.unit || 'g', rU);
+      var available = (refine.qty || 0) - consumedExceptSelf;
+      var qtyInRU = convertQty(qty, c.unit || 'g', rU);
+      if (qtyInRU > available + 1e-6) {
+        alert('가용 재고('+fmtQty(available, rU)+')를 초과합니다.');
         return;
       }
     }
@@ -1075,26 +1066,41 @@ window.APP = {
       rowHeights[curRow] = {hpt: lots.some(function(l){return l.subName;}) ? 30 : 18};
       curRow++;
 
-      /* 산출량/재고 행 (STAGE 4 — finalQty 입력된 Lot 한정) */
-      var hasQty = lots.some(function(l){ return typeof l.finalQty === 'number'; });
-      if (hasQty) {
+      /* 정제 Batch 잔량 행 — refines가 있는 Lot 한정 */
+      var hasRefines = lots.some(function(l){ return (l.refines||[]).some(function(r){return typeof r.qty === 'number';}); });
+      if (hasRefines) {
+        var maxRefRows = 0;
+        lots.forEach(function(l) {
+          maxRefRows = Math.max(maxRefRows, (l.refines||[]).filter(function(r){return typeof r.qty === 'number';}).length);
+        });
         lots.forEach(function(l, ci) {
-          var sk = lotStock(l);
-          if (!sk.hasQty) {
+          var refs = (l.refines||[]).filter(function(r){return typeof r.qty === 'number';});
+          if (!refs.length) {
             sc(curRow, ci, '', { fill:{fgColor:{rgb:'F9FAFB'}} });
             return;
           }
-          var lines = ['산출: '+fmtQty(sk.finalQty, sk.unit), '재고: '+fmtQty(sk.stock, sk.unit)];
-          if (sk.consumed > 0) lines.push('출하: '+fmtQty(sk.consumed, sk.unit));
-          var fillC = sk.stock <= 0 ? 'FEE2E2' : (sk.ratio < 0.2 ? 'FEF3C7' : (sk.ratio < 0.5 ? 'F3F4F6' : 'DCFCE7'));
-          var fontC = sk.stock <= 0 ? 'B91C1C' : (sk.ratio < 0.2 ? 'B45309' : (sk.ratio < 0.5 ? '1F2937' : '15803D'));
+          var lines = refs.map(function(r) {
+            var sk = refineStock(r);
+            var label = (r.name || '(이름 없음)') + ': ' + fmtQty(sk.stock, sk.unit) + ' / ' + fmtQty(sk.qty, sk.unit);
+            return label;
+          });
+          // 색상은 합산 잔여 비율 기준
+          var totalQty = 0, totalStock = 0;
+          refs.forEach(function(r) {
+            var sk = refineStock(r);
+            totalQty += convertQty(sk.qty, sk.unit, 'g');
+            totalStock += convertQty(sk.stock, sk.unit, 'g');
+          });
+          var ratio = totalQty > 0 ? totalStock / totalQty : 0;
+          var fillC = totalStock <= 0 ? 'FEE2E2' : (ratio < 0.2 ? 'FEF3C7' : (ratio < 0.5 ? 'F3F4F6' : 'DCFCE7'));
+          var fontC = totalStock <= 0 ? 'B91C1C' : (ratio < 0.2 ? 'B45309' : (ratio < 0.5 ? '1F2937' : '15803D'));
           sc(curRow, ci, lines.join('\n'), {
-            font: { sz:9, bold:true, color:{rgb:fontC} },
+            font: { sz:9, color:{rgb:fontC} },
             fill: { fgColor:{rgb:fillC} },
             alignment: { horizontal:'center', vertical:'center', wrapText:true }
           });
         });
-        rowHeights[curRow] = {hpt: 38};
+        rowHeights[curRow] = {hpt: Math.max(28, maxRefRows * 14)};
         curRow++;
       }
 
@@ -1151,7 +1157,7 @@ window.APP = {
     (d.sections||[]).forEach(function(s) {
       (s.lots||[]).forEach(function(l) { docLotIds[l.id] = { sec: s, lot: l }; });
     });
-    var shipRows = [['출하명','고객','일자','메모','Type','Lot','수량','단위','문서']];
+    var shipRows = [['출하명','고객','일자','메모','Type','정제 Batch','합성 Batch','수량','단위','문서']];
     var TYPE_ORDER_XL = { P:0, N:1, S:2 };
     var shipList = Object.values(STATE.shipments||{}).filter(function(sh){
       if (!sh || sh.deleted) return false;
@@ -1164,7 +1170,7 @@ window.APP = {
         var ta = TYPE_ORDER_XL[a.sectionTypeSnapshot]; if (ta===undefined) ta=9;
         var tb = TYPE_ORDER_XL[b.sectionTypeSnapshot]; if (tb===undefined) tb=9;
         if (ta !== tb) return ta - tb;
-        return (a.lotNameSnapshot||'').localeCompare(b.lotNameSnapshot||'');
+        return (a.refineNameSnapshot||a.lotNameSnapshot||'').localeCompare(b.refineNameSnapshot||b.lotNameSnapshot||'');
       });
       comps.forEach(function(c, ci) {
         if (!docLotIds[c.lotId]) return; // 다른 문서의 Lot은 스킵
@@ -1174,6 +1180,7 @@ window.APP = {
           ci === 0 ? (sh.date||'') : '',
           ci === 0 ? (sh.note||'') : '',
           c.sectionTypeSnapshot || '',
+          c.refineNameSnapshot || '',
           c.lotNameSnapshot || '',
           (typeof c.qty === 'number') ? c.qty : '',
           c.unit || 'g',
@@ -1183,9 +1190,8 @@ window.APP = {
     });
     if (shipRows.length > 1) {
       var wsShip = XLSX.utils.aoa_to_sheet(shipRows);
-      wsShip['!cols'] = [{wch:22},{wch:14},{wch:12},{wch:24},{wch:6},{wch:22},{wch:10},{wch:6},{wch:22}];
-      // 헤더 굵게 (xlsx-js-style 지원)
-      ['A1','B1','C1','D1','E1','F1','G1','H1','I1'].forEach(function(addr) {
+      wsShip['!cols'] = [{wch:22},{wch:14},{wch:12},{wch:24},{wch:6},{wch:22},{wch:22},{wch:10},{wch:6},{wch:22}];
+      ['A1','B1','C1','D1','E1','F1','G1','H1','I1','J1'].forEach(function(addr) {
         if (wsShip[addr]) wsShip[addr].s = {
           font:{bold:true, color:{rgb:'4338CA'}},
           fill:{fgColor:{rgb:'EEF2FF'}},
@@ -1366,22 +1372,21 @@ function renderSec(s) {
     bodyHtml+'</div>';
 }
 
-function renderStockBadge(l) {
-  var sk = lotStock(l);
+/* 정제 Batch 행의 📦 재고 배지 + 🔗 이력 popover */
+function renderRefineStockBadge(r) {
+  var sk = refineStock(r);
   if (!sk.hasQty) return '';
   var tier = 'full';
   if (sk.stock <= 0) tier = 'empty';
   else if (sk.ratio < 0.2) tier = 'low';
   else if (sk.ratio < 0.5) tier = 'mid';
-  var titleParts = ['재고 '+fmtQty(sk.stock, sk.unit)+' / 산출 '+fmtQty(sk.finalQty, sk.unit)];
+  var titleParts = ['재고 '+fmtQty(sk.stock, sk.unit)+' / 입력 '+fmtQty(sk.qty, sk.unit)];
   if (sk.consumed > 0) titleParts.push('출하됨 '+fmtQty(sk.consumed, sk.unit));
-  var stock = '<span class="pf-lot-stock pf-stock-'+tier+'" title="'+esc(titleParts.join(' · '))+'">📦 '+esc(fmtQty(sk.stock, sk.unit))+'</span>';
-  return stock + renderHistoryBadge(l);
+  return '<span class="pf-refine-stock pf-stock-'+tier+'" title="'+esc(titleParts.join(' · '))+'">📦 '+esc(fmtQty(sk.stock, sk.unit))+'</span>';
 }
 
-/* 출하 이력 배지 + 인라인 popover (STAGE 3) */
-function renderHistoryBadge(l) {
-  var hist = lotShipments(l.id);
+function renderRefineHistoryBadge(r) {
+  var hist = refineShipments(r.id);
   if (!hist.length) return '';
   var popRows = hist.map(function(h) {
     return '<button class="pf-lot-hist-row" onclick="APP.jumpToShip(\''+h.shipId+'\',event)">'+
@@ -1391,8 +1396,8 @@ function renderHistoryBadge(l) {
       '</button>';
   }).join('');
   return '<span class="pf-lot-hist-wrap" onclick="event.stopPropagation()">'+
-    '<button class="pf-lot-hist-btn" title="이 Lot이 포함된 출하 '+hist.length+'건" onclick="APP.toggleLotHistory(\''+l.id+'\',event)">🔗 '+hist.length+'</button>'+
-    '<div class="pf-lot-hist-pop" data-lot-id="'+l.id+'">'+
+    '<button class="pf-lot-hist-btn" title="이 정제 Batch가 포함된 출하 '+hist.length+'건" onclick="APP.toggleRefineHistory(\''+r.id+'\',event)">🔗 '+hist.length+'</button>'+
+    '<div class="pf-lot-hist-pop" data-refine-id="'+r.id+'">'+
       '<div class="pf-lot-hist-hd">출하 이력 ('+hist.length+'건)</div>'+
       popRows+
     '</div>'+
@@ -1410,16 +1415,11 @@ function renderLot(l, s) {
        + (lastStep.date?' · '+lastStep.date:'')
        + (lastStep.operator?' · '+lastStep.operator:''))
     : (l.steps&&l.steps.length ? l.steps.length+'스텝' : '스텝 없음');
-  var qtyVal = (typeof l.finalQty === 'number') ? l.finalQty : '';
-  var unitVal = l.unit || 'g';
-  var unitOpts = ['mg','g','kg'].map(function(u){
-    return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
-  }).join('');
-  var refCount = (l.refines || []).length;
-  var bodyHtml = isCollapsed
+  // 정제 Batch 영역은 공정 접힘 여부와 무관하게 항상 노출 (사용자 요구).
+  var refinesHtml = renderRefinesSection(l);
+  var processBody = isCollapsed
     ? '<div class="pf-lot-collapsed-body">'+
         '<span>총 '+(l.steps||[]).length+'스텝</span>'+
-        (refCount?'<span>정제 '+refCount+'건</span>':'')+
         (lastInfo?'<span>마지막: '+esc(lastInfo)+'</span>':'')+
         '<button class="pf-add-lot-btn" style="margin-top:4px" onclick="APP.toggleLot(\''+l.id+'\',event)">▶ 펼치기</button>'+
       '</div>'
@@ -1432,31 +1432,34 @@ function renderLot(l, s) {
       '<button class="pf-qadd wet" onclick="APP.addStep(\''+l.id+'\',\'wet\',event)">+Wet</button>'+
       '<button class="pf-qadd subl" onclick="APP.addStep(\''+l.id+'\',\'subl\',event)">+승화</button>'+
       '<button class="pf-qadd collect" onclick="APP.addStep(\''+l.id+'\',\'collect\',event)">+여액</button>'+
-      '</div>'+
-      renderRefinesSection(l);
+      '</div>';
   return '<div class="pf-lot-col pf-lot-st-'+status+'" data-lot-id="'+l.id+'">'+
     '<div class="pf-lot-header '+tc+'">'+
     '<div class="pf-lot-head-top">'+
       '<span class="pf-lot-status pf-st-'+status+'">'+statusLbl+'</span>'+
-      '<span class="pf-lot-stock-slot" data-lot-stock="'+l.id+'">'+renderStockBadge(l)+'</span>'+
-      '<button class="pf-lot-collapse-btn" title="접기/펼치기" onclick="APP.toggleLot(\''+l.id+'\',event)">'+(isCollapsed?'▶':'▼')+'</button>'+
+      '<button class="pf-lot-collapse-btn" title="공정 접기/펼치기" onclick="APP.toggleLot(\''+l.id+'\',event)">'+(isCollapsed?'▶':'▼')+'</button>'+
       '<button class="pf-lot-ctl-btn" title="Lot 복제" onclick="APP.cloneLot(\''+l.id+'\',event)">⎘</button>'+
       '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div>'+
-    '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
-    '<div class="pf-lot-qty-row" onclick="event.stopPropagation()">'+
-      '<span class="pf-lot-qty-lbl" title="최종 산출량 (출하 가능 재고)">산출량</span>'+
-      '<input class="pf-lot-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateLotQty(\''+l.id+'\',this.value)">'+
-      '<select class="pf-lot-qty-unit" onchange="APP.updateLotUnit(\''+l.id+'\',this.value)">'+unitOpts+'</select>'+
-    '</div>'+
-    '</div>'+bodyHtml+'</div>';
+    '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="합성 Batch No." oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
+    '</div>'+refinesHtml+processBody+'</div>';
 }
 
-/* 재고 배지만 partial 갱신 — qty 입력 중 full render 시 input blur 방지 */
-function renderLotStock(lid) {
-  var l = findLot(lid); if(!l) return;
-  var slot = document.querySelector('[data-lot-stock="'+lid+'"]');
-  if (slot) slot.innerHTML = renderStockBadge(l);
+/* 정제 Batch 한 행의 재고/이력 배지만 partial 갱신 */
+function renderRefineStock(rid) {
+  var slot = document.querySelector('[data-refine-stock="'+rid+'"]');
+  if (!slot) return;
+  // refine 객체 검색
+  var found = null;
+  if (STATE.currentId && getDoc()) {
+    (getDoc().sections||[]).forEach(function(s) {
+      (s.lots||[]).forEach(function(l) {
+        (l.refines||[]).forEach(function(r) { if (r.id === rid) found = r; });
+      });
+    });
+  }
+  if (!found) return;
+  slot.innerHTML = renderRefineStockBadge(found) + renderRefineHistoryBadge(found);
 }
 
 /* 정제 Batch 섹션 — Lot 카드 body 하단에 노출.
@@ -1481,11 +1484,14 @@ function renderRefineRowHtml(l, r) {
   var unitOpts = ['mg','g','kg'].map(function(u){
     return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
   }).join('');
-  return '<tr class="pf-refine-row" data-refine-id="'+r.id+'">'+
+  return '<tr class="pf-refine-row" data-refine-row-id="'+r.id+'">'+
     '<td><input class="pf-refine-name-inp" placeholder="정제 Batch 이름" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)"></td>'+
     '<td class="pf-refine-qty-cell">'+
       '<input class="pf-refine-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'qty\',this.value)">'+
       '<select class="pf-refine-unit" onchange="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'unit\',this.value)">'+unitOpts+'</select>'+
+    '</td>'+
+    '<td class="pf-refine-badges" data-refine-stock="'+r.id+'">'+
+      renderRefineStockBadge(r)+renderRefineHistoryBadge(r)+
     '</td>'+
     '<td class="pf-refine-del"><button class="pf-refine-del-btn" title="삭제" onclick="APP.deleteRefine(\''+l.id+'\',\''+r.id+'\')">✕</button></td>'+
   '</tr>';
@@ -1646,7 +1652,7 @@ function renderShipDetail(sh) {
     var ta = TYPE_ORDER[a.c.sectionTypeSnapshot]; if (ta === undefined) ta = 9;
     var tb = TYPE_ORDER[b.c.sectionTypeSnapshot]; if (tb === undefined) tb = 9;
     if (ta !== tb) return ta - tb;
-    return (a.c.lotNameSnapshot||'').localeCompare(b.c.lotNameSnapshot||'');
+    return (a.c.refineNameSnapshot||a.c.lotNameSnapshot||'').localeCompare(b.c.refineNameSnapshot||b.c.lotNameSnapshot||'');
   });
   var tot = shipTotal(sh);
   var compRows = comps.map(function(entry) {
@@ -1656,15 +1662,20 @@ function renderShipDetail(sh) {
     var doc = STATE.docs[c.docId];
     var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
-    var orphan = !lot ? '<span class="pf-comp-orphan" title="원본 Lot이 삭제됨 — 드릴다운 불가">⚠</span>' : '';
+    var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
+    var orphan = (!lot || (c.refineId && !refine)) ? '<span class="pf-comp-orphan" title="원본이 삭제됨 — 드릴다운 불가">⚠</span>' : '';
+    var refIdArg = c.refineId ? '\''+c.refineId+'\'' : 'null';
     var jumpBtn = lot
-      ? '<button class="pf-comp-jump" title="이 Batch의 공정으로 이동" onclick="APP.jumpToLot(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\',event)">↗</button>'
+      ? '<button class="pf-comp-jump" title="해당 Lot/정제 Batch의 공정으로 이동" onclick="APP.jumpToLot(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\','+refIdArg+',event)">↗</button>'
       : '';
+    var refineLabel = c.refineNameSnapshot
+      ? esc(c.refineNameSnapshot)
+      : '<span class="pf-comp-legacy" title="정제 Batch 정보 없음 (구 데이터)">— (구 데이터)</span>';
     return '<tr>'+
       '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(typeLbl)+'</span></td>'+
-      '<td class="pf-comp-name">'+esc(c.lotNameSnapshot||'(이름 없음)')+' '+orphan+jumpBtn+'</td>'+
-      '<td class="pf-comp-mat">'+esc(c.materialSnapshot||'-')+'</td>'+
-      '<td class="pf-comp-doc">'+esc(c.docTitleSnapshot||'-')+'</td>'+
+      '<td class="pf-comp-name">'+refineLabel+' '+orphan+jumpBtn+'</td>'+
+      '<td class="pf-comp-mat"><span class="pf-comp-parent">합성: '+esc(c.lotNameSnapshot||'-')+'</span></td>'+
+      '<td class="pf-comp-doc">'+esc(c.materialSnapshot||'-')+' · '+esc(c.docTitleSnapshot||'-')+'</td>'+
       '<td class="pf-ship-num">'+
         '<input type="number" min="0" step="0.01" class="pf-comp-qty-inp" value="'+esc(String(c.qty))+'" oninput="APP.updateShipCompQty(\''+sh.id+'\','+i+',this.value)">'+
         '<span class="pf-comp-unit">'+esc(c.unit||'g')+'</span>'+
@@ -1673,13 +1684,15 @@ function renderShipDetail(sh) {
     '</tr>';
   }).join('');
 
-  // 일괄 추가 그리드 — finalQty 입력된 모든 Lot을 P → N → S 순으로 표시
+  // 일괄 추가 그리드 — qty 입력된 모든 정제 Batch를 P → N → S 순으로 표시
   var pickerRows = [];
   Object.values(STATE.docs).forEach(function(doc) {
     (doc.sections||[]).forEach(function(s) {
       (s.lots||[]).forEach(function(l) {
-        if (typeof l.finalQty !== 'number') return;
-        pickerRows.push({ doc: doc, sec: s, lot: l });
+        (l.refines||[]).forEach(function(r) {
+          if (typeof r.qty !== 'number') return;
+          pickerRows.push({ doc: doc, sec: s, lot: l, refine: r });
+        });
       });
     });
   });
@@ -1689,22 +1702,25 @@ function renderShipDetail(sh) {
     if (ta !== tb) return ta - tb;
     var ma = (a.doc.material||a.doc.title||'').localeCompare(b.doc.material||b.doc.title||'');
     if (ma !== 0) return ma;
-    return (a.lot.name||'').localeCompare(b.lot.name||'');
+    var na = (a.lot.name||'').localeCompare(b.lot.name||'');
+    if (na !== 0) return na;
+    return (a.refine.name||'').localeCompare(b.refine.name||'');
   });
   var pickerHtml;
   if (!pickerRows.length) {
-    pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">산출량이 입력된 Lot이 없습니다. Lot 헤더의 "산출량"을 먼저 입력하세요.</div>';
+    pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">수량이 입력된 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 수량을 먼저 입력하세요.</div>';
   } else {
-    var pickerBody = pickerRows.map(function(r) {
-      var sk = lotStock(r.lot);
-      var typeCls = r.sec.type === 'N' ? 'pf-comp-n' : (r.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
+    var pickerBody = pickerRows.map(function(pr) {
+      var sk = refineStock(pr.refine);
+      var typeCls = pr.sec.type === 'N' ? 'pf-comp-n' : (pr.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
       var rowCls = sk.stock <= 0 ? 'pf-pick-row pf-pick-empty' : 'pf-pick-row';
       var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
-      return '<tr class="'+rowCls+'" data-doc-id="'+r.doc.id+'" data-sec-id="'+r.sec.id+'" data-lot-id="'+r.lot.id+'">'+
-        '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(r.sec.type||'-')+'</span></td>'+
-        '<td class="pf-pick-name">'+esc(r.lot.name||'(이름 없음)')+'</td>'+
-        '<td class="pf-pick-mat">'+esc(r.doc.material||'-')+'</td>'+
-        '<td class="pf-pick-doc">'+esc(r.doc.title||'-')+'</td>'+
+      return '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
+        '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(pr.sec.type||'-')+'</span></td>'+
+        '<td class="pf-pick-name">'+esc(pr.refine.name||'(이름 없음)')+'</td>'+
+        '<td class="pf-pick-parent">'+esc(pr.lot.name||'-')+'</td>'+
+        '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
+        '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
         '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
         '<td class="pf-ship-num">'+
           '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="-"'+
@@ -1715,7 +1731,7 @@ function renderShipDetail(sh) {
       '</tr>';
     }).join('');
     pickerHtml = '<table class="pf-ship-table pf-pick-table"><thead><tr>'+
-        '<th>Type</th><th>Lot</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
+        '<th>Type</th><th>정제 Batch</th><th>합성 Batch</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
       '</tr></thead><tbody>'+pickerBody+'</tbody></table>'+
       '<div class="pf-pick-actions">'+
         '<button class="btn btn-primary" onclick="APP.addShipComponentsBatch(\''+sh.id+'\')">+ 입력한 수량 모두 추가</button>'+
@@ -1738,7 +1754,7 @@ function renderShipDetail(sh) {
     '<h4 class="pf-ship-sub">구성 (P → N → S 정렬)</h4>'+
     (comps.length
       ? '<table class="pf-ship-table"><thead><tr>'+
-          '<th>Type</th><th>Lot</th><th>소재</th><th>문서</th><th>수량</th><th></th>'+
+          '<th>Type</th><th>정제 Batch</th><th>합성 Batch</th><th>소재 · 문서</th><th>수량</th><th></th>'+
         '</tr></thead><tbody>'+compRows+'</tbody></table>'
       : '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다. 아래 표에서 사용수량을 입력하세요.</div>')+
     '<h4 class="pf-ship-sub pf-ship-sub-pick">+ 산출량 입력된 Lot에서 일괄 추가</h4>'+

@@ -1,6 +1,6 @@
 # 15. P/N 공정 Flow 관리
 
-> Last updated: 2026-05-13
+> Last updated: 2026-05-13 (rev. 정제 Batch 기준 재고)
 > 폴더: `apps/15_pn_flow/`
 > 대분류: 공정 이력 관리 · ID: `pn_flow` · 가드: `_AG_ADMIN_ONLY = true`
 
@@ -51,12 +51,10 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
       lots: [
         {
           id: 'uid',
-          name: 'Lot 이름',                  // = 합성 Batch No.
+          name: '합성 Batch No.',
           subName: '부제',
-          finalQty: 50.2 | null,           // 합성 산출량 (출하 차감 대상). null=미입력
-          unit: 'mg' | 'g' | 'kg',          // 기본 'g'
-          refines: [                        // 정제 Batch 잔량 기록 (출하 시스템과 독립)
-            { id: 'uid', name: '정제 Batch No.', qty: 12.5 | null, unit: 'g' }
+          refines: [                        // 정제 Batch — 재고·출하 단위 (출하 차감 대상)
+            { id: 'uid', name: '정제 Batch No.', qty: 12.5 | null, unit: 'mg'|'g'|'kg' }
           ],
           steps: [
             {
@@ -96,7 +94,7 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 - 드래그앤드롭 재정렬 (섹션, Lot, 단계, 교차 Lot 이동)
 - Undo/Redo (Ctrl+Z / Cmd+Z, 20개 상태 기억)
 - 상태 추적 (각 단계: pass/fail/pending)
-- 재고량 추적 (Lot별 `finalQty` + 단위) — STAGE 1
+- 재고량 추적 (정제 Batch 단위 — 합성 Batch는 헤더만, 수량은 정제 단계에서)
 - Excel 출력 (2개 시트: 메타 + 공정 다이어그램, 색상 칠하기)
 - 인쇄 최적화 (토폴로지 유지, 색상 유지)
 - 실시간 Firebase 동기화 (conflict resolution 포함)
@@ -114,10 +112,11 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 
 | STAGE | 산출물 | 상태 |
 |-------|--------|------|
-| 1 | Lot에 `finalQty/unit` 필드 + Lot 카드 재고 배지 (📦) | 구현 완료 (2026-05-13) |
-| 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 (P/N·멀티배치 혼합) + Firebase 보안 규칙 + 재고 자동 차감 + 색상 단계(green/회/주황/빨강) | 구현 완료 (2026-05-13) |
-| 3 | drill-down(컴포넌트 → 공정 점프) + Lot측 "출하이력" 역방향 popover + 노란 글로우 하이라이트 | 구현 완료 (2026-05-13) |
-| 4 | Excel 출력 — 산출량/재고 행 + 별도 "출하 Lot" 시트 · glossary("출하 Lot/공정 Lot/산출량") | 구현 완료 (2026-05-13) |
+| 1 | Lot(합성)에 `finalQty/unit` 필드 + 카드 재고 배지 | (deprecated — STAGE 5에서 제거) |
+| 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 + Firebase 보안 규칙 + 재고 자동 차감 | 구현 완료 (2026-05-13) |
+| 3 | drill-down(컴포넌트 → 공정 점프) + 역방향 출하이력 popover + 노란 글로우 | 구현 완료 (2026-05-13) |
+| 4 | Excel 출력 — 정제 잔량 행 + "출하 Lot" 시트 · glossary | 구현 완료 (2026-05-13) |
+| 5 | **정제 Batch 기준 재고로 피벗** — 합성 Lot의 `finalQty/unit` 제거, 재고·이력·출하 모두 refines 단위로 이동. 공정 접기 상태에서도 정제 Batch는 항상 노출 | 구현 완료 (2026-05-13) |
 
 ### STAGE 1 — 재고 데이터 모델
 
@@ -222,12 +221,25 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 - **공정 전체 접기/펼치기** 버튼 (topbar): 문서 내 **모든 Lot의 공정**(개별 Lot 헤더 ▼/▶와 동일)을 일괄 토글. `STATE.collapsedLots` Set 조작. 라벨은 현재 상태에 따라 "▶ 공정 전체 펼치기" ↔ "▼ 공정 전체 접기" 자동 변경
 - **새 Lot 기본 이름 제거**: `+ Lot 추가` 시 빈 이름으로 생성 (placeholder만 표시)
 
-### 정제 Batch (refines)
+### STAGE 5 — 정제 Batch 기준 재고 (현재 구조)
 
-각 Lot(= 합성 Batch)이 정제 공정을 거쳐 산출한 정제 batches의 **잔량**을 기록하는 sub-records. 출하 차감 시스템과 독립 (출하는 여전히 `finalQty` 기준).
+합성 Batch(=Lot) 단위 재고 추적이 실제 워크플로(여러 정제 batch가 합성에서 나옴)와 맞지 않아 정제 Batch 기준으로 피벗.
 
-- 데이터: `lot.refines[] = [{ id, name, qty, unit }]`
-- UI: Lot 카드 body 하단 — 녹색 패널, 행마다 이름 + 수량 + 단위 + 삭제 버튼
-- Lot 접힘 상태에서는 "정제 N건"으로 카운트만 노출
-- 음수 거부, 빈 값은 `null` 저장
-- `cloneLot` 시 refines도 새 id로 복제, `normDoc`에서 RTDB의 object→array 정규화
+**제거된 것**
+- `lot.finalQty`, `lot.unit` 필드 (스키마에서 삭제)
+- Lot 헤더의 산출량 입력 행, 📦 재고 배지, 🔗 출하이력 배지
+- `lotStock / lotConsumed / lotShipments` 헬퍼
+- `APP.updateLotQty / updateLotUnit` mutator
+
+**대체된 것**
+- `refineStock(refine)` → `{stock, qty, unit, hasQty, consumed, ratio}`
+- `refineConsumed(refineId, refineUnit)` — 비-삭제 출하의 components 합산
+- `refineShipments(refineId)` — 역방향 lookup
+- 출하 component 스키마: `refineId, refineNameSnapshot` 추가
+- 정제 Batch 행마다 📦 재고 배지 + 🔗 출하이력 popover
+- 출하 picker 그리드: Type / 정제 Batch / 합성 Batch / 소재 / 문서 / 현재고 / 사용수량
+
+**UX**
+- 정제 Batch 영역은 **공정 접힘 여부와 무관하게 항상 노출** — 사용자가 잔량을 항상 확인 가능
+- 컴포넌트 ↗ 점프 → 부모 Lot 카드 노란 글로우 + 해당 정제 Batch 행도 따로 하이라이트 (`pf-refine-pulse`)
+- 구 데이터(`refineId` 없는 component)는 "(구 데이터)" 표시 + 점프 가능하지만 잔량 검증 스킵
