@@ -110,7 +110,7 @@ function stepLbl(s, n) {
 /* ── 팩토리 ────────────────────────────────────── */
 function mkDoc(o) { return Object.assign({id:uid(),title:'새 Flow',material:'',author:'',date:todayStr(),sections:[]},o); }
 function mkSec(t) { return {id:uid(),type:t||'P',lots:[]}; }
-function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[]}; }
+function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[],finalQty:null,unit:'g'}; }
 function mkStep(t,o) { return Object.assign({id:uid(),type:t||'wet',detail:'',tag:null,location:'',date:'',operator:''},o); }
 
 /* ── Lot 최종상태 ───────────────────────────────── */
@@ -123,6 +123,23 @@ function lotStatus(lot) {
     if (t === 'fail') return 'fail';
   }
   return 'progress';
+}
+
+/* ── Lot 재고 ───────────────────────────────────
+   STAGE 1: stock = finalQty (출하 차감 없음).
+   STAGE 2에서 pn_flow_shipments의 components를 합산해 차감 예정.
+   STAGE 2 진입 시 이 함수의 시그니처만 유지하면 호출부 수정 불필요.
+─────────────────────────────────────────────────── */
+function lotStock(lot) {
+  var fq = (lot && typeof lot.finalQty === 'number') ? lot.finalQty : null;
+  var unit = (lot && lot.unit) || 'g';
+  return { stock: fq, finalQty: fq, unit: unit, hasQty: fq !== null && !isNaN(fq) };
+}
+
+function fmtQty(n, unit) {
+  if (n === null || n === undefined || isNaN(n)) return '';
+  var s = (Math.round(n * 100) / 100).toString();
+  return s + (unit || 'g');
 }
 
 /* ── 저장 상태 표시 ─────────────────────────────── */
@@ -452,6 +469,8 @@ window.APP = {
       id: uid(),
       name: (src.name || '') + ' (복제)',
       subName: src.subName || '',
+      finalQty: (typeof src.finalQty === 'number') ? src.finalQty : null,
+      unit: src.unit || 'g',
       steps: (src.steps || []).map(function(st) {
         return Object.assign({}, st, { id: uid() });
       })
@@ -489,6 +508,24 @@ window.APP = {
   updateLotName: function(lid, val) {
     var l = findLot(lid); if(l) l.name=val;
     save();
+  },
+  updateLotQty: function(lid, val) {
+    var l = findLot(lid); if(!l) return;
+    var trimmed = String(val).trim();
+    if (trimmed === '') { l.finalQty = null; }
+    else {
+      var n = Number(trimmed);
+      if (isNaN(n) || n < 0) return; // 음수 무시
+      l.finalQty = n;
+    }
+    save();
+    renderLotStock(lid);
+  },
+  updateLotUnit: function(lid, val) {
+    var l = findLot(lid); if(!l) return;
+    l.unit = val || 'g';
+    save();
+    renderLotStock(lid);
   },
   // updateLotSub removed
   onMetaChange: function() {
@@ -825,6 +862,12 @@ function renderSec(s) {
     bodyHtml+'</div>';
 }
 
+function renderStockBadge(l) {
+  var sk = lotStock(l);
+  if (!sk.hasQty) return '';
+  return '<span class="pf-lot-stock" title="재고 (최종 산출량)">📦 '+esc(fmtQty(sk.stock, sk.unit))+'</span>';
+}
+
 function renderLot(l, s) {
   var tc = s.type==='N'?'pf-lot-n':(s.type==='S'?'pf-lot-s':'pf-lot-p');
   var status = lotStatus(l);
@@ -836,6 +879,11 @@ function renderLot(l, s) {
        + (lastStep.date?' · '+lastStep.date:'')
        + (lastStep.operator?' · '+lastStep.operator:''))
     : (l.steps&&l.steps.length ? l.steps.length+'스텝' : '스텝 없음');
+  var qtyVal = (typeof l.finalQty === 'number') ? l.finalQty : '';
+  var unitVal = l.unit || 'g';
+  var unitOpts = ['mg','g','kg'].map(function(u){
+    return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
+  }).join('');
   var bodyHtml = isCollapsed
     ? '<div class="pf-lot-collapsed-body">'+
         '<span>총 '+(l.steps||[]).length+'스텝</span>'+
@@ -856,12 +904,25 @@ function renderLot(l, s) {
     '<div class="pf-lot-header '+tc+'">'+
     '<div class="pf-lot-head-top">'+
       '<span class="pf-lot-status pf-st-'+status+'">'+statusLbl+'</span>'+
+      '<span class="pf-lot-stock-slot" data-lot-stock="'+l.id+'">'+renderStockBadge(l)+'</span>'+
       '<button class="pf-lot-collapse-btn" title="접기/펼치기" onclick="APP.toggleLot(\''+l.id+'\',event)">'+(isCollapsed?'▶':'▼')+'</button>'+
       '<button class="pf-lot-ctl-btn" title="Lot 복제" onclick="APP.cloneLot(\''+l.id+'\',event)">⎘</button>'+
       '<button class="pf-lot-ctl-btn pf-lot-del-btn" title="Lot 삭제" onclick="APP.deleteLot(\''+l.id+'\',event)">✕</button>'+
     '</div>'+
     '<input class="pf-lot-name-inp" value="'+esc(l.name)+'" placeholder="Lot 이름" oninput="APP.updateLotName(\''+l.id+'\',this.value)" onclick="event.stopPropagation()">'+
+    '<div class="pf-lot-qty-row" onclick="event.stopPropagation()">'+
+      '<span class="pf-lot-qty-lbl" title="최종 산출량 (출하 가능 재고)">산출량</span>'+
+      '<input class="pf-lot-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateLotQty(\''+l.id+'\',this.value)">'+
+      '<select class="pf-lot-qty-unit" onchange="APP.updateLotUnit(\''+l.id+'\',this.value)">'+unitOpts+'</select>'+
+    '</div>'+
     '</div>'+bodyHtml+'</div>';
+}
+
+/* 재고 배지만 partial 갱신 — qty 입력 중 full render 시 input blur 방지 */
+function renderLotStock(lid) {
+  var l = findLot(lid); if(!l) return;
+  var slot = document.querySelector('[data-lot-stock="'+lid+'"]');
+  if (slot) slot.innerHTML = renderStockBadge(l);
 }
 
 function renderStep(st, l, i) {

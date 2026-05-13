@@ -319,6 +319,45 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 }
 .pf-lot-sub-inp { font-size: 11px; font-weight: 400; opacity: .85; }
 
+/* ── Lot 재고 배지 + 산출량 입력 (STAGE 1) ──────────────────────── */
+.pf-lot-stock-slot { display: inline-flex; align-items: center; }
+.pf-lot-stock {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+  letter-spacing: .2px; line-height: 1.5;
+  background: rgba(255,255,255,.18); color: #fff;
+  border: 1px solid rgba(255,255,255,.32);
+  white-space: nowrap;
+}
+.pf-lot-qty-row {
+  display: flex; align-items: center; gap: 4px; margin-top: 4px;
+}
+.pf-lot-qty-lbl {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,.7);
+  letter-spacing: .2px; padding-right: 2px;
+}
+.pf-lot-qty-inp {
+  flex: 1 1 auto; min-width: 0;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px; color: #fff; padding: 3px 6px;
+  font-size: 11.5px; font-family: inherit; outline: none;
+  box-sizing: border-box;
+}
+.pf-lot-qty-inp::placeholder { color: rgba(255,255,255,.5); }
+.pf-lot-qty-inp:focus {
+  background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6);
+}
+.pf-lot-qty-inp::-webkit-outer-spin-button,
+.pf-lot-qty-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pf-lot-qty-inp { -moz-appearance: textfield; }
+.pf-lot-qty-unit {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px; color: #fff; padding: 3px 4px;
+  font-size: 11px; font-family: inherit; outline: none;
+  cursor: pointer;
+}
+.pf-lot-qty-unit option { color: #111; }
+
 .pf-steps-list { padding: 8px; display: flex; flex-direction: column; gap: 0; }
 
 /* ── ADD STEP BAR ──────────────────────────────────────────────── */
@@ -513,6 +552,13 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-lot-sub-inp  { background: none; border: none; color: #555; padding: 0; font-size: 11px; }
   .pf-lot-header   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pf-step         { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pf-lot-qty-inp, .pf-lot-qty-unit {
+    background: none; border: none; color: #000; padding: 0; font-size: 11px;
+  }
+  .pf-lot-qty-lbl { color: rgba(0,0,0,.6); }
+  .pf-lot-stock {
+    background: rgba(0,0,0,.08); color: #000; border-color: rgba(0,0,0,.18);
+  }
 }
 
 /* ── 데이터 로딩 오버레이 ───────────────────────────────────────────── */
