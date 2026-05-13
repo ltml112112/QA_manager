@@ -966,3 +966,103 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   cursor: pointer; font-family: inherit; line-height: 1.4;
 }
 .pf-comp-jump:hover { background: #c7d2fe; }
+
+/* ── 공정 미리보기 팝업 — 출하 모달 위에 우측 떠 공정·잔량 동시 확인 ── */
+.pf-proc-popup {
+  display: none;
+  position: fixed; top: 80px; right: 24px;
+  width: 360px; max-height: calc(100vh - 120px);
+  background: #fff; color: #111827;
+  border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.32);
+  z-index: 1200;
+  overflow: hidden;
+  flex-direction: column;
+  font-family: inherit;
+}
+.pf-proc-popup.pf-proc-open { display: flex; }
+.pf-proc-hd {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  color: #fff;
+}
+.pf-proc-hd.pf-proc-p { background: linear-gradient(135deg,#3f6bd9,#5b8df0); }
+.pf-proc-hd.pf-proc-n { background: linear-gradient(135deg,#7a4cc7,#9d6ee0); }
+.pf-proc-hd.pf-proc-s { background: linear-gradient(135deg,#c79a2c,#e4b04a); }
+.pf-proc-type-tag {
+  background: rgba(255,255,255,.22);
+  border: 1px solid rgba(255,255,255,.35);
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11.5px; font-weight: 700;
+}
+.pf-proc-title { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-proc-close {
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+  color: #fff; padding: 2px 8px; border-radius: 4px;
+  font-size: 12px; cursor: pointer;
+}
+.pf-proc-close:hover { background: rgba(255,255,255,.28); }
+.pf-proc-meta {
+  padding: 8px 12px; font-size: 11.5px; color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pf-proc-sec { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+.pf-proc-sec:last-child { border-bottom: 0; flex: 1 1 auto; overflow-y: auto; }
+.pf-proc-sec-hd {
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: .3px;
+  margin-bottom: 6px;
+}
+.pf-proc-refines { display: flex; flex-direction: column; gap: 4px; }
+.pf-proc-refine {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 6px 8px;
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+}
+.pf-proc-refine.pf-proc-refine-hi {
+  background: #fef3c7; border-color: #f59e0b;
+}
+.pf-proc-refine-noqty {
+  font-size: 11px; color: #9ca3af; font-style: italic;
+}
+.pf-proc-steps { display: flex; flex-direction: column; gap: 5px; }
+.pf-proc-step {
+  border: 1px solid; border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+.pf-proc-step.react   { background: #dbe7ff; border-color: #3f6bd9; }
+.pf-proc-step.solid   { background: #e4f1fa; border-color: #2e8ac7; }
+.pf-proc-step.wet     { background: #e0f5e6; border-color: #2f9e52; }
+.pf-proc-step.subl    { background: #efe4fb; border-color: #7a4cc7; }
+.pf-proc-step.collect { background: #fff6db; border-color: #c79a2c; }
+.pf-proc-step-hd {
+  display: flex; align-items: center; gap: 6px;
+}
+.pf-proc-step-lbl { font-weight: 600; color: #111827; flex: 1; }
+.pf-proc-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .3px;
+  padding: 1px 6px; border-radius: 3px;
+}
+.pf-proc-tag.pf-tag-pass { background: #1f8f3e; color: #fff; }
+.pf-proc-tag.pf-tag-fail { background: #c0312c; color: #fff; }
+.pf-proc-tag.pf-proc-pending {
+  background: #fff; border: 1px dashed #8a94a6; color: #6b7280;
+}
+.pf-proc-step-det {
+  margin-top: 3px; font-size: 11.5px; color: #374151;
+}
+.pf-proc-step-meta {
+  margin-top: 3px; font-size: 10.5px; color: #6b7280;
+}
+.pf-proc-empty {
+  padding: 8px; text-align: center; color: #9ca3af;
+  font-size: 11.5px; font-style: italic;
+}
+
+@media (max-width: 780px) {
+  .pf-proc-popup {
+    top: 60px; right: 12px; left: 12px;
+    width: auto; max-height: calc(100vh - 80px);
+  }
+}

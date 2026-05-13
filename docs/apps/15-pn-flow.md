@@ -184,11 +184,13 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 
 ### STAGE 3 — 양방향 네비게이션
 
-**Forward (컴포넌트 → 공정)**
-- 출하 상세의 컴포넌트 이름 옆 `↗` 버튼 → `APP.jumpToLot(docId, sectionId, lotId)`
-- 동작: 모달 닫기 → `STATE.currentId = docId` → `render()` → `scrollIntoView({block:'center'})` → 2.4s 노란 글로우 (`pf-lot-pulse` keyframe)
-- 접혀있던 섹션/Lot 자동 펼침 (`collapsedSecs.delete`)
-- 원본 Lot 삭제 시 `⚠` 표시 + 점프 버튼 숨김 (snapshot으로 이름만 보존)
+**Forward (컴포넌트·picker → 공정 미리보기)**
+- 출하 상세의 컴포넌트·picker 행 정제 Batch 옆 `↗` 버튼 → `APP.openProcessPopup(docId, sectionId, lotId, refineId)`
+- 동작: 우상단에 `#pf-proc-popup` 띄움 — 출하 모달은 **닫히지 않음** (공정·잔량을 동시에 확인하기 위함)
+- 팝업 내용: Lot 이름·Type 헤더, 소재·문서 메타, 정제 Batch 잔량(📦 배지), 공정 단계(read-only)
+- `refineId`가 전달되면 해당 정제 행이 `pf-proc-refine-hi`(노랑 강조)로 표시
+- 닫기: 우상단 `✕`, Esc, 팝업 외부 클릭, 출하 모달 닫기 시
+- 원본 Lot 삭제 시 `⚠` 표시 + 버튼 숨김 (snapshot으로 이름만 보존), 팝업 열린 상태에서 원본 삭제되면 자동 닫힘
 
 **Reverse (Lot → 출하)**
 - `lotShipments(lotId)` 헬퍼 — 해당 lot이 포함된 비-삭제 출하 목록 반환
@@ -196,10 +198,10 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 - 클릭 → fixed-positioned popover 표시 (각 출하: 이름·수량·고객·일자)
 - 출하 행 클릭 → `APP.jumpToShip(shId)` → 모달 상세 뷰로 직행
 
-**Popover 위치 처리**
-- `position: fixed` + JS로 `getBoundingClientRect` 기반 viewport 좌표 세팅 — 부모 `overflow: hidden / auto` 영향 무시
-- 우측 클립 방지(`window.innerWidth - 8`까지)
-- 클릭 외부·Escape로 자동 닫힘 (`document.click` + keydown 핸들러)
+**Popover/팝업 위치 처리**
+- 히스토리 popover: `position: fixed` + JS로 `getBoundingClientRect` 기반 viewport 좌표 세팅
+- 공정 미리보기 팝업: `position: fixed; top: 80px; right: 24px` 고정 + `z-index: 1200`(출하 모달 1000 위)
+- 클릭 외부·Escape로 자동 닫힘 (`document.click` + keydown 핸들러), 팝업 컨테이너는 `onclick="event.stopPropagation()"`로 내부 클릭 보존
 
 ### STAGE 4 — Excel 출력 확장
 

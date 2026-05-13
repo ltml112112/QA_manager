@@ -43,7 +43,8 @@ var SEC_LABEL  = { P:'P Type', N:'N Type', S:'Single' };
 var STATE = {
   docs: {}, currentId: null, editKey: null, timer: null,
   collapsedSecs: new Set(), collapsedLots: new Set(),
-  shipments: {}, ship: { open: false, view: 'list', selectedId: null, timer: null }
+  shipments: {}, ship: { open: false, view: 'list', selectedId: null, timer: null },
+  proc: { open: false, docId: null, sectionId: null, lotId: null, refineId: null }
 };
 
 var _undoStack = [];
@@ -418,6 +419,7 @@ function load() {
     } else if (!STATE.editKey) {
       render();
     }
+    if (STATE.proc.open) renderProcessPopup();
   }, function(err) {
     _clearStuckTimer();
     // PERMISSION_DENIED 등 listener cancel 시 silent death 방지
@@ -470,6 +472,8 @@ function loadShipments() {
     }
     // 출하 모달이 열려 있으면 다시 그리기
     if (STATE.ship.open) renderShipModal();
+    // 공정 미리보기 팝업이 열려 있으면 잔량 배지 갱신
+    if (STATE.proc.open) renderProcessPopup();
   }, function(err) {
     console.warn('[pn_flow] SHIP_DB listener cancelled:', err && err.code);
     SHIP_DB.off('value');
@@ -772,6 +776,7 @@ window.APP = {
     STATE.ship.open = false;
     clearTimeout(STATE.ship.timer);
     renderShipModal();
+    if (STATE.proc.open) { STATE.proc.open = false; renderProcessPopup(); }
   },
   newShip: function() {
     var sh = mkShip({ shipName: 'SHIP-' + new Date().toISOString().slice(0,10) });
@@ -883,43 +888,25 @@ window.APP = {
     saveShipNow(shId);
     renderShipModal();
   },
-  /* ── 드릴다운: 컴포넌트 → 해당 공정 Lot으로 점프 ────────
-     모달 닫고 docId의 문서를 열고 lotId 카드로 스크롤. refineId가 있으면
-     해당 정제 Batch 행도 하이라이트.
-  ─────────────────────────────────────────────────── */
-  jumpToLot: function(docId, sectionId, lotId, refineId, ev) {
+  /* ── 공정 미리보기 팝업: 출하 모달을 닫지 않고 공정·잔량 동시 확인 ──── */
+  openProcessPopup: function(docId, sectionId, lotId, refineId, ev) {
     if (ev) ev.stopPropagation();
     var doc = STATE.docs[docId];
     if (!doc) { alert('원본 문서를 찾을 수 없습니다.'); return; }
     var sec = (doc.sections||[]).find(function(s){return s.id===sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===lotId;});
     if (!sec || !lot) { alert('원본 Lot이 삭제되었거나 이동되었습니다.'); return; }
-    STATE.collapsedSecs.delete(sectionId);
-    STATE.collapsedLots.delete(lotId);
-    STATE.ship.open = false;
-    renderShipModal();
-    STATE.currentId = docId;
-    STATE.editKey = null;
-    render();
-    setTimeout(function() {
-      var el = document.querySelector('.pf-lot-col[data-lot-id="'+lotId+'"]');
-      if (!el) return;
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { el.scrollIntoView(); }
-      el.classList.remove('pf-lot-highlight');
-      void el.offsetWidth;
-      el.classList.add('pf-lot-highlight');
-      // 정제 batch 행 추가 하이라이트
-      if (refineId) {
-        var row = el.querySelector('[data-refine-row-id="'+refineId+'"]');
-        if (row) {
-          row.classList.remove('pf-refine-highlight');
-          void row.offsetWidth;
-          row.classList.add('pf-refine-highlight');
-          setTimeout(function(){ row && row.classList.remove('pf-refine-highlight'); }, 2400);
-        }
-      }
-      setTimeout(function() { el && el.classList.remove('pf-lot-highlight'); }, 2400);
-    }, 50);
+    STATE.proc.open = true;
+    STATE.proc.docId = docId;
+    STATE.proc.sectionId = sectionId;
+    STATE.proc.lotId = lotId;
+    STATE.proc.refineId = refineId || null;
+    renderProcessPopup();
+  },
+  closeProcessPopup: function() {
+    STATE.proc.open = false;
+    STATE.proc.docId = STATE.proc.sectionId = STATE.proc.lotId = STATE.proc.refineId = null;
+    renderProcessPopup();
   },
   /* 정제 Batch 출하이력 popover 토글 */
   toggleRefineHistory: function(refineId, ev) {
@@ -1218,6 +1205,7 @@ document.addEventListener('keydown', function(e) {
     // popover 우선 닫기
     var openPop = document.querySelector('.pf-lot-hist-pop.pf-open');
     if (openPop) { openPop.classList.remove('pf-open'); return; }
+    if (STATE.proc.open) { APP.closeProcessPopup(); return; }
     if (STATE.ship.open) { APP.closeShipMgr(); return; }
     if (STATE.editKey) { closeEdit(); renderDoc(); renderDrawer(); }
   }
@@ -1227,12 +1215,16 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-/* 클릭 외부 — 열린 popover 닫기 (STAGE 3) */
+/* 클릭 외부 — 열린 popover/팝업 닫기 (STAGE 3+) */
 document.addEventListener('click', function(e) {
   var openPops = document.querySelectorAll('.pf-lot-hist-pop.pf-open');
-  if (!openPops.length) return;
-  if (e.target.closest('.pf-lot-hist-wrap')) return; // popover 내부 클릭은 보존
-  openPops.forEach(function(p) { p.classList.remove('pf-open'); });
+  if (openPops.length && !e.target.closest('.pf-lot-hist-wrap')) {
+    openPops.forEach(function(p) { p.classList.remove('pf-open'); });
+  }
+  // 공정 팝업: 외부 클릭으로 닫기 (트리거 ↗ 버튼 클릭은 stopPropagation으로 보호됨)
+  if (STATE.proc.open && !e.target.closest('#pf-proc-popup')) {
+    APP.closeProcessPopup();
+  }
 });
 
 /* ── 렌더링 ────────────────────────────────────── */
@@ -1689,7 +1681,7 @@ function renderShipDetail(sh) {
         var orphan = (!lot || (c.refineId && !refine)) ? '<span class="pf-comp-orphan" title="원본이 삭제됨 — 드릴다운 불가">⚠</span>' : '';
         var refIdArg = c.refineId ? '\''+c.refineId+'\'' : 'null';
         var jumpBtn = lot
-          ? '<button class="pf-comp-jump" title="해당 공정으로 이동" onclick="APP.jumpToLot(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\','+refIdArg+',event)">↗</button>'
+          ? '<button class="pf-comp-jump" title="공정 미리보기" onclick="APP.openProcessPopup(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\','+refIdArg+',event)">↗</button>'
           : '';
         var refineLabel = c.refineNameSnapshot
           ? '<span class="pf-batch-name">'+esc(c.refineNameSnapshot)+'</span>'
@@ -1762,11 +1754,12 @@ function renderShipDetail(sh) {
         if (idx === rowsT.length - 1) classParts.push('pf-pick-grp-last');
         var rowCls = classParts.join(' ');
         var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
+        var pickJumpBtn = '<button class="pf-comp-jump" title="공정 미리보기" onclick="APP.openProcessPopup(\''+pr.doc.id+'\',\''+pr.sec.id+'\',\''+pr.lot.id+'\',\''+pr.refine.id+'\',event)">↗</button>';
         pickerBodyParts.push(
           '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
             '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(pr.sec.type||'-')+'</span></td>'+
             '<td class="pf-pick-synth"><span class="pf-batch-name">'+esc(pr.lot.name||'-')+'</span></td>'+
-            '<td class="pf-pick-refine"><span class="pf-batch-name">'+esc(pr.refine.name||'(이름 없음)')+'</span></td>'+
+            '<td class="pf-pick-refine"><span class="pf-batch-name">'+esc(pr.refine.name||'(이름 없음)')+'</span> '+pickJumpBtn+'</td>'+
             '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
             '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
             '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
@@ -1801,10 +1794,68 @@ function renderShipDetail(sh) {
       '<label class="pf-ship-meta-note">메모 <input id="pf-ship-inp-note" class="pf-inp" value="'+esc(sh.note||'')+'" placeholder="" oninput="APP.updateShipField(\''+sh.id+'\',\'note\',this.value)"></label>'+
     '</div>'+
     '<div class="pf-ship-total">총 '+fmtQty(tot.qty, tot.unit)+' · '+comps.length+'개 Batch</div>'+
-    '<h4 class="pf-ship-sub">구성 (P → N → S 정렬)</h4>'+
     compTableHtml+
     '<h4 class="pf-ship-sub pf-ship-sub-pick">+ 산출량 입력된 Lot에서 일괄 추가</h4>'+
     pickerHtml;
+}
+
+/* ── 공정 미리보기 팝업 ─────────────────────────────────────
+   출하 모달을 닫지 않고 우상단에 떠 공정 step·정제 잔량을 함께 표시. */
+function renderProcessPopup() {
+  var pop = document.getElementById('pf-proc-popup');
+  if (!pop) return;
+  if (!STATE.proc.open) { pop.classList.remove('pf-proc-open'); pop.innerHTML = ''; return; }
+  var doc = STATE.docs[STATE.proc.docId];
+  var sec = doc && (doc.sections||[]).find(function(s){return s.id===STATE.proc.sectionId;});
+  var lot = sec && (sec.lots||[]).find(function(l){return l.id===STATE.proc.lotId;});
+  if (!doc || !sec || !lot) { STATE.proc.open = false; pop.classList.remove('pf-proc-open'); pop.innerHTML = ''; return; }
+  var tc = sec.type==='N'?'pf-proc-n':(sec.type==='S'?'pf-proc-s':'pf-proc-p');
+  var typeLbl = sec.type || '-';
+  var steps = Array.isArray(lot.steps) ? lot.steps : [];
+  var refines = Array.isArray(lot.refines) ? lot.refines : [];
+  var stepHtml = steps.length
+    ? steps.map(function(st, i) {
+        var lbl = stepLbl(st, stepNum(steps, i, st.type));
+        var tagHtml = st.tag && st.tag!=='pending'
+          ? '<span class="pf-proc-tag pf-tag-'+st.tag+'">'+st.tag.toUpperCase()+'</span>'
+          : (st.tag==='pending' ? '<span class="pf-proc-tag pf-proc-pending">예정</span>' : '');
+        var metaParts = [];
+        if (st.date)     metaParts.push('📅 '+esc(st.date));
+        if (st.operator) metaParts.push('👤 '+esc(st.operator));
+        var meta = metaParts.length ? '<div class="pf-proc-step-meta">'+metaParts.join(' · ')+'</div>' : '';
+        var det = st.detail ? '<div class="pf-proc-step-det">'+esc(st.detail)+'</div>' : '';
+        return '<div class="pf-proc-step '+st.type+'">'+
+          '<div class="pf-proc-step-hd"><span class="pf-proc-step-lbl">'+esc(lbl)+'</span>'+tagHtml+'</div>'+
+          det+meta+
+        '</div>';
+      }).join('')
+    : '<div class="pf-proc-empty">공정 단계가 없습니다.</div>';
+  var refineHtml = refines.length
+    ? refines.map(function(r) {
+        var hi = (STATE.proc.refineId && r.id === STATE.proc.refineId) ? ' pf-proc-refine-hi' : '';
+        var stock = renderRefineStockBadge(r) || '<span class="pf-proc-refine-noqty">수량 미입력</span>';
+        return '<div class="pf-proc-refine'+hi+'">'+
+          '<span class="pf-batch-name">'+esc(r.name||'(이름 없음)')+'</span>'+
+          stock+
+        '</div>';
+      }).join('')
+    : '<div class="pf-proc-empty">정제 Batch가 없습니다.</div>';
+  pop.innerHTML =
+    '<div class="pf-proc-hd '+tc+'">'+
+      '<span class="pf-proc-type-tag">'+esc(typeLbl)+'</span>'+
+      '<span class="pf-proc-title"><span class="pf-batch-name">'+esc(lot.name||'(이름 없음)')+'</span></span>'+
+      '<button class="pf-proc-close" onclick="APP.closeProcessPopup()" title="닫기 (Esc)">✕</button>'+
+    '</div>'+
+    '<div class="pf-proc-meta">'+esc(doc.material||'-')+' · '+esc(doc.title||'-')+'</div>'+
+    '<div class="pf-proc-sec">'+
+      '<div class="pf-proc-sec-hd">📦 정제 Batch 잔량</div>'+
+      '<div class="pf-proc-refines">'+refineHtml+'</div>'+
+    '</div>'+
+    '<div class="pf-proc-sec">'+
+      '<div class="pf-proc-sec-hd">공정 단계 ('+steps.length+')</div>'+
+      '<div class="pf-proc-steps">'+stepHtml+'</div>'+
+    '</div>';
+  pop.classList.add('pf-proc-open');
 }
 
 /* ── 빈 문서 CTA ─────────────────────────────────── */
