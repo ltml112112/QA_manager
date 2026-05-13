@@ -1481,14 +1481,13 @@ function renderRefinesSection(l) {
 function renderRefineRowHtml(l, r) {
   var qtyVal = (typeof r.qty === 'number') ? r.qty : '';
   var unitVal = r.unit || 'g';
-  var unitOpts = ['mg','g','kg'].map(function(u){
-    return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
-  }).join('');
   return '<div class="pf-refine-row" data-refine-row-id="'+r.id+'">'+
-    '<input class="pf-refine-name-inp" placeholder="정제 Batch 이름" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)">'+
-    '<div class="pf-refine-ctl">'+
-      '<input class="pf-refine-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'qty\',this.value)">'+
-      '<select class="pf-refine-unit" onchange="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'unit\',this.value)">'+unitOpts+'</select>'+
+    '<div class="pf-refine-top">'+
+      '<input class="pf-refine-name-inp" placeholder="L00L-000-000" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)">'+
+      '<input class="pf-refine-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="수량" value="'+esc(String(qtyVal))+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'qty\',this.value)">'+
+      '<span class="pf-refine-unit-lbl">'+esc(unitVal)+'</span>'+
+    '</div>'+
+    '<div class="pf-refine-bot">'+
       '<span class="pf-refine-badges" data-refine-stock="'+r.id+'">'+
         renderRefineStockBadge(r)+renderRefineHistoryBadge(r)+
       '</span>'+
