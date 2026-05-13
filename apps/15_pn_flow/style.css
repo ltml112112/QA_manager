@@ -380,24 +380,31 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-refines-empty {
   font-size: 11px; color: #9ca3af; padding: 2px 2px 4px;
 }
-.pf-refines-table {
-  width: 100%; border-collapse: collapse;
+/* 정제 Batch 행 — 카드 스타일 2단 레이아웃
+   1단: 이름 입력(전폭)
+   2단: 수량 · 단위 · 재고 배지 · 이력 배지 · 삭제 */
+.pf-refines-list {
+  display: flex; flex-direction: column; gap: 4px;
 }
-.pf-refine-row td {
-  padding: 2px 1px;
-  vertical-align: middle;
+.pf-refine-row {
+  display: flex; flex-direction: column; gap: 3px;
+  background: #fff; border: 1px solid #dcfce7; border-radius: 6px;
+  padding: 5px 6px;
 }
 .pf-refine-name-inp {
   width: 100%; box-sizing: border-box;
-  padding: 3px 6px; font-size: 11.5px;
+  padding: 4px 7px; font-size: 12px; font-weight: 600;
   border: 1px solid #d1d5db; border-radius: 4px;
   background: #fff; color: #111827;
   font-family: inherit;
 }
 .pf-refine-name-inp:focus { outline: none; border-color: #15803d; }
-.pf-refine-qty-cell { white-space: nowrap; text-align: right; padding-left: 6px; }
+.pf-refine-ctl {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+}
 .pf-refine-qty-inp {
-  width: 56px; padding: 3px 5px; font-size: 11.5px;
+  flex: 0 0 auto;
+  width: 70px; padding: 3px 6px; font-size: 11.5px;
   border: 1px solid #d1d5db; border-radius: 4px;
   font-variant-numeric: tabular-nums; text-align: right;
   font-family: inherit; background: #fff;
@@ -407,32 +414,31 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-refine-qty-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .pf-refine-qty-inp { -moz-appearance: textfield; }
 .pf-refine-unit {
-  margin-left: 3px;
+  flex: 0 0 auto;
   padding: 3px 4px; font-size: 11px;
   border: 1px solid #d1d5db; border-radius: 4px;
   background: #fff; color: #111827;
   font-family: inherit; cursor: pointer;
 }
 .pf-refine-badges {
-  white-space: nowrap; padding: 0 6px;
-  text-align: right;
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: auto;
+  white-space: nowrap;
 }
-.pf-refine-badges .pf-refine-stock + .pf-lot-hist-wrap { margin-left: 4px; }
-
-.pf-refine-del { width: 24px; text-align: center; padding-left: 4px; }
 .pf-refine-del-btn {
+  flex: 0 0 auto;
   background: none; border: 0; color: #9ca3af;
-  font-size: 12px; padding: 2px 4px; cursor: pointer;
-  border-radius: 4px;
+  font-size: 13px; padding: 2px 6px; cursor: pointer;
+  border-radius: 4px; line-height: 1;
 }
 .pf-refine-del-btn:hover { background: #fee2e2; color: #b91c1c; }
 
 /* drill-down — 정제 batch 행 노란 글로우 (2.4초) */
 @keyframes pf-refine-pulse {
   0%   { background: rgba(250,204,21,.85); }
-  100% { background: transparent; }
+  100% { background: #fff; }
 }
-.pf-refine-row.pf-refine-highlight td { animation: pf-refine-pulse 2.4s ease-out; }
+.pf-refine-row.pf-refine-highlight { animation: pf-refine-pulse 2.4s ease-out; }
 
 /* 일괄 추가 picker — 합성/정제 컬럼 */
 .pf-pick-parent { color: #6b7280; font-size: 12px; }
