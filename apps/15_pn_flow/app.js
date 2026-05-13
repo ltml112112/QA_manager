@@ -780,44 +780,59 @@ window.APP = {
       if (hd && field === 'shipName') hd.textContent = sh.shipName || '(이름 없음)';
     }
   },
-  addShipComponent: function(shId) {
+  /* 일괄 추가 — 그리드의 모든 입력 행에서 qty>0인 항목 수집·검증·일괄 push */
+  addShipComponentsBatch: function(shId) {
     var sh = STATE.shipments[shId]; if(!sh) return;
-    var sel = document.getElementById('pf-ship-comp-pick');
-    var qtyInp = document.getElementById('pf-ship-comp-qty');
-    if (!sel || !sel.value) { alert('Batch(공정 Lot)를 선택하세요.'); return; }
-    var qty = Number(qtyInp.value);
-    if (isNaN(qty) || qty <= 0) { alert('수량을 양수로 입력하세요.'); return; }
-    var parts = sel.value.split('|');
-    var docId = parts[0], sectionId = parts[1], lotId = parts[2];
-    var doc = STATE.docs[docId];
-    var sec = doc && (doc.sections||[]).find(function(s){return s.id===sectionId;});
-    var lot = sec && (sec.lots||[]).find(function(l){return l.id===lotId;});
-    if (!doc || !sec || !lot) { alert('선택한 Lot을 찾을 수 없습니다.'); return; }
-    // 재고 검증 — 이 출하의 기존 component(같은 lot) 제외하고 가용 재고 계산
-    var lotU = lot.unit || 'g';
-    var availableInLotU = (lot.finalQty || 0) - lotConsumed(lotId, lotU);
-    // 새 입력은 lot.unit으로 들어옴
-    var qtyG = convertQty(qty, lotU, 'g');
-    var availG = convertQty(availableInLotU, lotU, 'g');
-    if (qtyG > availG + 1e-6) {
-      alert('가용 재고('+fmtQty(availableInLotU, lotU)+')를 초과합니다.');
+    var rows = document.querySelectorAll('.pf-pick-table tbody tr.pf-pick-row');
+    var picks = [];
+    var errors = [];
+    for (var ri = 0; ri < rows.length; ri++) {
+      var tr = rows[ri];
+      var inp = tr.querySelector('.pf-pick-qty-inp');
+      if (!inp) continue;
+      var raw = String(inp.value || '').trim();
+      if (!raw) continue;
+      var qty = Number(raw);
+      if (isNaN(qty) || qty <= 0) continue;
+      var docId = tr.dataset.docId, sectionId = tr.dataset.secId, lotId = tr.dataset.lotId;
+      var doc = STATE.docs[docId];
+      var sec = doc && (doc.sections||[]).find(function(s){return s.id===sectionId;});
+      var lot = sec && (sec.lots||[]).find(function(l){return l.id===lotId;});
+      if (!doc || !sec || !lot) { errors.push('알 수 없는 Lot ('+(lotId||'')+')'); continue; }
+      var lotU = lot.unit || 'g';
+      var available = (lot.finalQty || 0) - lotConsumed(lotId, lotU);
+      if (qty > available + 1e-6) {
+        errors.push('['+sec.type+'] '+(lot.name||'(이름 없음)')+' — 입력 '+fmtQty(qty, lotU)+' > 가용 '+fmtQty(available, lotU));
+        continue;
+      }
+      picks.push({ docId: docId, sectionId: sectionId, lotId: lotId, qty: qty, unit: lotU, lot: lot, sec: sec, doc: doc });
+    }
+    if (errors.length) {
+      alert('가용 재고 초과·오류 행 (해당 행만 누락):\n\n' + errors.join('\n'));
+    }
+    if (!picks.length) {
+      if (!errors.length) alert('사용수량이 입력된 행이 없습니다. 표에서 수량을 입력하세요.');
       return;
     }
     if (!Array.isArray(sh.components)) sh.components = [];
-    sh.components.push({
-      docId: docId,
-      sectionId: sectionId,
-      lotId: lotId,
-      qty: qty,
-      unit: lotU,
-      lotNameSnapshot: lot.name || '',
-      sectionTypeSnapshot: sec.type || '',
-      docTitleSnapshot: doc.title || '',
-      materialSnapshot: doc.material || ''
+    picks.forEach(function(p) {
+      sh.components.push({
+        docId: p.docId,
+        sectionId: p.sectionId,
+        lotId: p.lotId,
+        qty: p.qty,
+        unit: p.unit,
+        lotNameSnapshot: p.lot.name || '',
+        sectionTypeSnapshot: p.sec.type || '',
+        docTitleSnapshot: p.doc.title || '',
+        materialSnapshot: p.doc.material || ''
+      });
     });
-    qtyInp.value = '';
     saveShipNow(shId);
     renderShipModal();
+  },
+  clearPickGrid: function() {
+    document.querySelectorAll('.pf-pick-table tbody .pf-pick-qty-inp').forEach(function(inp) { inp.value = ''; });
   },
   removeShipComponent: function(shId, idx) {
     var sh = STATE.shipments[shId]; if(!sh) return;
@@ -1452,12 +1467,22 @@ function renderShipList() {
 }
 
 function renderShipDetail(sh) {
-  var comps = Array.isArray(sh.components) ? sh.components : [];
+  var compsRaw = Array.isArray(sh.components) ? sh.components : [];
+  // 출하 내부 components 정렬: P → N → S → 기타, 같은 타입 내 이름 asc.
+  // 원래 index를 보존해야 mutator(updateShipCompQty, removeShipComponent)가 정상 동작.
+  var TYPE_ORDER = { P: 0, N: 1, S: 2 };
+  var comps = compsRaw.map(function(c, i) { return { c: c, i: i }; });
+  comps.sort(function(a, b) {
+    var ta = TYPE_ORDER[a.c.sectionTypeSnapshot]; if (ta === undefined) ta = 9;
+    var tb = TYPE_ORDER[b.c.sectionTypeSnapshot]; if (tb === undefined) tb = 9;
+    if (ta !== tb) return ta - tb;
+    return (a.c.lotNameSnapshot||'').localeCompare(b.c.lotNameSnapshot||'');
+  });
   var tot = shipTotal(sh);
-  var compRows = comps.map(function(c, i) {
+  var compRows = comps.map(function(entry) {
+    var c = entry.c; var i = entry.i;
     var typeCls = c.sectionTypeSnapshot === 'N' ? 'pf-comp-n' : (c.sectionTypeSnapshot === 'S' ? 'pf-comp-s' : 'pf-comp-p');
     var typeLbl = c.sectionTypeSnapshot || '-';
-    // 원본 Lot 존재 여부 (snapshot은 항상 표시)
     var doc = STATE.docs[c.docId];
     var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
@@ -1477,20 +1502,57 @@ function renderShipDetail(sh) {
       '<td><button class="pf-ship-del-btn" onclick="APP.removeShipComponent(\''+sh.id+'\','+i+')">제거</button></td>'+
     '</tr>';
   }).join('');
-  // 컴포넌트 선택 드롭다운 — 모든 doc의 모든 lot 열거 (finalQty가 입력된 것만)
-  var pickerOpts = ['<option value="">— Batch 선택 (P/N 혼합 가능) —</option>'];
+
+  // 일괄 추가 그리드 — finalQty 입력된 모든 Lot을 P → N → S 순으로 표시
+  var pickerRows = [];
   Object.values(STATE.docs).forEach(function(doc) {
     (doc.sections||[]).forEach(function(s) {
       (s.lots||[]).forEach(function(l) {
         if (typeof l.finalQty !== 'number') return;
-        var sk = lotStock(l);
-        var label = '['+s.type+'] '+(l.name||'(이름 없음)')+' · '+(doc.material||doc.title||'-')+
-                    '  (재고 '+fmtQty(sk.stock, sk.unit)+')';
-        var disabled = sk.stock <= 0 ? ' disabled' : '';
-        pickerOpts.push('<option value="'+doc.id+'|'+s.id+'|'+l.id+'"'+disabled+'>'+esc(label)+'</option>');
+        pickerRows.push({ doc: doc, sec: s, lot: l });
       });
     });
   });
+  pickerRows.sort(function(a, b) {
+    var ta = TYPE_ORDER[a.sec.type]; if (ta === undefined) ta = 9;
+    var tb = TYPE_ORDER[b.sec.type]; if (tb === undefined) tb = 9;
+    if (ta !== tb) return ta - tb;
+    var ma = (a.doc.material||a.doc.title||'').localeCompare(b.doc.material||b.doc.title||'');
+    if (ma !== 0) return ma;
+    return (a.lot.name||'').localeCompare(b.lot.name||'');
+  });
+  var pickerHtml;
+  if (!pickerRows.length) {
+    pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">산출량이 입력된 Lot이 없습니다. Lot 헤더의 "산출량"을 먼저 입력하세요.</div>';
+  } else {
+    var pickerBody = pickerRows.map(function(r) {
+      var sk = lotStock(r.lot);
+      var typeCls = r.sec.type === 'N' ? 'pf-comp-n' : (r.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
+      var rowCls = sk.stock <= 0 ? 'pf-pick-row pf-pick-empty' : 'pf-pick-row';
+      var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
+      return '<tr class="'+rowCls+'" data-doc-id="'+r.doc.id+'" data-sec-id="'+r.sec.id+'" data-lot-id="'+r.lot.id+'">'+
+        '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(r.sec.type||'-')+'</span></td>'+
+        '<td class="pf-pick-name">'+esc(r.lot.name||'(이름 없음)')+'</td>'+
+        '<td class="pf-pick-mat">'+esc(r.doc.material||'-')+'</td>'+
+        '<td class="pf-pick-doc">'+esc(r.doc.title||'-')+'</td>'+
+        '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
+        '<td class="pf-ship-num">'+
+          '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="-"'+
+            (sk.stock <= 0 ? ' disabled' : '')+
+            ' data-max="'+sk.stock+'">'+
+          '<span class="pf-comp-unit">'+esc(sk.unit||'g')+'</span>'+
+        '</td>'+
+      '</tr>';
+    }).join('');
+    pickerHtml = '<table class="pf-ship-table pf-pick-table"><thead><tr>'+
+        '<th>Type</th><th>Lot</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
+      '</tr></thead><tbody>'+pickerBody+'</tbody></table>'+
+      '<div class="pf-pick-actions">'+
+        '<button class="btn btn-primary" onclick="APP.addShipComponentsBatch(\''+sh.id+'\')">+ 입력한 수량 모두 추가</button>'+
+        '<button class="btn pf-pick-clear" onclick="APP.clearPickGrid()">입력 초기화</button>'+
+      '</div>';
+  }
+
   return '<div class="pf-ship-detail-hd">'+
       '<button class="pf-back-btn" onclick="APP.backToShipList()">← 목록</button>'+
       '<h3 id="pf-ship-detail-title" class="pf-ship-h">'+esc(sh.shipName||'(이름 없음)')+'</h3>'+
@@ -1503,17 +1565,14 @@ function renderShipDetail(sh) {
       '<label class="pf-ship-meta-note">메모 <input id="pf-ship-inp-note" class="pf-inp" value="'+esc(sh.note||'')+'" placeholder="" oninput="APP.updateShipField(\''+sh.id+'\',\'note\',this.value)"></label>'+
     '</div>'+
     '<div class="pf-ship-total">총 '+fmtQty(tot.qty, tot.unit)+' · '+comps.length+'개 Batch</div>'+
-    '<h4 class="pf-ship-sub">구성 (P/N·여러 Batch 혼합 가능)</h4>'+
+    '<h4 class="pf-ship-sub">구성 (P → N → S 정렬)</h4>'+
     (comps.length
       ? '<table class="pf-ship-table"><thead><tr>'+
           '<th>Type</th><th>Lot</th><th>소재</th><th>문서</th><th>수량</th><th></th>'+
         '</tr></thead><tbody>'+compRows+'</tbody></table>'
-      : '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다.</div>')+
-    '<div class="pf-ship-add-row">'+
-      '<select id="pf-ship-comp-pick" class="pf-inp">'+pickerOpts.join('')+'</select>'+
-      '<input id="pf-ship-comp-qty" class="pf-inp" type="number" min="0" step="0.01" placeholder="수량">'+
-      '<button class="btn btn-primary" onclick="APP.addShipComponent(\''+sh.id+'\')">+ 추가</button>'+
-    '</div>';
+      : '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다. 아래 표에서 사용수량을 입력하세요.</div>')+
+    '<h4 class="pf-ship-sub pf-ship-sub-pick">+ 산출량 입력된 Lot에서 일괄 추가</h4>'+
+    pickerHtml;
 }
 
 /* ── 빈 문서 CTA ─────────────────────────────────── */

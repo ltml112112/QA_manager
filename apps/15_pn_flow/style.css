@@ -746,20 +746,44 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-comp-qty-inp:focus { outline: none; border-color: #6366f1; }
 .pf-comp-unit { color: #6b7280; margin-left: 4px; font-size: 11px; }
 
-.pf-ship-add-row {
-  display: flex; gap: 8px; align-items: center; margin-top: 10px;
-  padding: 10px; background: #f9fafb; border-radius: 6px;
+/* 일괄 추가 그리드 (Excel-like picker) */
+.pf-ship-sub-pick { margin-top: 16px; }
+.pf-pick-table {
+  margin-bottom: 8px;
 }
-.pf-ship-add-row select.pf-inp {
-  flex: 1; min-width: 0; padding: 5px 8px; font-size: 12.5px;
-  border: 1px solid #d1d5db; border-radius: 5px; background: #fff;
-  font-family: inherit;
+.pf-pick-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: #eef2ff; color: #4338ca;
 }
-.pf-ship-add-row input.pf-inp {
-  width: 100px; padding: 5px 8px; font-size: 12.5px;
-  border: 1px solid #d1d5db; border-radius: 5px;
-  font-variant-numeric: tabular-nums; font-family: inherit;
+.pf-pick-row:hover { background: #f3f4f6; }
+.pf-pick-row.pf-pick-empty { background: #fef2f2; opacity: .55; }
+.pf-pick-row.pf-pick-empty:hover { background: #fee2e2; }
+.pf-pick-name { font-weight: 600; }
+.pf-pick-mat, .pf-pick-doc { color: #6b7280; font-size: 12px; }
+
+.pf-pick-stock-full  { color: #15803d; font-weight: 700; }
+.pf-pick-stock-mid   { color: #1f2937; font-weight: 700; }
+.pf-pick-stock-low   { color: #b45309; font-weight: 700; }
+.pf-pick-stock-empty { color: #b91c1c; font-weight: 700; }
+
+.pf-pick-qty-inp {
+  width: 70px; padding: 3px 6px; font-size: 12px; text-align: right;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
+.pf-pick-qty-inp:focus { outline: none; border-color: #6366f1; background: #eef2ff; }
+.pf-pick-qty-inp:disabled { background: #f3f4f6; cursor: not-allowed; }
+
+.pf-pick-actions {
+  display: flex; gap: 8px; margin-top: 6px; padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+.pf-pick-clear {
+  background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+  padding: 6px 12px; border-radius: 5px; cursor: pointer;
+  font-size: 12.5px; font-weight: 500;
+}
+.pf-pick-clear:hover { background: #e5e7eb; }
 
 @media (max-width: 700px) {
   .pf-ship-meta { grid-template-columns: 1fr 1fr; }
