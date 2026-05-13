@@ -766,3 +766,79 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-ship-meta-note { grid-column: 1 / -1; }
   .pf-ship-panel { max-width: 100%; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   STAGE 3 — drill-down 하이라이트 · 출하이력 popover · 점프 버튼
+   ══════════════════════════════════════════════════════════════════ */
+
+/* drill-down 도착 시 Lot 카드 노란 글로우 (2.4초) */
+@keyframes pf-lot-pulse {
+  0%   { box-shadow: 0 0 0 0px rgba(250,204,21,.85), 0 1px 3px rgba(15,26,46,.05); }
+  30%  { box-shadow: 0 0 0 6px rgba(250,204,21,.85), 0 0 24px 4px rgba(250,204,21,.6); }
+  100% { box-shadow: 0 0 0 0px rgba(250,204,21,0),   0 1px 3px rgba(15,26,46,.05); }
+}
+.pf-lot-col.pf-lot-highlight {
+  animation: pf-lot-pulse 2.4s ease-out;
+  position: relative; z-index: 5;
+}
+
+/* 출하 이력 배지 + popover */
+.pf-lot-hist-wrap {
+  position: relative; display: inline-flex; align-items: center;
+}
+.pf-lot-hist-btn {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+  letter-spacing: .2px; line-height: 1.5;
+  background: rgba(99,102,241,.32); color: #fff;
+  border: 1px solid rgba(129,140,248,.55);
+  cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.pf-lot-hist-btn:hover { background: rgba(99,102,241,.5); }
+.pf-lot-hist-pop {
+  display: none;
+  position: fixed;
+  /* top/left은 JS에서 viewport 좌표로 세팅 (toggleLotHistory) */
+  min-width: 240px; max-width: 320px;
+  background: #fff; color: #111827;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  z-index: 500;
+  padding: 4px;
+  font-family: inherit;
+}
+.pf-lot-hist-pop.pf-open { display: block; }
+.pf-lot-hist-hd {
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  padding: 6px 8px 4px; letter-spacing: .3px; text-transform: uppercase;
+}
+.pf-lot-hist-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: baseline;
+  gap: 1px 8px;
+  width: 100%; text-align: left;
+  padding: 6px 8px; border-radius: 5px;
+  background: none; border: 0; font-family: inherit;
+  cursor: pointer; color: #111827;
+}
+.pf-lot-hist-row:hover { background: #f3f4f6; }
+.pf-lot-hist-name { font-size: 12.5px; font-weight: 600; }
+.pf-lot-hist-qty {
+  font-size: 12px; font-weight: 700; color: #4338ca;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pf-lot-hist-meta {
+  grid-column: 1 / -1;
+  font-size: 11px; color: #6b7280;
+}
+
+/* 컴포넌트 행 — 공정 이동 점프 버튼 */
+.pf-comp-jump {
+  display: inline-block; margin-left: 6px;
+  background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca;
+  font-size: 11px; padding: 1px 7px; border-radius: 4px;
+  cursor: pointer; font-family: inherit; line-height: 1.4;
+}
+.pf-comp-jump:hover { background: #c7d2fe; }

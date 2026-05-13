@@ -113,7 +113,7 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 |-------|--------|------|
 | 1 | Lot에 `finalQty/unit` 필드 + Lot 카드 재고 배지 (📦) | 구현 완료 (2026-05-13) |
 | 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 (P/N·멀티배치 혼합) + Firebase 보안 규칙 + 재고 자동 차감 + 색상 단계(green/회/주황/빨강) | 구현 완료 (2026-05-13) |
-| 3 | drill-down(컴포넌트 클릭 → 해당 공정 점프) + Lot측 "출하이력" 역방향 링크 | 예정 |
+| 3 | drill-down(컴포넌트 → 공정 점프) + Lot측 "출하이력" 역방향 popover + 노란 글로우 하이라이트 | 구현 완료 (2026-05-13) |
 | 4 | Excel 출력 컬럼 확장 + glossary("출하 Lot") | 예정 |
 
 ### STAGE 1 — 재고 데이터 모델
@@ -179,3 +179,22 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 #### Firebase 보안 규칙
 
 `pn_flow_shipments` 경로는 `@ltml.co.kr` 인증 필요 (default deny). 콘솔 Rules 탭에 추가 안 하면 PERMISSION_DENIED. JSON 블록은 `docs/architecture/auth.md` 6절.
+
+### STAGE 3 — 양방향 네비게이션
+
+**Forward (컴포넌트 → 공정)**
+- 출하 상세의 컴포넌트 이름 옆 `↗` 버튼 → `APP.jumpToLot(docId, sectionId, lotId)`
+- 동작: 모달 닫기 → `STATE.currentId = docId` → `render()` → `scrollIntoView({block:'center'})` → 2.4s 노란 글로우 (`pf-lot-pulse` keyframe)
+- 접혀있던 섹션/Lot 자동 펼침 (`collapsedSecs.delete`)
+- 원본 Lot 삭제 시 `⚠` 표시 + 점프 버튼 숨김 (snapshot으로 이름만 보존)
+
+**Reverse (Lot → 출하)**
+- `lotShipments(lotId)` 헬퍼 — 해당 lot이 포함된 비-삭제 출하 목록 반환
+- Lot 헤더에 `🔗 N` 인디고 배지 (출하 N건 있을 때만)
+- 클릭 → fixed-positioned popover 표시 (각 출하: 이름·수량·고객·일자)
+- 출하 행 클릭 → `APP.jumpToShip(shId)` → 모달 상세 뷰로 직행
+
+**Popover 위치 처리**
+- `position: fixed` + JS로 `getBoundingClientRect` 기반 viewport 좌표 세팅 — 부모 `overflow: hidden / auto` 영향 무시
+- 우측 클립 방지(`window.innerWidth - 8`까지)
+- 클릭 외부·Escape로 자동 닫힘 (`document.click` + keydown 핸들러)
