@@ -1473,7 +1473,7 @@ function renderRefinesSection(l) {
       '<button class="pf-refines-add" onclick="APP.addRefine(\''+l.id+'\')">+ 정제 Batch 추가</button>'+
     '</div>'+
     (refines.length
-      ? '<table class="pf-refines-table"><tbody>'+rows+'</tbody></table>'
+      ? '<div class="pf-refines-list">'+rows+'</div>'
       : '<div class="pf-refines-empty">아직 정제 Batch가 없습니다.</div>')+
   '</div>';
 }
@@ -1484,17 +1484,17 @@ function renderRefineRowHtml(l, r) {
   var unitOpts = ['mg','g','kg'].map(function(u){
     return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
   }).join('');
-  return '<tr class="pf-refine-row" data-refine-row-id="'+r.id+'">'+
-    '<td><input class="pf-refine-name-inp" placeholder="정제 Batch 이름" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)"></td>'+
-    '<td class="pf-refine-qty-cell">'+
+  return '<div class="pf-refine-row" data-refine-row-id="'+r.id+'">'+
+    '<input class="pf-refine-name-inp" placeholder="정제 Batch 이름" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)">'+
+    '<div class="pf-refine-ctl">'+
       '<input class="pf-refine-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'qty\',this.value)">'+
       '<select class="pf-refine-unit" onchange="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'unit\',this.value)">'+unitOpts+'</select>'+
-    '</td>'+
-    '<td class="pf-refine-badges" data-refine-stock="'+r.id+'">'+
-      renderRefineStockBadge(r)+renderRefineHistoryBadge(r)+
-    '</td>'+
-    '<td class="pf-refine-del"><button class="pf-refine-del-btn" title="삭제" onclick="APP.deleteRefine(\''+l.id+'\',\''+r.id+'\')">✕</button></td>'+
-  '</tr>';
+      '<span class="pf-refine-badges" data-refine-stock="'+r.id+'">'+
+        renderRefineStockBadge(r)+renderRefineHistoryBadge(r)+
+      '</span>'+
+      '<button class="pf-refine-del-btn" title="삭제" onclick="APP.deleteRefine(\''+l.id+'\',\''+r.id+'\')">✕</button>'+
+    '</div>'+
+  '</div>';
 }
 
 
