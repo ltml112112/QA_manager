@@ -51,10 +51,13 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
       lots: [
         {
           id: 'uid',
-          name: 'Lot 이름',
+          name: 'Lot 이름',                  // = 합성 Batch No.
           subName: '부제',
-          finalQty: 50.2 | null,           // 최종 산출량 (출하 가능 재고). null=미입력
+          finalQty: 50.2 | null,           // 합성 산출량 (출하 차감 대상). null=미입력
           unit: 'mg' | 'g' | 'kg',          // 기본 'g'
+          refines: [                        // 정제 Batch 잔량 기록 (출하 시스템과 독립)
+            { id: 'uid', name: '정제 Batch No.', qty: 12.5 | null, unit: 'g' }
+          ],
           steps: [
             {
               id: 'uid',
@@ -216,5 +219,15 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 
 ### 부가 UX 개선
 
-- **전체 접기/펼치기** 버튼 (topbar): 모든 섹션의 collapse 상태를 토글. 모두 접혀있으면 "▶ 전체 펼치기", 아니면 "▼ 전체 접기"로 라벨 자동 변경
+- **공정 전체 접기/펼치기** 버튼 (topbar): 문서 내 **모든 Lot의 공정**(개별 Lot 헤더 ▼/▶와 동일)을 일괄 토글. `STATE.collapsedLots` Set 조작. 라벨은 현재 상태에 따라 "▶ 공정 전체 펼치기" ↔ "▼ 공정 전체 접기" 자동 변경
 - **새 Lot 기본 이름 제거**: `+ Lot 추가` 시 빈 이름으로 생성 (placeholder만 표시)
+
+### 정제 Batch (refines)
+
+각 Lot(= 합성 Batch)이 정제 공정을 거쳐 산출한 정제 batches의 **잔량**을 기록하는 sub-records. 출하 차감 시스템과 독립 (출하는 여전히 `finalQty` 기준).
+
+- 데이터: `lot.refines[] = [{ id, name, qty, unit }]`
+- UI: Lot 카드 body 하단 — 녹색 패널, 행마다 이름 + 수량 + 단위 + 삭제 버튼
+- Lot 접힘 상태에서는 "정제 N건"으로 카운트만 노출
+- 음수 거부, 빈 값은 `null` 저장
+- `cloneLot` 시 refines도 새 id로 복제, `normDoc`에서 RTDB의 object→array 정규화

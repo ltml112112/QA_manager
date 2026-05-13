@@ -386,6 +386,70 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-qadd.subl    { background: #efe4fb; border-color: #7a4cc7; color: #5b21b6; }
 .pf-qadd.collect { background: #fff6db; border-color: #c79a2c; color: #92400e; }
 
+/* ── 정제 Batch (refines) ────────────────────────────────────────
+   Lot 카드(=합성 Batch) 하단 — 정제 산출물 잔량 기록 */
+.pf-refines {
+  border-top: 1px solid #e5e7eb;
+  background: #f0fdf4;
+  padding: 8px;
+}
+.pf-refines-hd {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.pf-refines-title {
+  flex: 1; font-size: 11px; font-weight: 700;
+  color: #15803d; letter-spacing: .3px;
+}
+.pf-refines-add {
+  background: #dcfce7; border: 1px solid #86efac; color: #15803d;
+  font-size: 11px; font-weight: 600; padding: 3px 9px;
+  border-radius: 5px; cursor: pointer;
+}
+.pf-refines-add:hover { background: #bbf7d0; }
+.pf-refines-empty {
+  font-size: 11px; color: #9ca3af; padding: 2px 2px 4px;
+}
+.pf-refines-table {
+  width: 100%; border-collapse: collapse;
+}
+.pf-refine-row td {
+  padding: 2px 1px;
+  vertical-align: middle;
+}
+.pf-refine-name-inp {
+  width: 100%; box-sizing: border-box;
+  padding: 3px 6px; font-size: 11.5px;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  background: #fff; color: #111827;
+  font-family: inherit;
+}
+.pf-refine-name-inp:focus { outline: none; border-color: #15803d; }
+.pf-refine-qty-cell { white-space: nowrap; text-align: right; padding-left: 6px; }
+.pf-refine-qty-inp {
+  width: 56px; padding: 3px 5px; font-size: 11.5px;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  font-variant-numeric: tabular-nums; text-align: right;
+  font-family: inherit; background: #fff;
+}
+.pf-refine-qty-inp:focus { outline: none; border-color: #15803d; }
+.pf-refine-qty-inp::-webkit-outer-spin-button,
+.pf-refine-qty-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pf-refine-qty-inp { -moz-appearance: textfield; }
+.pf-refine-unit {
+  margin-left: 3px;
+  padding: 3px 4px; font-size: 11px;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  background: #fff; color: #111827;
+  font-family: inherit; cursor: pointer;
+}
+.pf-refine-del { width: 24px; text-align: center; padding-left: 4px; }
+.pf-refine-del-btn {
+  background: none; border: 0; color: #9ca3af;
+  font-size: 12px; padding: 2px 4px; cursor: pointer;
+  border-radius: 4px;
+}
+.pf-refine-del-btn:hover { background: #fee2e2; color: #b91c1c; }
+
 /* ── ADD LOT COLUMN ────────────────────────────────────────────── */
 .pf-add-lot-col {
   min-width: 80px; display: flex; align-items: flex-start; padding-top: 20px;
@@ -566,6 +630,10 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-lot-qty-lbl { color: rgba(0,0,0,.6); }
   .pf-lot-stock {
     background: rgba(0,0,0,.08); color: #000; border-color: rgba(0,0,0,.18);
+  }
+  .pf-refines { background: #f8fafc; border-top: 1px solid #cbd5e1; }
+  .pf-refine-name-inp, .pf-refine-qty-inp, .pf-refine-unit {
+    background: none; border: none; color: #000; padding: 0; font-size: 11px;
   }
 }
 

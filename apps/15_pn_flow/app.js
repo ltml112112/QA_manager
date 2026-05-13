@@ -112,8 +112,9 @@ function stepLbl(s, n) {
 /* ── 팩토리 ────────────────────────────────────── */
 function mkDoc(o) { return Object.assign({id:uid(),title:'새 Flow',material:'',author:'',date:todayStr(),sections:[]},o); }
 function mkSec(t) { return {id:uid(),type:t||'P',lots:[]}; }
-function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[],finalQty:null,unit:'g'}; }
+function mkLot(n,s) { return {id:uid(),name:n||'',subName:s||'',steps:[],finalQty:null,unit:'g',refines:[]}; }
 function mkStep(t,o) { return Object.assign({id:uid(),type:t||'wet',detail:'',tag:null,location:'',date:'',operator:''},o); }
+function mkRefine(o) { return Object.assign({id:uid(),name:'',qty:null,unit:'g'},o||{}); }
 
 /* ── Lot 최종상태 ───────────────────────────────── */
 /* 마지막 "비-예정" 스텝의 tag로 판정. 없으면 'progress' */
@@ -316,6 +317,7 @@ function normDoc(d) {
     if (!Array.isArray(s.lots)) s.lots = s.lots ? Object.values(s.lots) : [];
     s.lots.forEach(function(l) {
       if (!Array.isArray(l.steps)) l.steps = l.steps ? Object.values(l.steps) : [];
+      if (!Array.isArray(l.refines)) l.refines = l.refines ? Object.values(l.refines) : [];
     });
   });
   return d;
@@ -589,14 +591,18 @@ window.APP = {
     else STATE.collapsedSecs.add(sid);
     render();
   },
-  /* 모든 섹션 일괄 접기/펼치기 — 전부 접혀있으면 펼치고, 아니면 모두 접음 */
-  toggleAllSecs: function() {
+  /* 모든 Lot 공정 일괄 접기/펼치기 — 개별 Lot 헤더의 ▼/▶와 동일 동작을
+     문서 내 모든 Lot에 한꺼번에 적용. 전부 접혀있으면 펼치고, 아니면 모두 접음. */
+  toggleAllLots: function() {
     var d = getDoc(); if(!d) return;
-    var ids = (d.sections||[]).map(function(s){return s.id;});
-    if (!ids.length) return;
-    var allCollapsed = ids.every(function(id){return STATE.collapsedSecs.has(id);});
-    if (allCollapsed) ids.forEach(function(id){STATE.collapsedSecs.delete(id);});
-    else              ids.forEach(function(id){STATE.collapsedSecs.add(id);});
+    var lotIds = [];
+    (d.sections||[]).forEach(function(s) {
+      (s.lots||[]).forEach(function(l) { lotIds.push(l.id); });
+    });
+    if (!lotIds.length) return;
+    var allCollapsed = lotIds.every(function(id){return STATE.collapsedLots.has(id);});
+    if (allCollapsed) lotIds.forEach(function(id){STATE.collapsedLots.delete(id);});
+    else              lotIds.forEach(function(id){STATE.collapsedLots.add(id);});
     render();
   },
   toggleLot: function(lid, ev) {
@@ -631,6 +637,9 @@ window.APP = {
       unit: src.unit || 'g',
       steps: (src.steps || []).map(function(st) {
         return Object.assign({}, st, { id: uid() });
+      }),
+      refines: (src.refines || []).map(function(r) {
+        return Object.assign({}, r, { id: uid() });
       })
     };
     var idx = sec.lots.findIndex(l=>l.id===lid);
@@ -684,6 +693,40 @@ window.APP = {
     l.unit = val || 'g';
     save();
     renderLotStock(lid);
+  },
+  /* 정제 Batch (refines) — 합성 Batch(Lot) 내 정제 산출 기록 */
+  addRefine: function(lid) {
+    var l = findLot(lid); if(!l) return;
+    if (!Array.isArray(l.refines)) l.refines = [];
+    l.refines.push(mkRefine({ unit: l.unit || 'g' }));
+    save();
+    render();
+  },
+  deleteRefine: function(lid, rid) {
+    var l = findLot(lid); if(!l) return;
+    l.refines = (l.refines || []).filter(function(r){return r.id!==rid;});
+    save();
+    render();
+  },
+  updateRefineField: function(lid, rid, field, val) {
+    var l = findLot(lid); if(!l) return;
+    var r = (l.refines || []).find(function(x){return x.id===rid;});
+    if (!r) return;
+    if (field === 'qty') {
+      var trimmed = String(val).trim();
+      if (trimmed === '') { r.qty = null; }
+      else {
+        var n = Number(trimmed);
+        if (isNaN(n) || n < 0) return; // 음수 거부
+        r.qty = n;
+      }
+    } else if (field === 'unit') {
+      r.unit = val || 'g';
+    } else {
+      r[field] = val;
+    }
+    save();
+    // DOM은 이미 oninput으로 값이 반영됨 — full render 호출 안 함(blur 방지)
   },
   // updateLotSub removed
   onMetaChange: function() {
@@ -1238,13 +1281,14 @@ function renderDoc() {
   var html = secs.length === 0 ? renderEmptyDoc() : secs.map(renderSec).join('');
   document.getElementById('doc-body').innerHTML = html;
   renderUpdatedInfo();
-  // 전체 접기/펼치기 버튼 라벨 갱신
+  // 전체 Lot 공정 접기/펼치기 버튼 라벨 갱신
   var togBtn = document.getElementById('pf-toggle-all-btn');
   if (togBtn) {
-    var ids = secs.map(function(s){return s.id;});
-    var allCollapsed = ids.length && ids.every(function(id){return STATE.collapsedSecs.has(id);});
-    togBtn.textContent = allCollapsed ? '▶ 전체 펼치기' : '▼ 전체 접기';
-    togBtn.disabled = !ids.length;
+    var lotIds = [];
+    secs.forEach(function(s){ (s.lots||[]).forEach(function(l){ lotIds.push(l.id); }); });
+    var allCollapsed = lotIds.length && lotIds.every(function(id){return STATE.collapsedLots.has(id);});
+    togBtn.textContent = allCollapsed ? '▶ 공정 전체 펼치기' : '▼ 공정 전체 접기';
+    togBtn.disabled = !lotIds.length;
   }
   APP.initSortable();
 }
@@ -1371,9 +1415,11 @@ function renderLot(l, s) {
   var unitOpts = ['mg','g','kg'].map(function(u){
     return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
   }).join('');
+  var refCount = (l.refines || []).length;
   var bodyHtml = isCollapsed
     ? '<div class="pf-lot-collapsed-body">'+
         '<span>총 '+(l.steps||[]).length+'스텝</span>'+
+        (refCount?'<span>정제 '+refCount+'건</span>':'')+
         (lastInfo?'<span>마지막: '+esc(lastInfo)+'</span>':'')+
         '<button class="pf-add-lot-btn" style="margin-top:4px" onclick="APP.toggleLot(\''+l.id+'\',event)">▶ 펼치기</button>'+
       '</div>'
@@ -1386,7 +1432,8 @@ function renderLot(l, s) {
       '<button class="pf-qadd wet" onclick="APP.addStep(\''+l.id+'\',\'wet\',event)">+Wet</button>'+
       '<button class="pf-qadd subl" onclick="APP.addStep(\''+l.id+'\',\'subl\',event)">+승화</button>'+
       '<button class="pf-qadd collect" onclick="APP.addStep(\''+l.id+'\',\'collect\',event)">+여액</button>'+
-      '</div>';
+      '</div>'+
+      renderRefinesSection(l);
   return '<div class="pf-lot-col pf-lot-st-'+status+'" data-lot-id="'+l.id+'">'+
     '<div class="pf-lot-header '+tc+'">'+
     '<div class="pf-lot-head-top">'+
@@ -1411,6 +1458,39 @@ function renderLotStock(lid) {
   var slot = document.querySelector('[data-lot-stock="'+lid+'"]');
   if (slot) slot.innerHTML = renderStockBadge(l);
 }
+
+/* 정제 Batch 섹션 — Lot 카드 body 하단에 노출.
+   합성 Batch(Lot)에서 정제 공정을 거쳐 나온 산출물들의 잔량 기록용. */
+function renderRefinesSection(l) {
+  var refines = Array.isArray(l.refines) ? l.refines : [];
+  var rows = refines.map(function(r){ return renderRefineRowHtml(l, r); }).join('');
+  return '<div class="pf-refines" onclick="event.stopPropagation()">'+
+    '<div class="pf-refines-hd">'+
+      '<span class="pf-refines-title">정제 Batch · 잔량'+(refines.length?' ('+refines.length+'건)':'')+'</span>'+
+      '<button class="pf-refines-add" onclick="APP.addRefine(\''+l.id+'\')">+ 정제 Batch 추가</button>'+
+    '</div>'+
+    (refines.length
+      ? '<table class="pf-refines-table"><tbody>'+rows+'</tbody></table>'
+      : '<div class="pf-refines-empty">아직 정제 Batch가 없습니다.</div>')+
+  '</div>';
+}
+
+function renderRefineRowHtml(l, r) {
+  var qtyVal = (typeof r.qty === 'number') ? r.qty : '';
+  var unitVal = r.unit || 'g';
+  var unitOpts = ['mg','g','kg'].map(function(u){
+    return '<option value="'+u+'"'+(unitVal===u?' selected':'')+'>'+u+'</option>';
+  }).join('');
+  return '<tr class="pf-refine-row" data-refine-id="'+r.id+'">'+
+    '<td><input class="pf-refine-name-inp" placeholder="정제 Batch 이름" value="'+esc(r.name||'')+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'name\',this.value)"></td>'+
+    '<td class="pf-refine-qty-cell">'+
+      '<input class="pf-refine-qty-inp" type="number" min="0" step="0.01" inputmode="decimal" placeholder="-" value="'+esc(String(qtyVal))+'" oninput="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'qty\',this.value)">'+
+      '<select class="pf-refine-unit" onchange="APP.updateRefineField(\''+l.id+'\',\''+r.id+'\',\'unit\',this.value)">'+unitOpts+'</select>'+
+    '</td>'+
+    '<td class="pf-refine-del"><button class="pf-refine-del-btn" title="삭제" onclick="APP.deleteRefine(\''+l.id+'\',\''+r.id+'\')">✕</button></td>'+
+  '</tr>';
+}
+
 
 function renderStep(st, l, i) {
   var n = stepNum(l.steps, i, st.type);
