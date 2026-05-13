@@ -26,10 +26,12 @@ apps/15_pn_flow/
 ## 3. Firebase 경로
 
 ```javascript
-db.ref('pn_flow_docs')
+db.ref('pn_flow_docs')       // 공정 문서 (P/N/S 섹션 + Lot + Step)
+db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 ```
 
 > Firebase 표준 listener 패턴은 `docs/architecture/firebase-rtdb.md` 참고.
+> 두 경로 모두 `@ltml.co.kr` 인증 필요 — 보안 규칙은 `docs/architecture/auth.md` 6절.
 
 ---
 
@@ -110,8 +112,8 @@ db.ref('pn_flow_docs')
 | STAGE | 산출물 | 상태 |
 |-------|--------|------|
 | 1 | Lot에 `finalQty/unit` 필드 + Lot 카드 재고 배지 (📦) | 구현 완료 (2026-05-13) |
-| 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 (P/N·멀티배치 혼합) + Firebase 보안 규칙 | 예정 |
-| 3 | 출하 Lot 관리 화면 + drill-down(컴포넌트 클릭 → 해당 공정 점프) + Lot측 "출하이력" 역방향 링크 | 예정 |
+| 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 (P/N·멀티배치 혼합) + Firebase 보안 규칙 + 재고 자동 차감 + 색상 단계(green/회/주황/빨강) | 구현 완료 (2026-05-13) |
+| 3 | drill-down(컴포넌트 클릭 → 해당 공정 점프) + Lot측 "출하이력" 역방향 링크 | 예정 |
 | 4 | Excel 출력 컬럼 확장 + glossary("출하 Lot") | 예정 |
 
 ### STAGE 1 — 재고 데이터 모델
@@ -119,6 +121,61 @@ db.ref('pn_flow_docs')
 - `lot.finalQty: number | null` — 마지막 공정 후 산출량. `null` = 미입력(배지 숨김)
 - `lot.unit: 'mg' | 'g' | 'kg'` — 기본 `'g'`
 - 음수 입력은 mutator(`APP.updateLotQty`)에서 거부
-- 헬퍼 `lotStock(lot)` → `{stock, finalQty, unit, hasQty}` 반환. STAGE 2에서 `stock = finalQty − Σ(출하 components)`로 계산 로직만 확장 (시그니처 유지)
+- 헬퍼 `lotStock(lot)` → `{stock, finalQty, unit, hasQty, consumed, ratio}` 반환
 - `cloneLot`은 `finalQty/unit` 같이 복제
 - 부분 갱신 `renderLotStock(lid)` — 수량 입력 중 full render 시 input blur 방지용
+
+### STAGE 2 — 출하 Lot 데이터 모델
+
+`pn_flow_shipments/{shipId}`:
+
+```javascript
+{
+  id: 'uid',
+  shipName: 'SHIP-2026-05-13',
+  customer: 'LGD',
+  date: 'YYYY-MM-DD',
+  note: '',
+  components: [                           // N:M — P/N·멀티배치 혼합 가능
+    {
+      docId, sectionId, lotId,            // 원본 참조 (drill-down은 STAGE 3)
+      qty: 20.0,
+      unit: 'g',                          // component 추가 시점 lot.unit 스냅샷
+      lotNameSnapshot: 'P-MI18-TOL',      // 원본 Lot 이름/타입 변경·삭제 대비
+      sectionTypeSnapshot: 'P',
+      docTitleSnapshot: '...',
+      materialSnapshot: 'LT-PHM295'
+    }
+  ],
+  deleted: false,                          // 소프트 삭제 (복원 가능, 재고 복구)
+  createdAt, createdBy,
+  updatedAt, updatedBy
+}
+```
+
+#### 재고 차감 로직
+
+- `lotConsumed(lotId, lotUnit)` — 모든 비-삭제 shipment의 components 중 `lotId` 일치 항목 qty를 `lotUnit`으로 정규화 후 합산
+- `lotStock(lot)` — `finalQty − consumed` (음수면 0으로 clamp)
+- 단위 환산: `UNIT_TO_G = { mg: 0.001, g: 1, kg: 1000 }`, `convertQty(qty, from, to)` 헬퍼
+- 출하 추가/수정/삭제 시 즉시 모든 Lot 카드의 재고 배지가 partial 갱신됨 (`renderLotStock` × N)
+
+#### 재고 배지 색상 단계
+
+| 잔여 비율 | tier 클래스 | 색상 |
+|-----------|-------------|------|
+| `stock > 50%` | `pf-stock-full` | 녹색 |
+| `20% ≤ stock ≤ 50%` | `pf-stock-mid` | 흰색(중성) |
+| `0 < stock < 20%` | `pf-stock-low` | 주황 |
+| `stock = 0` | `pf-stock-empty` | 빨강 |
+
+#### 입력 검증
+
+- 컴포넌트 추가/수정 시 `qty ≤ 가용재고` 검증 (자기 자신 제외)
+- 가용 초과 시 alert + 입력 거부
+- 음수·NaN 거부
+- 소프트 삭제(`deleted: true`)로 출하 Lot 제거 → 재고 자동 복원
+
+#### Firebase 보안 규칙
+
+`pn_flow_shipments` 경로는 `@ltml.co.kr` 인증 필요 (default deny). 콘솔 Rules 탭에 추가 안 하면 PERMISSION_DENIED. JSON 블록은 `docs/architecture/auth.md` 6절.

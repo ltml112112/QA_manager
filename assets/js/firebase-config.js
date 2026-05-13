@@ -29,6 +29,7 @@
     lotSchedule:       'lot_schedule',         // 06번
     oledResults:       'oled_results',         // 01·06번 공유
     pnFlowDocs:        'pn_flow_docs',         // 15번
+    pnFlowShipments:   'pn_flow_shipments',    // 15번 — 출하 Lot
     measurementHplc:   'measurement_hplc',     // 18번 (예정)
     measurementDscTga: 'measurement_dsc_tga',  // 19번 (예정)
     lotFlow:           'lot_flow'              // 20번 (예정)

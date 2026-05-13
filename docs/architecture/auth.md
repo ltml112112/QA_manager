@@ -1,6 +1,6 @@
 # 인증 시스템 & 보안 규칙
 
-> Last updated: 2026-05-07
+> Last updated: 2026-05-13
 
 QA Manager 포털의 인증·권한·Firebase 보안 규칙 전체 가이드. `index.html` 하단 IIFE에 인라인된 Firebase Auth 게이트와 RTDB의 `portal_users/` 역할 정보로 admin/user 권한을 결정한다.
 
@@ -131,6 +131,7 @@ locked 탭 버튼·iframe·그룹 헤더에 `display:none` 토글 → 현재 활
     "lot_schedule":         { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
     "oled_results":         { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
     "pn_flow_docs":         { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
+    "pn_flow_shipments":    { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
     "measurement_hplc":     { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
     "measurement_dsc_tga":  { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
     "lot_flow":             { ".read": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)", ".write": "auth != null && auth.token.email.matches(/.*@ltml\\.co\\.kr$/)" },
