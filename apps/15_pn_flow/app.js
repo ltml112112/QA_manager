@@ -1157,7 +1157,7 @@ window.APP = {
     (d.sections||[]).forEach(function(s) {
       (s.lots||[]).forEach(function(l) { docLotIds[l.id] = { sec: s, lot: l }; });
     });
-    var shipRows = [['출하명','고객','일자','메모','Type','정제 Batch','합성 Batch','수량','단위','문서']];
+    var shipRows = [['출하명','고객','일자','메모','Type','합성 Batch','정제 Batch','수량','단위','문서']];
     var TYPE_ORDER_XL = { P:0, N:1, S:2 };
     var shipList = Object.values(STATE.shipments||{}).filter(function(sh){
       if (!sh || sh.deleted) return false;
@@ -1170,7 +1170,9 @@ window.APP = {
         var ta = TYPE_ORDER_XL[a.sectionTypeSnapshot]; if (ta===undefined) ta=9;
         var tb = TYPE_ORDER_XL[b.sectionTypeSnapshot]; if (tb===undefined) tb=9;
         if (ta !== tb) return ta - tb;
-        return (a.refineNameSnapshot||a.lotNameSnapshot||'').localeCompare(b.refineNameSnapshot||b.lotNameSnapshot||'');
+        var la = (a.lotNameSnapshot||'').localeCompare(b.lotNameSnapshot||'');
+        if (la !== 0) return la;
+        return (a.refineNameSnapshot||'').localeCompare(b.refineNameSnapshot||'');
       });
       comps.forEach(function(c, ci) {
         if (!docLotIds[c.lotId]) return; // 다른 문서의 Lot은 스킵
@@ -1180,8 +1182,8 @@ window.APP = {
           ci === 0 ? (sh.date||'') : '',
           ci === 0 ? (sh.note||'') : '',
           c.sectionTypeSnapshot || '',
-          c.refineNameSnapshot || '',
           c.lotNameSnapshot || '',
+          c.refineNameSnapshot || '',
           (typeof c.qty === 'number') ? c.qty : '',
           c.unit || 'g',
           c.docTitleSnapshot || ''
@@ -1643,47 +1645,80 @@ function renderShipList() {
 
 function renderShipDetail(sh) {
   var compsRaw = Array.isArray(sh.components) ? sh.components : [];
-  // 출하 내부 components 정렬: P → N → S → 기타, 같은 타입 내 이름 asc.
-  // 원래 index를 보존해야 mutator(updateShipCompQty, removeShipComponent)가 정상 동작.
   var TYPE_ORDER = { P: 0, N: 1, S: 2 };
+  var GRP_ORDER = ['P','N','S','OTHER'];
+  var GRP_LABEL = { P:'P Type', N:'N Type', S:'Single', OTHER:'기타' };
+  function typeBucket(t) { return (t === 'P' || t === 'N' || t === 'S') ? t : 'OTHER'; }
+  function bucketRows(rows, typeAccessor) {
+    var b = { P:[], N:[], S:[], OTHER:[] };
+    rows.forEach(function(r) { b[typeBucket(typeAccessor(r))].push(r); });
+    return b;
+  }
+
+  /* 구성 (이미 추가된 components) — 합성→정제 순, P/N/S 그룹 헤더·테두리 */
   var comps = compsRaw.map(function(c, i) { return { c: c, i: i }; });
   comps.sort(function(a, b) {
     var ta = TYPE_ORDER[a.c.sectionTypeSnapshot]; if (ta === undefined) ta = 9;
     var tb = TYPE_ORDER[b.c.sectionTypeSnapshot]; if (tb === undefined) tb = 9;
     if (ta !== tb) return ta - tb;
-    return (a.c.refineNameSnapshot||a.c.lotNameSnapshot||'').localeCompare(b.c.refineNameSnapshot||b.c.lotNameSnapshot||'');
+    var la = (a.c.lotNameSnapshot||'').localeCompare(b.c.lotNameSnapshot||'');
+    if (la !== 0) return la;
+    return (a.c.refineNameSnapshot||'').localeCompare(b.c.refineNameSnapshot||'');
   });
   var tot = shipTotal(sh);
-  var compRows = comps.map(function(entry) {
-    var c = entry.c; var i = entry.i;
-    var typeCls = c.sectionTypeSnapshot === 'N' ? 'pf-comp-n' : (c.sectionTypeSnapshot === 'S' ? 'pf-comp-s' : 'pf-comp-p');
-    var typeLbl = c.sectionTypeSnapshot || '-';
-    var doc = STATE.docs[c.docId];
-    var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
-    var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
-    var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
-    var orphan = (!lot || (c.refineId && !refine)) ? '<span class="pf-comp-orphan" title="원본이 삭제됨 — 드릴다운 불가">⚠</span>' : '';
-    var refIdArg = c.refineId ? '\''+c.refineId+'\'' : 'null';
-    var jumpBtn = lot
-      ? '<button class="pf-comp-jump" title="해당 Lot/정제 Batch의 공정으로 이동" onclick="APP.jumpToLot(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\','+refIdArg+',event)">↗</button>'
-      : '';
-    var refineLabel = c.refineNameSnapshot
-      ? esc(c.refineNameSnapshot)
-      : '<span class="pf-comp-legacy" title="정제 Batch 정보 없음 (구 데이터)">— (구 데이터)</span>';
-    return '<tr>'+
-      '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(typeLbl)+'</span></td>'+
-      '<td class="pf-comp-name">'+refineLabel+' '+orphan+jumpBtn+'</td>'+
-      '<td class="pf-comp-mat"><span class="pf-comp-parent">합성: '+esc(c.lotNameSnapshot||'-')+'</span></td>'+
-      '<td class="pf-comp-doc">'+esc(c.materialSnapshot||'-')+' · '+esc(c.docTitleSnapshot||'-')+'</td>'+
-      '<td class="pf-ship-num">'+
-        '<input type="number" min="0" step="0.01" class="pf-comp-qty-inp" value="'+esc(String(c.qty))+'" oninput="APP.updateShipCompQty(\''+sh.id+'\','+i+',this.value)">'+
-        '<span class="pf-comp-unit">'+esc(c.unit||'g')+'</span>'+
-      '</td>'+
-      '<td><button class="pf-ship-del-btn" onclick="APP.removeShipComponent(\''+sh.id+'\','+i+')">제거</button></td>'+
-    '</tr>';
-  }).join('');
+  var compTableHtml = '';
+  if (comps.length) {
+    var compBuckets = bucketRows(comps, function(e){return e.c.sectionTypeSnapshot;});
+    var compParts = [];
+    GRP_ORDER.forEach(function(t) {
+      var rowsT = compBuckets[t]; if (!rowsT.length) return;
+      var grpCls = 'pf-pick-grp-' + t;
+      compParts.push(
+        '<tr class="pf-pick-grp-hd '+grpCls+'">'+
+          '<td colspan="6"><span class="pf-pick-grp-lbl">'+GRP_LABEL[t]+'</span> · '+rowsT.length+'건</td>'+
+        '</tr>'
+      );
+      rowsT.forEach(function(entry, idx) {
+        var c = entry.c, i = entry.i;
+        var typeCls = c.sectionTypeSnapshot === 'N' ? 'pf-comp-n' : (c.sectionTypeSnapshot === 'S' ? 'pf-comp-s' : 'pf-comp-p');
+        var typeLbl = c.sectionTypeSnapshot || '-';
+        var doc = STATE.docs[c.docId];
+        var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
+        var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
+        var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
+        var orphan = (!lot || (c.refineId && !refine)) ? '<span class="pf-comp-orphan" title="원본이 삭제됨 — 드릴다운 불가">⚠</span>' : '';
+        var refIdArg = c.refineId ? '\''+c.refineId+'\'' : 'null';
+        var jumpBtn = lot
+          ? '<button class="pf-comp-jump" title="해당 공정으로 이동" onclick="APP.jumpToLot(\''+c.docId+'\',\''+c.sectionId+'\',\''+c.lotId+'\','+refIdArg+',event)">↗</button>'
+          : '';
+        var refineLabel = c.refineNameSnapshot
+          ? '<span class="pf-batch-name">'+esc(c.refineNameSnapshot)+'</span>'
+          : '<span class="pf-comp-legacy" title="정제 Batch 정보 없음 (구 데이터)">— (구 데이터)</span>';
+        var classParts = ['pf-pick-row', grpCls];
+        if (idx === rowsT.length - 1) classParts.push('pf-pick-grp-last');
+        compParts.push(
+          '<tr class="'+classParts.join(' ')+'">'+
+            '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(typeLbl)+'</span></td>'+
+            '<td class="pf-comp-synth"><span class="pf-batch-name">'+esc(c.lotNameSnapshot||'-')+'</span></td>'+
+            '<td class="pf-comp-refine">'+refineLabel+' '+orphan+jumpBtn+'</td>'+
+            '<td class="pf-comp-doc">'+esc(c.materialSnapshot||'-')+' · '+esc(c.docTitleSnapshot||'-')+'</td>'+
+            '<td class="pf-ship-num">'+
+              '<input type="number" min="0" step="0.01" class="pf-comp-qty-inp" value="'+esc(String(c.qty))+'" oninput="APP.updateShipCompQty(\''+sh.id+'\','+i+',this.value)">'+
+              '<span class="pf-comp-unit">'+esc(c.unit||'g')+'</span>'+
+            '</td>'+
+            '<td><button class="pf-ship-del-btn" onclick="APP.removeShipComponent(\''+sh.id+'\','+i+')">제거</button></td>'+
+          '</tr>'
+        );
+      });
+    });
+    compTableHtml = '<table class="pf-ship-table pf-pick-table"><thead><tr>'+
+        '<th>Type</th><th>합성 Batch</th><th>정제 Batch</th><th>소재 · 문서</th><th>수량</th><th></th>'+
+      '</tr></thead><tbody>'+compParts.join('')+'</tbody></table>';
+  } else {
+    compTableHtml = '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다. 아래 표에서 사용수량을 입력하세요.</div>';
+  }
 
-  // 일괄 추가 그리드 — qty 입력된 모든 정제 Batch를 P → N → S 순으로 표시
+  /* 일괄 추가 그리드 — qty 입력된 모든 정제 Batch */
   var pickerRows = [];
   Object.values(STATE.docs).forEach(function(doc) {
     (doc.sections||[]).forEach(function(s) {
@@ -1709,19 +1744,10 @@ function renderShipDetail(sh) {
   if (!pickerRows.length) {
     pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">수량이 입력된 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 수량을 먼저 입력하세요.</div>';
   } else {
-    // 타입별 버킷팅 — P → N → S → 기타 순으로 그룹 헤더 + 행 묶음 렌더
-    var GRP_ORDER = ['P','N','S','OTHER'];
-    var GRP_LABEL = { P:'P Type', N:'N Type', S:'Single', OTHER:'기타' };
-    var buckets = { P:[], N:[], S:[], OTHER:[] };
-    pickerRows.forEach(function(pr) {
-      var t = pr.sec.type;
-      if (t === 'P' || t === 'N' || t === 'S') buckets[t].push(pr);
-      else buckets.OTHER.push(pr);
-    });
+    var pBuckets = bucketRows(pickerRows, function(r){return r.sec.type;});
     var pickerBodyParts = [];
     GRP_ORDER.forEach(function(t) {
-      var rowsT = buckets[t];
-      if (!rowsT.length) return;
+      var rowsT = pBuckets[t]; if (!rowsT.length) return;
       var grpCls = 'pf-pick-grp-' + t;
       pickerBodyParts.push(
         '<tr class="pf-pick-grp-hd '+grpCls+'">'+
@@ -1739,8 +1765,8 @@ function renderShipDetail(sh) {
         pickerBodyParts.push(
           '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
             '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(pr.sec.type||'-')+'</span></td>'+
-            '<td class="pf-pick-name">'+esc(pr.refine.name||'(이름 없음)')+'</td>'+
-            '<td class="pf-pick-parent">'+esc(pr.lot.name||'-')+'</td>'+
+            '<td class="pf-pick-synth"><span class="pf-batch-name">'+esc(pr.lot.name||'-')+'</span></td>'+
+            '<td class="pf-pick-refine"><span class="pf-batch-name">'+esc(pr.refine.name||'(이름 없음)')+'</span></td>'+
             '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
             '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
             '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
@@ -1755,7 +1781,7 @@ function renderShipDetail(sh) {
       });
     });
     pickerHtml = '<table class="pf-ship-table pf-pick-table"><thead><tr>'+
-        '<th>Type</th><th>정제 Batch</th><th>합성 Batch</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
+        '<th>Type</th><th>합성 Batch</th><th>정제 Batch</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
       '</tr></thead><tbody>'+pickerBodyParts.join('')+'</tbody></table>'+
       '<div class="pf-pick-actions">'+
         '<button class="btn btn-primary" onclick="APP.addShipComponentsBatch(\''+sh.id+'\')">+ 입력한 수량 모두 추가</button>'+
@@ -1776,11 +1802,7 @@ function renderShipDetail(sh) {
     '</div>'+
     '<div class="pf-ship-total">총 '+fmtQty(tot.qty, tot.unit)+' · '+comps.length+'개 Batch</div>'+
     '<h4 class="pf-ship-sub">구성 (P → N → S 정렬)</h4>'+
-    (comps.length
-      ? '<table class="pf-ship-table"><thead><tr>'+
-          '<th>Type</th><th>정제 Batch</th><th>합성 Batch</th><th>소재 · 문서</th><th>수량</th><th></th>'+
-        '</tr></thead><tbody>'+compRows+'</tbody></table>'
-      : '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다. 아래 표에서 사용수량을 입력하세요.</div>')+
+    compTableHtml+
     '<h4 class="pf-ship-sub pf-ship-sub-pick">+ 산출량 입력된 Lot에서 일괄 추가</h4>'+
     pickerHtml;
 }

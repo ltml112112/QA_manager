@@ -444,12 +444,7 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 }
 .pf-refine-row.pf-refine-highlight { animation: pf-refine-pulse 2.4s ease-out; }
 
-/* 일괄 추가 picker — 합성/정제 컬럼 */
-.pf-pick-parent { color: #6b7280; font-size: 12px; }
-
-/* 출하 상세 컴포넌트 — 부모 합성 Batch 라벨 */
-.pf-comp-parent { color: #4338ca; font-size: 11.5px; font-weight: 600; }
-.pf-comp-legacy { color: #9ca3af; font-style: italic; }
+.pf-comp-legacy { color: #9ca3af; font-style: italic; font-family: 'Inter','Noto Sans KR',sans-serif; }
 
 /* ── ADD LOT COLUMN ────────────────────────────────────────────── */
 .pf-add-lot-col {
@@ -802,9 +797,19 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-comp-type-tag.pf-comp-p { background: #3f6bd9; }
 .pf-comp-type-tag.pf-comp-n { background: #7a4cc7; }
 .pf-comp-type-tag.pf-comp-s { background: #d97706; }
-.pf-comp-name { font-weight: 600; }
-.pf-comp-mat, .pf-comp-doc { color: #6b7280; font-size: 12px; }
-.pf-comp-orphan { color: #d97706; cursor: help; }
+
+/* Batch 이름 통일 폰트 — 합성·정제 양쪽 모두 monospace */
+.pf-batch-name {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12.5px; font-weight: 600; color: #111827;
+  letter-spacing: .2px;
+}
+.pf-comp-synth, .pf-pick-synth { padding-right: 8px; }
+.pf-comp-refine, .pf-pick-refine { padding-right: 8px; }
+.pf-comp-doc, .pf-pick-mat, .pf-pick-doc {
+  color: #6b7280; font-size: 12px;
+}
+.pf-comp-orphan { color: #d97706; cursor: help; margin-left: 4px; }
 .pf-comp-qty-inp {
   width: 70px; padding: 3px 6px; font-size: 12px; text-align: right;
   border: 1px solid #d1d5db; border-radius: 4px;
@@ -825,8 +830,6 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-pick-row:hover { background: #f3f4f6; }
 .pf-pick-row.pf-pick-empty { background: #fef2f2; opacity: .55; }
 .pf-pick-row.pf-pick-empty:hover { background: #fee2e2; }
-.pf-pick-name { font-weight: 600; }
-.pf-pick-mat, .pf-pick-doc { color: #6b7280; font-size: 12px; }
 
 /* ── 그룹 헤더 & 테두리 (P / N / S / OTHER) ──────────────────── */
 .pf-pick-grp-hd td {
