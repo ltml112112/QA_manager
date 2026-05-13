@@ -589,6 +589,16 @@ window.APP = {
     else STATE.collapsedSecs.add(sid);
     render();
   },
+  /* 모든 섹션 일괄 접기/펼치기 — 전부 접혀있으면 펼치고, 아니면 모두 접음 */
+  toggleAllSecs: function() {
+    var d = getDoc(); if(!d) return;
+    var ids = (d.sections||[]).map(function(s){return s.id;});
+    if (!ids.length) return;
+    var allCollapsed = ids.every(function(id){return STATE.collapsedSecs.has(id);});
+    if (allCollapsed) ids.forEach(function(id){STATE.collapsedSecs.delete(id);});
+    else              ids.forEach(function(id){STATE.collapsedSecs.add(id);});
+    render();
+  },
   toggleLot: function(lid, ev) {
     if(ev) ev.stopPropagation();
     if(STATE.collapsedLots.has(lid)) STATE.collapsedLots.delete(lid);
@@ -598,7 +608,7 @@ window.APP = {
   addLot: function(sid) {
     var d = getDoc(); if(!d) return;
     var s = d.sections.find(x=>x.id===sid); if(!s) return;
-    s.lots.push(mkLot('새 Lot'));
+    s.lots.push(mkLot(''));
     save();
     render();
   },
@@ -1022,6 +1032,29 @@ window.APP = {
       rowHeights[curRow] = {hpt: lots.some(function(l){return l.subName;}) ? 30 : 18};
       curRow++;
 
+      /* 산출량/재고 행 (STAGE 4 — finalQty 입력된 Lot 한정) */
+      var hasQty = lots.some(function(l){ return typeof l.finalQty === 'number'; });
+      if (hasQty) {
+        lots.forEach(function(l, ci) {
+          var sk = lotStock(l);
+          if (!sk.hasQty) {
+            sc(curRow, ci, '', { fill:{fgColor:{rgb:'F9FAFB'}} });
+            return;
+          }
+          var lines = ['산출: '+fmtQty(sk.finalQty, sk.unit), '재고: '+fmtQty(sk.stock, sk.unit)];
+          if (sk.consumed > 0) lines.push('출하: '+fmtQty(sk.consumed, sk.unit));
+          var fillC = sk.stock <= 0 ? 'FEE2E2' : (sk.ratio < 0.2 ? 'FEF3C7' : (sk.ratio < 0.5 ? 'F3F4F6' : 'DCFCE7'));
+          var fontC = sk.stock <= 0 ? 'B91C1C' : (sk.ratio < 0.2 ? 'B45309' : (sk.ratio < 0.5 ? '1F2937' : '15803D'));
+          sc(curRow, ci, lines.join('\n'), {
+            font: { sz:9, bold:true, color:{rgb:fontC} },
+            fill: { fgColor:{rgb:fillC} },
+            alignment: { horizontal:'center', vertical:'center', wrapText:true }
+          });
+        });
+        rowHeights[curRow] = {hpt: 38};
+        curRow++;
+      }
+
       /* 공정 행 */
       if (maxSteps > 0) {
         for (var si = 0; si < maxSteps; si++) {
@@ -1069,6 +1102,55 @@ window.APP = {
     ws['!rows'] = rowHeights;
 
     XLSX.utils.book_append_sheet(wb, ws, '공정도');
+
+    /* ── Sheet 3: 출하 Lot (이 문서의 Lot이 포함된 비-삭제 출하만) ── */
+    var docLotIds = {};
+    (d.sections||[]).forEach(function(s) {
+      (s.lots||[]).forEach(function(l) { docLotIds[l.id] = { sec: s, lot: l }; });
+    });
+    var shipRows = [['출하명','고객','일자','메모','Type','Lot','수량','단위','문서']];
+    var TYPE_ORDER_XL = { P:0, N:1, S:2 };
+    var shipList = Object.values(STATE.shipments||{}).filter(function(sh){
+      if (!sh || sh.deleted) return false;
+      var comps = Array.isArray(sh.components) ? sh.components : (sh.components ? Object.values(sh.components) : []);
+      return comps.some(function(c){ return docLotIds[c.lotId]; });
+    }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    shipList.forEach(function(sh) {
+      var comps = Array.isArray(sh.components) ? sh.components : Object.values(sh.components||{});
+      comps = comps.slice().sort(function(a,b) {
+        var ta = TYPE_ORDER_XL[a.sectionTypeSnapshot]; if (ta===undefined) ta=9;
+        var tb = TYPE_ORDER_XL[b.sectionTypeSnapshot]; if (tb===undefined) tb=9;
+        if (ta !== tb) return ta - tb;
+        return (a.lotNameSnapshot||'').localeCompare(b.lotNameSnapshot||'');
+      });
+      comps.forEach(function(c, ci) {
+        if (!docLotIds[c.lotId]) return; // 다른 문서의 Lot은 스킵
+        shipRows.push([
+          ci === 0 ? (sh.shipName||'') : '',
+          ci === 0 ? (sh.customer||'') : '',
+          ci === 0 ? (sh.date||'') : '',
+          ci === 0 ? (sh.note||'') : '',
+          c.sectionTypeSnapshot || '',
+          c.lotNameSnapshot || '',
+          (typeof c.qty === 'number') ? c.qty : '',
+          c.unit || 'g',
+          c.docTitleSnapshot || ''
+        ]);
+      });
+    });
+    if (shipRows.length > 1) {
+      var wsShip = XLSX.utils.aoa_to_sheet(shipRows);
+      wsShip['!cols'] = [{wch:22},{wch:14},{wch:12},{wch:24},{wch:6},{wch:22},{wch:10},{wch:6},{wch:22}];
+      // 헤더 굵게 (xlsx-js-style 지원)
+      ['A1','B1','C1','D1','E1','F1','G1','H1','I1'].forEach(function(addr) {
+        if (wsShip[addr]) wsShip[addr].s = {
+          font:{bold:true, color:{rgb:'4338CA'}},
+          fill:{fgColor:{rgb:'EEF2FF'}},
+          alignment:{horizontal:'center'}
+        };
+      });
+      XLSX.utils.book_append_sheet(wb, wsShip, '출하 Lot');
+    }
 
     var fname = (d.material || d.title || 'PN_Flow').replace(/[\\/:*?"<>|]/g,'_') + '_' + (d.date || todayStr()) + '.xlsx';
     XLSX.writeFile(wb, fname);
@@ -1156,6 +1238,14 @@ function renderDoc() {
   var html = secs.length === 0 ? renderEmptyDoc() : secs.map(renderSec).join('');
   document.getElementById('doc-body').innerHTML = html;
   renderUpdatedInfo();
+  // 전체 접기/펼치기 버튼 라벨 갱신
+  var togBtn = document.getElementById('pf-toggle-all-btn');
+  if (togBtn) {
+    var ids = secs.map(function(s){return s.id;});
+    var allCollapsed = ids.length && ids.every(function(id){return STATE.collapsedSecs.has(id);});
+    togBtn.textContent = allCollapsed ? '▶ 전체 펼치기' : '▼ 전체 접기';
+    togBtn.disabled = !ids.length;
+  }
   APP.initSortable();
 }
 

@@ -114,7 +114,7 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 | 1 | Lot에 `finalQty/unit` 필드 + Lot 카드 재고 배지 (📦) | 구현 완료 (2026-05-13) |
 | 2 | `pn_flow_shipments` RTDB + 출하 Lot 생성·배정 모달 (P/N·멀티배치 혼합) + Firebase 보안 규칙 + 재고 자동 차감 + 색상 단계(green/회/주황/빨강) | 구현 완료 (2026-05-13) |
 | 3 | drill-down(컴포넌트 → 공정 점프) + Lot측 "출하이력" 역방향 popover + 노란 글로우 하이라이트 | 구현 완료 (2026-05-13) |
-| 4 | Excel 출력 컬럼 확장 + glossary("출하 Lot") | 예정 |
+| 4 | Excel 출력 — 산출량/재고 행 + 별도 "출하 Lot" 시트 · glossary("출하 Lot/공정 Lot/산출량") | 구현 완료 (2026-05-13) |
 
 ### STAGE 1 — 재고 데이터 모델
 
@@ -198,3 +198,23 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 - `position: fixed` + JS로 `getBoundingClientRect` 기반 viewport 좌표 세팅 — 부모 `overflow: hidden / auto` 영향 무시
 - 우측 클립 방지(`window.innerWidth - 8`까지)
 - 클릭 외부·Escape로 자동 닫힘 (`document.click` + keydown 핸들러)
+
+### STAGE 4 — Excel 출력 확장
+
+`exportXlsx()`가 다음 3개 시트를 생성하도록 확장:
+
+1. **문서정보** (기존 그대로)
+2. **공정도** — Lot 이름 행 바로 아래에 **산출량/재고/출하** 표시 행 추가
+   - `finalQty`가 입력된 Lot이 하나라도 있을 때만 행 생성
+   - 색상: 녹(>50%) / 회(20–50%) / 노랑(<20%) / 빨강(0)
+3. **출하 Lot** *(NEW)* — 이 문서의 공정 Lot이 포함된 비-삭제 출하만 추출
+   - 컬럼: 출하명·고객·일자·메모·Type·Lot·수량·단위·문서
+   - 같은 출하의 첫 컴포넌트 행에만 출하 메타데이터 채우고, 나머지 행은 컴포넌트만
+   - 컴포넌트 정렬: P → N → S → 기타, 이름 asc.
+   - 다른 문서의 컴포넌트는 시트에서 제외 (해당 문서 기준 export)
+   - 매칭되는 출하가 없으면 시트 자체를 생략
+
+### 부가 UX 개선
+
+- **전체 접기/펼치기** 버튼 (topbar): 모든 섹션의 collapse 상태를 토글. 모두 접혀있으면 "▶ 전체 펼치기", 아니면 "▼ 전체 접기"로 라벨 자동 변경
+- **새 Lot 기본 이름 제거**: `+ Lot 추가` 시 빈 이름으로 생성 (placeholder만 표시)
