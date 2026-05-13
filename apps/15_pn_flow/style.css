@@ -323,48 +323,19 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 }
 .pf-lot-sub-inp { font-size: 11px; font-weight: 400; opacity: .85; }
 
-/* ── Lot 재고 배지 + 산출량 입력 (STAGE 1) ──────────────────────── */
-.pf-lot-stock-slot { display: inline-flex; align-items: center; }
-.pf-lot-stock {
+/* ── 정제 Batch 행의 재고 배지 (tier 색상은 .pf-refines 컨테이너 안) ── */
+.pf-refine-stock {
   font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
   letter-spacing: .2px; line-height: 1.5;
-  background: rgba(255,255,255,.18); color: #fff;
-  border: 1px solid rgba(255,255,255,.32);
+  background: #e5e7eb; color: #1f2937;
+  border: 1px solid #d1d5db;
   white-space: nowrap; cursor: help;
+  display: inline-block;
 }
-.pf-lot-stock.pf-stock-full  { background: rgba(34,197,94,.32); border-color: rgba(34,197,94,.55); }
-.pf-lot-stock.pf-stock-mid   { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.4); }
-.pf-lot-stock.pf-stock-low   { background: rgba(245,158,11,.45); border-color: rgba(245,158,11,.7); }
-.pf-lot-stock.pf-stock-empty { background: rgba(220,38,38,.55); border-color: rgba(220,38,38,.8); }
-.pf-lot-qty-row {
-  display: flex; align-items: center; gap: 4px; margin-top: 4px;
-}
-.pf-lot-qty-lbl {
-  font-size: 10px; font-weight: 600; color: rgba(255,255,255,.7);
-  letter-spacing: .2px; padding-right: 2px;
-}
-.pf-lot-qty-inp {
-  flex: 1 1 auto; min-width: 0;
-  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
-  border-radius: 5px; color: #fff; padding: 3px 6px;
-  font-size: 11.5px; font-family: inherit; outline: none;
-  box-sizing: border-box;
-}
-.pf-lot-qty-inp::placeholder { color: rgba(255,255,255,.5); }
-.pf-lot-qty-inp:focus {
-  background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6);
-}
-.pf-lot-qty-inp::-webkit-outer-spin-button,
-.pf-lot-qty-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.pf-lot-qty-inp { -moz-appearance: textfield; }
-.pf-lot-qty-unit {
-  flex: 0 0 auto;
-  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
-  border-radius: 5px; color: #fff; padding: 3px 4px;
-  font-size: 11px; font-family: inherit; outline: none;
-  cursor: pointer;
-}
-.pf-lot-qty-unit option { color: #111; }
+.pf-refine-stock.pf-stock-full  { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.pf-refine-stock.pf-stock-mid   { background: #f3f4f6; border-color: #d1d5db; color: #1f2937; }
+.pf-refine-stock.pf-stock-low   { background: #fef3c7; border-color: #fcd34d; color: #b45309; }
+.pf-refine-stock.pf-stock-empty { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
 
 .pf-steps-list { padding: 8px; display: flex; flex-direction: column; gap: 0; }
 
@@ -442,6 +413,12 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   background: #fff; color: #111827;
   font-family: inherit; cursor: pointer;
 }
+.pf-refine-badges {
+  white-space: nowrap; padding: 0 6px;
+  text-align: right;
+}
+.pf-refine-badges .pf-refine-stock + .pf-lot-hist-wrap { margin-left: 4px; }
+
 .pf-refine-del { width: 24px; text-align: center; padding-left: 4px; }
 .pf-refine-del-btn {
   background: none; border: 0; color: #9ca3af;
@@ -449,6 +426,20 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   border-radius: 4px;
 }
 .pf-refine-del-btn:hover { background: #fee2e2; color: #b91c1c; }
+
+/* drill-down — 정제 batch 행 노란 글로우 (2.4초) */
+@keyframes pf-refine-pulse {
+  0%   { background: rgba(250,204,21,.85); }
+  100% { background: transparent; }
+}
+.pf-refine-row.pf-refine-highlight td { animation: pf-refine-pulse 2.4s ease-out; }
+
+/* 일괄 추가 picker — 합성/정제 컬럼 */
+.pf-pick-parent { color: #6b7280; font-size: 12px; }
+
+/* 출하 상세 컴포넌트 — 부모 합성 Batch 라벨 */
+.pf-comp-parent { color: #4338ca; font-size: 11.5px; font-weight: 600; }
+.pf-comp-legacy { color: #9ca3af; font-style: italic; }
 
 /* ── ADD LOT COLUMN ────────────────────────────────────────────── */
 .pf-add-lot-col {
@@ -624,14 +615,8 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-lot-sub-inp  { background: none; border: none; color: #555; padding: 0; font-size: 11px; }
   .pf-lot-header   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pf-step         { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .pf-lot-qty-inp, .pf-lot-qty-unit {
-    background: none; border: none; color: #000; padding: 0; font-size: 11px;
-  }
-  .pf-lot-qty-lbl { color: rgba(0,0,0,.6); }
-  .pf-lot-stock {
-    background: rgba(0,0,0,.08); color: #000; border-color: rgba(0,0,0,.18);
-  }
   .pf-refines { background: #f8fafc; border-top: 1px solid #cbd5e1; }
+  .pf-refine-stock { background: rgba(0,0,0,.08); color: #000; border-color: rgba(0,0,0,.18); }
   .pf-refine-name-inp, .pf-refine-qty-inp, .pf-refine-unit {
     background: none; border: none; color: #000; padding: 0; font-size: 11px;
   }
@@ -894,7 +879,7 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-lot-hist-pop {
   display: none;
   position: fixed;
-  /* top/left은 JS에서 viewport 좌표로 세팅 (toggleLotHistory) */
+  /* top/left은 JS에서 viewport 좌표로 세팅 (toggleRefineHistory) */
   min-width: 240px; max-width: 320px;
   background: #fff; color: #111827;
   border: 1px solid #d1d5db; border-radius: 8px;
