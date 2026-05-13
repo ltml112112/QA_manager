@@ -397,11 +397,13 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-refine-name-inp {
   flex: 1 1 auto; min-width: 0;
   box-sizing: border-box;
-  padding: 4px 7px; font-size: 12px; font-weight: 600;
+  padding: 4px 7px; font-size: 13px; font-weight: 500;
   border: 1px solid #d1d5db; border-radius: 4px;
   background: #fff; color: #111827;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  letter-spacing: .2px;
+  font-family: 'JetBrains Mono', 'Consolas', 'Menlo', ui-monospace, monospace;
+  letter-spacing: .3px;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "ss19" 1, "tnum" 1;
 }
 .pf-refine-name-inp:focus { outline: none; border-color: #15803d; }
 .pf-refine-name-inp::placeholder { font-family: inherit; color: #9ca3af; }
@@ -798,11 +800,15 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-comp-type-tag.pf-comp-n { background: #7a4cc7; }
 .pf-comp-type-tag.pf-comp-s { background: #d97706; }
 
-/* Batch 이름 통일 폰트 — 합성·정제 양쪽 모두 monospace */
+/* Batch 이름 통일 폰트 — 합성·정제 양쪽 모두 monospace
+   font-feature-settings "zero" 1 → JetBrains Mono의 슬래시 0 활성화
+   (기본 0은 가운데 점 형태로 작은 사이즈에서 8과 헷갈림) */
 .pf-batch-name {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 12.5px; font-weight: 600; color: #111827;
-  letter-spacing: .2px;
+  font-family: 'JetBrains Mono', 'Consolas', 'Menlo', ui-monospace, monospace;
+  font-size: 13.5px; font-weight: 500; color: #111827;
+  letter-spacing: .3px;
+  font-variant-numeric: slashed-zero tabular-nums;
+  font-feature-settings: "zero" 1, "ss19" 1, "tnum" 1;
 }
 .pf-comp-synth, .pf-pick-synth { padding-right: 8px; }
 .pf-comp-refine, .pf-pick-refine { padding-right: 8px; }
