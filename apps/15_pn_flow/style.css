@@ -828,6 +828,35 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-pick-name { font-weight: 600; }
 .pf-pick-mat, .pf-pick-doc { color: #6b7280; font-size: 12px; }
 
+/* ── 그룹 헤더 & 테두리 (P / N / S / OTHER) ──────────────────── */
+.pf-pick-grp-hd td {
+  padding: 6px 10px;
+  font-size: 11.5px; font-weight: 700;
+  letter-spacing: .3px;
+  border-top: 2px solid; border-bottom: 1px solid;
+}
+.pf-pick-grp-lbl { font-size: 12px; font-weight: 800; letter-spacing: .4px; }
+
+.pf-pick-grp-hd.pf-pick-grp-P    { background: #dbe7ff; color: #1d4ed8; }
+.pf-pick-grp-hd.pf-pick-grp-P td { border-top-color: #3f6bd9; border-bottom-color: #c7d2fe; }
+.pf-pick-grp-hd.pf-pick-grp-N    { background: #efe4fb; color: #6d28d9; }
+.pf-pick-grp-hd.pf-pick-grp-N td { border-top-color: #7a4cc7; border-bottom-color: #ddd6fe; }
+.pf-pick-grp-hd.pf-pick-grp-S    { background: #fff6db; color: #b45309; }
+.pf-pick-grp-hd.pf-pick-grp-S td { border-top-color: #d97706; border-bottom-color: #fde68a; }
+.pf-pick-grp-hd.pf-pick-grp-OTHER    { background: #f3f4f6; color: #374151; }
+.pf-pick-grp-hd.pf-pick-grp-OTHER td { border-top-color: #9ca3af; border-bottom-color: #d1d5db; }
+
+/* 각 그룹의 모든 행에 좌측 색 막대 + 마지막 행 하단 굵은 라인 */
+.pf-pick-row.pf-pick-grp-P td:first-child    { box-shadow: inset 4px 0 0 #3f6bd9; }
+.pf-pick-row.pf-pick-grp-N td:first-child    { box-shadow: inset 4px 0 0 #7a4cc7; }
+.pf-pick-row.pf-pick-grp-S td:first-child    { box-shadow: inset 4px 0 0 #d97706; }
+.pf-pick-row.pf-pick-grp-OTHER td:first-child { box-shadow: inset 4px 0 0 #9ca3af; }
+
+.pf-pick-row.pf-pick-grp-last.pf-pick-grp-P    td { border-bottom: 2px solid #3f6bd9; }
+.pf-pick-row.pf-pick-grp-last.pf-pick-grp-N    td { border-bottom: 2px solid #7a4cc7; }
+.pf-pick-row.pf-pick-grp-last.pf-pick-grp-S    td { border-bottom: 2px solid #d97706; }
+.pf-pick-row.pf-pick-grp-last.pf-pick-grp-OTHER td { border-bottom: 2px solid #9ca3af; }
+
 .pf-pick-stock-full  { color: #15803d; font-weight: 700; }
 .pf-pick-stock-mid   { color: #1f2937; font-weight: 700; }
 .pf-pick-stock-low   { color: #b45309; font-weight: 700; }

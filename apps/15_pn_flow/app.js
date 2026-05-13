@@ -1709,29 +1709,54 @@ function renderShipDetail(sh) {
   if (!pickerRows.length) {
     pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">수량이 입력된 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 수량을 먼저 입력하세요.</div>';
   } else {
-    var pickerBody = pickerRows.map(function(pr) {
-      var sk = refineStock(pr.refine);
-      var typeCls = pr.sec.type === 'N' ? 'pf-comp-n' : (pr.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
-      var rowCls = sk.stock <= 0 ? 'pf-pick-row pf-pick-empty' : 'pf-pick-row';
-      var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
-      return '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
-        '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(pr.sec.type||'-')+'</span></td>'+
-        '<td class="pf-pick-name">'+esc(pr.refine.name||'(이름 없음)')+'</td>'+
-        '<td class="pf-pick-parent">'+esc(pr.lot.name||'-')+'</td>'+
-        '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
-        '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
-        '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
-        '<td class="pf-ship-num">'+
-          '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="-"'+
-            (sk.stock <= 0 ? ' disabled' : '')+
-            ' data-max="'+sk.stock+'">'+
-          '<span class="pf-comp-unit">'+esc(sk.unit||'g')+'</span>'+
-        '</td>'+
-      '</tr>';
-    }).join('');
+    // 타입별 버킷팅 — P → N → S → 기타 순으로 그룹 헤더 + 행 묶음 렌더
+    var GRP_ORDER = ['P','N','S','OTHER'];
+    var GRP_LABEL = { P:'P Type', N:'N Type', S:'Single', OTHER:'기타' };
+    var buckets = { P:[], N:[], S:[], OTHER:[] };
+    pickerRows.forEach(function(pr) {
+      var t = pr.sec.type;
+      if (t === 'P' || t === 'N' || t === 'S') buckets[t].push(pr);
+      else buckets.OTHER.push(pr);
+    });
+    var pickerBodyParts = [];
+    GRP_ORDER.forEach(function(t) {
+      var rowsT = buckets[t];
+      if (!rowsT.length) return;
+      var grpCls = 'pf-pick-grp-' + t;
+      pickerBodyParts.push(
+        '<tr class="pf-pick-grp-hd '+grpCls+'">'+
+          '<td colspan="7"><span class="pf-pick-grp-lbl">'+GRP_LABEL[t]+'</span> · '+rowsT.length+'건</td>'+
+        '</tr>'
+      );
+      rowsT.forEach(function(pr, idx) {
+        var sk = refineStock(pr.refine);
+        var typeCls = pr.sec.type === 'N' ? 'pf-comp-n' : (pr.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
+        var classParts = ['pf-pick-row', grpCls];
+        if (sk.stock <= 0) classParts.push('pf-pick-empty');
+        if (idx === rowsT.length - 1) classParts.push('pf-pick-grp-last');
+        var rowCls = classParts.join(' ');
+        var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
+        pickerBodyParts.push(
+          '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
+            '<td><span class="pf-comp-type-tag '+typeCls+'">'+esc(pr.sec.type||'-')+'</span></td>'+
+            '<td class="pf-pick-name">'+esc(pr.refine.name||'(이름 없음)')+'</td>'+
+            '<td class="pf-pick-parent">'+esc(pr.lot.name||'-')+'</td>'+
+            '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
+            '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
+            '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
+            '<td class="pf-ship-num">'+
+              '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="-"'+
+                (sk.stock <= 0 ? ' disabled' : '')+
+                ' data-max="'+sk.stock+'">'+
+              '<span class="pf-comp-unit">'+esc(sk.unit||'g')+'</span>'+
+            '</td>'+
+          '</tr>'
+        );
+      });
+    });
     pickerHtml = '<table class="pf-ship-table pf-pick-table"><thead><tr>'+
         '<th>Type</th><th>정제 Batch</th><th>합성 Batch</th><th>소재</th><th>문서</th><th>현재고</th><th>사용수량</th>'+
-      '</tr></thead><tbody>'+pickerBody+'</tbody></table>'+
+      '</tr></thead><tbody>'+pickerBodyParts.join('')+'</tbody></table>'+
       '<div class="pf-pick-actions">'+
         '<button class="btn btn-primary" onclick="APP.addShipComponentsBatch(\''+sh.id+'\')">+ 입력한 수량 모두 추가</button>'+
         '<button class="btn pf-pick-clear" onclick="APP.clearPickGrid()">입력 초기화</button>'+
