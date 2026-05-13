@@ -47,7 +47,7 @@
       <input id="inp-date"     class="pf-inp pf-inp-sm"    type="date"                           oninput="APP.onMetaChange()">
     </div>
     <div id="pf-save-status" class="pf-save-status pf-ss-idle" title="저장 상태"><span class="pf-ss-dot"></span><span class="pf-ss-txt">대기</span></div>
-    <button id="pf-toggle-all-btn" class="btn pf-toggle-all-btn" onclick="APP.toggleAllSecs()" title="모든 섹션 접기/펼치기">▼ 전체 접기</button>
+    <button id="pf-toggle-all-btn" class="btn pf-toggle-all-btn" onclick="APP.toggleAllLots()" title="모든 Lot의 공정 일괄 접기/펼치기 (개별 Lot 헤더의 ▼/▶와 동일)">▼ 공정 전체 접기</button>
     <button id="pf-undo-btn" class="btn pf-undo-btn" onclick="APP.undo()" disabled title="드래그드롭 실행 취소 (Ctrl+Z)">↩ 되돌리기</button>
     <button class="btn pf-ship-btn" onclick="APP.openShipMgr()" title="출하 Lot 관리 — 재고 차감">📦 출하 관리</button>
     <button class="btn pf-xlsx-btn" onclick="APP.exportXlsx()">⇣ Excel</button>
