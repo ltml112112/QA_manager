@@ -28,6 +28,7 @@
     <h1 class="pf-app-title">P/N 공정 Flow 관리</h1>
     <div style="display:flex;gap:12px;align-items:center;">
       <input id="list-search" type="search" placeholder="제목, 소재, 작성자 검색..." class="pf-inp" style="min-width: 220px;" oninput="APP.onSearchInput()">
+      <button class="btn pf-ship-btn" onclick="APP.openShipMgr()">📦 출하 관리</button>
       <button class="btn btn-primary" onclick="APP.newDoc()">+ 새 문서</button>
     </div>
   </header>
@@ -46,7 +47,9 @@
       <input id="inp-date"     class="pf-inp pf-inp-sm"    type="date"                           oninput="APP.onMetaChange()">
     </div>
     <div id="pf-save-status" class="pf-save-status pf-ss-idle" title="저장 상태"><span class="pf-ss-dot"></span><span class="pf-ss-txt">대기</span></div>
+    <button id="pf-toggle-all-btn" class="btn pf-toggle-all-btn" onclick="APP.toggleAllSecs()" title="모든 섹션 접기/펼치기">▼ 전체 접기</button>
     <button id="pf-undo-btn" class="btn pf-undo-btn" onclick="APP.undo()" disabled title="드래그드롭 실행 취소 (Ctrl+Z)">↩ 되돌리기</button>
+    <button class="btn pf-ship-btn" onclick="APP.openShipMgr()" title="출하 Lot 관리 — 재고 차감">📦 출하 관리</button>
     <button class="btn pf-xlsx-btn" onclick="APP.exportXlsx()">⇣ Excel</button>
     <button class="btn pf-print-btn" onclick="window.print()">🖨 인쇄</button>
   </header>
@@ -81,6 +84,17 @@
     <button class="btn btn-secondary pf-n-sec" onclick="APP.addSection('N')">+ N Type 섹션</button>
     <button class="btn btn-secondary pf-s-sec" onclick="APP.addSection('S')">+ Single 섹션</button>
     <div class="pf-updated-info" id="pf-updated-info"></div>
+  </div>
+</div>
+
+<!-- ── 출하 Lot 관리 모달 ──────────────────────────────────── -->
+<div id="pf-ship-overlay" class="pf-ship-overlay" onclick="if(event.target===this)APP.closeShipMgr()">
+  <div class="pf-ship-panel">
+    <div class="pf-ship-hd">
+      <span class="pf-ship-title">📦 출하 Lot 관리</span>
+      <button class="pf-ship-close" onclick="APP.closeShipMgr()">✕ 닫기</button>
+    </div>
+    <div id="pf-ship-body" class="pf-ship-body"></div>
   </div>
 </div>
 

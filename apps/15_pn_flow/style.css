@@ -82,6 +82,10 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 .pf-undo-btn:not(:disabled) { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
 .pf-undo-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
 .pf-undo-btn:disabled { opacity: .35; cursor: not-allowed; }
+.pf-toggle-all-btn { white-space: nowrap; flex-shrink: 0; }
+.pf-toggle-all-btn:not(:disabled) { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.pf-toggle-all-btn:not(:disabled):hover { border-color: var(--accent); color: var(--accent); }
+.pf-toggle-all-btn:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ── SAVE STATUS BADGE ─────────────────────────────────────────── */
 .pf-save-status {
@@ -319,6 +323,49 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 }
 .pf-lot-sub-inp { font-size: 11px; font-weight: 400; opacity: .85; }
 
+/* ── Lot 재고 배지 + 산출량 입력 (STAGE 1) ──────────────────────── */
+.pf-lot-stock-slot { display: inline-flex; align-items: center; }
+.pf-lot-stock {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+  letter-spacing: .2px; line-height: 1.5;
+  background: rgba(255,255,255,.18); color: #fff;
+  border: 1px solid rgba(255,255,255,.32);
+  white-space: nowrap; cursor: help;
+}
+.pf-lot-stock.pf-stock-full  { background: rgba(34,197,94,.32); border-color: rgba(34,197,94,.55); }
+.pf-lot-stock.pf-stock-mid   { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.4); }
+.pf-lot-stock.pf-stock-low   { background: rgba(245,158,11,.45); border-color: rgba(245,158,11,.7); }
+.pf-lot-stock.pf-stock-empty { background: rgba(220,38,38,.55); border-color: rgba(220,38,38,.8); }
+.pf-lot-qty-row {
+  display: flex; align-items: center; gap: 4px; margin-top: 4px;
+}
+.pf-lot-qty-lbl {
+  font-size: 10px; font-weight: 600; color: rgba(255,255,255,.7);
+  letter-spacing: .2px; padding-right: 2px;
+}
+.pf-lot-qty-inp {
+  flex: 1 1 auto; min-width: 0;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px; color: #fff; padding: 3px 6px;
+  font-size: 11.5px; font-family: inherit; outline: none;
+  box-sizing: border-box;
+}
+.pf-lot-qty-inp::placeholder { color: rgba(255,255,255,.5); }
+.pf-lot-qty-inp:focus {
+  background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.6);
+}
+.pf-lot-qty-inp::-webkit-outer-spin-button,
+.pf-lot-qty-inp::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pf-lot-qty-inp { -moz-appearance: textfield; }
+.pf-lot-qty-unit {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px; color: #fff; padding: 3px 4px;
+  font-size: 11px; font-family: inherit; outline: none;
+  cursor: pointer;
+}
+.pf-lot-qty-unit option { color: #111; }
+
 .pf-steps-list { padding: 8px; display: flex; flex-direction: column; gap: 0; }
 
 /* ── ADD STEP BAR ──────────────────────────────────────────────── */
@@ -513,6 +560,13 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   .pf-lot-sub-inp  { background: none; border: none; color: #555; padding: 0; font-size: 11px; }
   .pf-lot-header   { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pf-step         { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pf-lot-qty-inp, .pf-lot-qty-unit {
+    background: none; border: none; color: #000; padding: 0; font-size: 11px;
+  }
+  .pf-lot-qty-lbl { color: rgba(0,0,0,.6); }
+  .pf-lot-stock {
+    background: rgba(0,0,0,.08); color: #000; border-color: rgba(0,0,0,.18);
+  }
 }
 
 /* ── 데이터 로딩 오버레이 ───────────────────────────────────────────── */
@@ -558,3 +612,261 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   font-family: inherit;
 }
 .loading-overlay .lo-retry-btn:hover { background: var(--accent-hover, #d4004a); }
+
+/* ══════════════════════════════════════════════════════════════════
+   출하 Lot 관리 모달 (STAGE 2)
+   ══════════════════════════════════════════════════════════════════ */
+.pf-ship-btn {
+  background: linear-gradient(135deg, #6366f1, #818cf8); color: #fff;
+  border: 0; padding: 6px 12px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.pf-ship-btn:hover { filter: brightness(1.08); }
+
+.pf-ship-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(15,23,42,.55);
+  display: none;
+  align-items: flex-start; justify-content: center;
+  padding: 40px 20px;
+}
+.pf-ship-overlay.pf-ship-open { display: flex; }
+.pf-ship-panel {
+  background: #fff;
+  border-radius: 10px;
+  width: 100%; max-width: 1080px;
+  max-height: calc(100vh - 80px);
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  overflow: hidden;
+}
+.pf-ship-hd {
+  display: flex; align-items: center;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #4338ca, #6366f1);
+  color: #fff;
+}
+.pf-ship-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; flex: 1; }
+.pf-ship-close {
+  background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+  color: #fff; padding: 4px 10px; border-radius: 5px; font-size: 12px; cursor: pointer;
+}
+.pf-ship-close:hover { background: rgba(255,255,255,.28); }
+.pf-ship-body {
+  padding: 18px 22px 22px;
+  overflow-y: auto; flex: 1 1 auto;
+  font-size: 13px; color: #111827;
+}
+
+.pf-ship-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.pf-ship-h { font-size: 15px; font-weight: 700; color: #1f2937; margin: 0; flex: 1; }
+
+.pf-ship-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12.5px; margin-bottom: 12px;
+}
+.pf-ship-table th, .pf-ship-table td {
+  padding: 7px 10px; text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pf-ship-table th {
+  background: #f9fafb; font-weight: 600; color: #4b5563;
+  font-size: 11.5px; letter-spacing: .2px;
+}
+.pf-ship-table tbody tr.pf-ship-row { cursor: pointer; transition: background .12s; }
+.pf-ship-table tbody tr.pf-ship-row:hover { background: #f3f4f6; }
+.pf-ship-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pf-ship-name { font-weight: 600; color: #1f2937; }
+
+.pf-ship-del-btn {
+  background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c;
+  padding: 3px 9px; border-radius: 4px; font-size: 11.5px; cursor: pointer;
+}
+.pf-ship-del-btn:hover { background: #fecaca; }
+.pf-ship-restore-btn {
+  background: #dcfce7; border: 1px solid #bbf7d0; color: #15803d;
+  padding: 3px 9px; border-radius: 4px; font-size: 11.5px; cursor: pointer;
+}
+.pf-ship-restore-btn:hover { background: #bbf7d0; }
+
+.pf-ship-empty { padding: 30px 12px; text-align: center; color: #9ca3af; font-size: 13px; }
+.pf-ship-empty-sm { padding: 18px 12px; }
+.pf-ship-deleted { margin-top: 18px; }
+.pf-ship-deleted summary { cursor: pointer; color: #6b7280; font-size: 12px; padding: 4px 0; }
+.pf-ship-deleted-row td { color: #9ca3af; text-decoration: line-through; }
+
+/* 출하 상세 */
+.pf-ship-detail-hd {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;
+}
+.pf-ship-detail-hd .pf-back-btn {
+  background: none; border: 1px solid #d1d5db; color: #374151;
+  padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+}
+.pf-ship-detail-hd .pf-ship-h { flex: 1; }
+
+.pf-ship-meta {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.pf-ship-meta label {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 11px; color: #6b7280; font-weight: 600;
+}
+.pf-ship-meta-note { grid-column: 1 / -1; }
+.pf-ship-meta input.pf-inp {
+  font-size: 13px; padding: 5px 9px;
+  border: 1px solid #d1d5db; border-radius: 5px;
+  color: #111827; background: #fff; font-family: inherit;
+}
+.pf-ship-meta input.pf-inp:focus { outline: none; border-color: #6366f1; }
+
+.pf-ship-total {
+  padding: 8px 12px; background: #eef2ff; color: #4338ca;
+  border-radius: 6px; font-weight: 700; margin-bottom: 12px;
+  font-size: 13px;
+}
+.pf-ship-sub {
+  font-size: 12.5px; font-weight: 700; color: #374151;
+  margin: 8px 0 8px; letter-spacing: .2px;
+}
+
+.pf-comp-type-tag {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+.pf-comp-type-tag.pf-comp-p { background: #3f6bd9; }
+.pf-comp-type-tag.pf-comp-n { background: #7a4cc7; }
+.pf-comp-type-tag.pf-comp-s { background: #d97706; }
+.pf-comp-name { font-weight: 600; }
+.pf-comp-mat, .pf-comp-doc { color: #6b7280; font-size: 12px; }
+.pf-comp-orphan { color: #d97706; cursor: help; }
+.pf-comp-qty-inp {
+  width: 70px; padding: 3px 6px; font-size: 12px; text-align: right;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  font-family: inherit; font-variant-numeric: tabular-nums;
+}
+.pf-comp-qty-inp:focus { outline: none; border-color: #6366f1; }
+.pf-comp-unit { color: #6b7280; margin-left: 4px; font-size: 11px; }
+
+/* 일괄 추가 그리드 (Excel-like picker) */
+.pf-ship-sub-pick { margin-top: 16px; }
+.pf-pick-table {
+  margin-bottom: 8px;
+}
+.pf-pick-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: #eef2ff; color: #4338ca;
+}
+.pf-pick-row:hover { background: #f3f4f6; }
+.pf-pick-row.pf-pick-empty { background: #fef2f2; opacity: .55; }
+.pf-pick-row.pf-pick-empty:hover { background: #fee2e2; }
+.pf-pick-name { font-weight: 600; }
+.pf-pick-mat, .pf-pick-doc { color: #6b7280; font-size: 12px; }
+
+.pf-pick-stock-full  { color: #15803d; font-weight: 700; }
+.pf-pick-stock-mid   { color: #1f2937; font-weight: 700; }
+.pf-pick-stock-low   { color: #b45309; font-weight: 700; }
+.pf-pick-stock-empty { color: #b91c1c; font-weight: 700; }
+
+.pf-pick-qty-inp {
+  width: 70px; padding: 3px 6px; font-size: 12px; text-align: right;
+  border: 1px solid #d1d5db; border-radius: 4px;
+  font-family: inherit; font-variant-numeric: tabular-nums;
+}
+.pf-pick-qty-inp:focus { outline: none; border-color: #6366f1; background: #eef2ff; }
+.pf-pick-qty-inp:disabled { background: #f3f4f6; cursor: not-allowed; }
+
+.pf-pick-actions {
+  display: flex; gap: 8px; margin-top: 6px; padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+.pf-pick-clear {
+  background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;
+  padding: 6px 12px; border-radius: 5px; cursor: pointer;
+  font-size: 12.5px; font-weight: 500;
+}
+.pf-pick-clear:hover { background: #e5e7eb; }
+
+@media (max-width: 700px) {
+  .pf-ship-meta { grid-template-columns: 1fr 1fr; }
+  .pf-ship-meta-note { grid-column: 1 / -1; }
+  .pf-ship-panel { max-width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STAGE 3 — drill-down 하이라이트 · 출하이력 popover · 점프 버튼
+   ══════════════════════════════════════════════════════════════════ */
+
+/* drill-down 도착 시 Lot 카드 노란 글로우 (2.4초) */
+@keyframes pf-lot-pulse {
+  0%   { box-shadow: 0 0 0 0px rgba(250,204,21,.85), 0 1px 3px rgba(15,26,46,.05); }
+  30%  { box-shadow: 0 0 0 6px rgba(250,204,21,.85), 0 0 24px 4px rgba(250,204,21,.6); }
+  100% { box-shadow: 0 0 0 0px rgba(250,204,21,0),   0 1px 3px rgba(15,26,46,.05); }
+}
+.pf-lot-col.pf-lot-highlight {
+  animation: pf-lot-pulse 2.4s ease-out;
+  position: relative; z-index: 5;
+}
+
+/* 출하 이력 배지 + popover */
+.pf-lot-hist-wrap {
+  position: relative; display: inline-flex; align-items: center;
+}
+.pf-lot-hist-btn {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 20px;
+  letter-spacing: .2px; line-height: 1.5;
+  background: rgba(99,102,241,.32); color: #fff;
+  border: 1px solid rgba(129,140,248,.55);
+  cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.pf-lot-hist-btn:hover { background: rgba(99,102,241,.5); }
+.pf-lot-hist-pop {
+  display: none;
+  position: fixed;
+  /* top/left은 JS에서 viewport 좌표로 세팅 (toggleLotHistory) */
+  min-width: 240px; max-width: 320px;
+  background: #fff; color: #111827;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  z-index: 500;
+  padding: 4px;
+  font-family: inherit;
+}
+.pf-lot-hist-pop.pf-open { display: block; }
+.pf-lot-hist-hd {
+  font-size: 11px; font-weight: 700; color: #6b7280;
+  padding: 6px 8px 4px; letter-spacing: .3px; text-transform: uppercase;
+}
+.pf-lot-hist-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: baseline;
+  gap: 1px 8px;
+  width: 100%; text-align: left;
+  padding: 6px 8px; border-radius: 5px;
+  background: none; border: 0; font-family: inherit;
+  cursor: pointer; color: #111827;
+}
+.pf-lot-hist-row:hover { background: #f3f4f6; }
+.pf-lot-hist-name { font-size: 12.5px; font-weight: 600; }
+.pf-lot-hist-qty {
+  font-size: 12px; font-weight: 700; color: #4338ca;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pf-lot-hist-meta {
+  grid-column: 1 / -1;
+  font-size: 11px; color: #6b7280;
+}
+
+/* 컴포넌트 행 — 공정 이동 점프 버튼 */
+.pf-comp-jump {
+  display: inline-block; margin-left: 6px;
+  background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca;
+  font-size: 11px; padding: 1px 7px; border-radius: 4px;
+  cursor: pointer; font-family: inherit; line-height: 1.4;
+}
+.pf-comp-jump:hover { background: #c7d2fe; }
