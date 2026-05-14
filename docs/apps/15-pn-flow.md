@@ -235,6 +235,11 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
   - 사용수량 `0` 또는 양수 입력 시 추가 가능 — 음수만 거부
   - `addShipComponentsBatch` / `updateShipCompQty`: `refine.qty` 미입력이거나 `qty=0`이면 stock 검증 스킵
   - 재고 0인 정제 Batch도 입력 활성화 (그래도 0 초과 입력 시 검증으로 거부)
+- **Cascade delete & 고아 컴포넌트 정리**:
+  - `deleteRefine/Lot/Section/Doc` 시 출하 component 참조 검사 — 있으면 confirm 후 자동 cascade clean (`cleanRefineComponentsFromShipments`)
+  - 출하 자체는 유지 (component만 제거), 빈 출하는 사용자가 수동 처리
+  - 출하 목록 toolbar에 "🧹 고아 정리 (N)" 버튼 — 원본이 삭제된 component 일괄 정리 (legacy data 마이그레이션용). 0이면 숨김
+  - 헬퍼: `shipsContainingRefines(refineIds)`, `findOrphanComponents()`, `cleanRefineComponentsFromShipments(refineIds)`, `confirmCascadeDelete(refineIds, label)`
 
 ### STAGE 5 — 정제 Batch 기준 재고 (현재 구조)
 
