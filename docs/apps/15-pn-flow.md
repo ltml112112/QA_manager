@@ -227,6 +227,14 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
   - **목록(밖)에서** 📦 출하 관리 클릭 → 필터 없이 **문서별 그룹**으로 한 번에 표시. 그룹 헤더(=`material · title`) 클릭 시 그 문서 필터로 좁히기. 여러 문서를 touch하는 혼합 출하는 각 그룹에 모두 노출되며 `🔗N` 마커로 표시
   - 컴포넌트가 없는 출하는 "미할당" 그룹에 모임
   - 그룹은 material(소재 코드) 알파순 정렬
+- **출하 picker 한 출하 = 한 문서 정책**:
+  - picker는 출하의 doc context(첫 컴포넌트 docId > `filterDocId`)와 같은 문서의 정제 Batch만 표시. 다른 문서 재고는 숨김
+  - 상단에 잠금 안내 노출 — 컴포넌트가 있으면 🔒 lock(`pf-pick-notice-locked`), 없으면 필터 표시
+- **0g 구성 허용** (placeholder 모드):
+  - 정제 Batch에 `qty`가 입력되지 않아도 picker에 노출 ("미입력" 배지)
+  - 사용수량 `0` 또는 양수 입력 시 추가 가능 — 음수만 거부
+  - `addShipComponentsBatch` / `updateShipCompQty`: `refine.qty` 미입력이거나 `qty=0`이면 stock 검증 스킵
+  - 재고 0인 정제 Batch도 입력 활성화 (그래도 0 초과 입력 시 검증으로 거부)
 
 ### STAGE 5 — 정제 Batch 기준 재고 (현재 구조)
 

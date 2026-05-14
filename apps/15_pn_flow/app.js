@@ -841,7 +841,7 @@ window.APP = {
       var raw = String(inp.value || '').trim();
       if (!raw) continue;
       var qty = Number(raw);
-      if (isNaN(qty) || qty <= 0) continue;
+      if (isNaN(qty) || qty < 0) continue;  // 음수만 거부 — 0g 구성은 허용 (추후 입력)
       var docId = tr.dataset.docId, sectionId = tr.dataset.secId, lotId = tr.dataset.lotId, refineId = tr.dataset.refineId;
       var doc = STATE.docs[docId];
       var sec = doc && (doc.sections||[]).find(function(s){return s.id===sectionId;});
@@ -849,10 +849,13 @@ window.APP = {
       var refine = lot && (lot.refines||[]).find(function(r){return r.id===refineId;});
       if (!doc || !sec || !lot || !refine) { errors.push('알 수 없는 정제 Batch ('+(refineId||'')+')'); continue; }
       var rU = refine.unit || 'g';
-      var available = (refine.qty || 0) - refineConsumed(refineId, rU);
-      if (qty > available + 1e-6) {
-        errors.push('['+sec.type+'] '+(refine.name||lot.name||'(이름 없음)')+' — 입력 '+fmtQty(qty, rU)+' > 가용 '+fmtQty(available, rU));
-        continue;
+      // refine.qty 미입력이거나 qty=0이면 stock 검증 스킵
+      if (typeof refine.qty === 'number' && qty > 0) {
+        var available = refine.qty - refineConsumed(refineId, rU);
+        if (qty > available + 1e-6) {
+          errors.push('['+sec.type+'] '+(refine.name||lot.name||'(이름 없음)')+' — 입력 '+fmtQty(qty, rU)+' > 가용 '+fmtQty(available, rU));
+          continue;
+        }
       }
       picks.push({ docId: docId, sectionId: sectionId, lotId: lotId, refineId: refineId,
                    qty: qty, unit: rU, refine: refine, lot: lot, sec: sec, doc: doc });
@@ -959,11 +962,11 @@ window.APP = {
     var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
     var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
     var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
-    if (refine) {
-      // 자기 자신 제외하고 가용 재고 계산
+    // 정제 Batch에 qty가 입력된 경우에만 stock 검증 (qty 미입력이면 placeholder 모드로 자유 입력 허용)
+    if (refine && typeof refine.qty === 'number' && qty > 0) {
       var rU = refine.unit || 'g';
       var consumedExceptSelf = refineConsumed(c.refineId, rU) - convertQty(c.qty, c.unit || 'g', rU);
-      var available = (refine.qty || 0) - consumedExceptSelf;
+      var available = refine.qty - consumedExceptSelf;
       var qtyInRU = convertQty(qty, c.unit || 'g', rU);
       if (qtyInRU > available + 1e-6) {
         alert('가용 재고('+fmtQty(available, rU)+')를 초과합니다.');
@@ -1806,13 +1809,19 @@ function renderShipDetail(sh) {
     compTableHtml = '<div class="pf-ship-empty pf-ship-empty-sm">아직 구성된 Batch가 없습니다. 아래 표에서 사용수량을 입력하세요.</div>';
   }
 
-  /* 일괄 추가 그리드 — qty 입력된 모든 정제 Batch */
+  /* 일괄 추가 그리드 — 같은 문서 내 정제 Batch만 (한 출하 = 한 문서 정책) */
+  var firstCompDocId = (comps[0] && comps[0].c.docId) || null;
+  // 우선순위: 이미 추가된 컴포넌트의 docId (lock) > 필터 docId
+  var pickDocId = firstCompDocId || STATE.ship.filterDocId || null;
+  var pickDoc = pickDocId ? STATE.docs[pickDocId] : null;
+  if (pickDocId && !pickDoc) pickDocId = null; // 사라진 문서면 무시
   var pickerRows = [];
   Object.values(STATE.docs).forEach(function(doc) {
+    if (pickDocId && doc.id !== pickDocId) return; // 다른 문서는 제외
     (doc.sections||[]).forEach(function(s) {
       (s.lots||[]).forEach(function(l) {
         (l.refines||[]).forEach(function(r) {
-          if (typeof r.qty !== 'number') return;
+          // r.qty 미입력 batch도 노출 — 추후 입력 전 0g 구성을 허용
           pickerRows.push({ doc: doc, sec: s, lot: l, refine: r });
         });
       });
@@ -1828,9 +1837,23 @@ function renderShipDetail(sh) {
     if (na !== 0) return na;
     return (a.refine.name||'').localeCompare(b.refine.name||'');
   });
+  // picker 위 상단 안내 — 어느 문서로 잠겨 있는지 표시
+  var pickNotice = '';
+  if (pickDocId && pickDoc) {
+    var lockedByComp = !!firstCompDocId;
+    pickNotice = '<div class="pf-pick-notice'+(lockedByComp?' pf-pick-notice-locked':'')+'">'+
+      '<span class="pf-pick-notice-lbl">'+(lockedByComp?'🔒 이 출하의 문서':'필터')+'</span>'+
+      '<span class="pf-pick-notice-doc">'+esc((pickDoc.material||'')+' · '+(pickDoc.title||''))+'</span>'+
+      (lockedByComp ? '<span class="pf-pick-notice-hint">컴포넌트 추가 후엔 같은 문서로 고정</span>' : '')+
+    '</div>';
+  }
   var pickerHtml;
   if (!pickerRows.length) {
-    pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">수량이 입력된 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 수량을 먼저 입력하세요.</div>';
+    pickerHtml = '<div class="pf-ship-empty pf-ship-empty-sm">'+
+      (pickDocId
+        ? '이 문서에 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 추가하세요.'
+        : '아직 정제 Batch가 없습니다. Lot 카드 하단 "정제 Batch" 영역에 추가하세요.')+
+    '</div>';
   } else {
     var pBuckets = bucketRows(pickerRows, function(r){return r.sec.type;});
     var pickerBodyParts = [];
@@ -1846,10 +1869,18 @@ function renderShipDetail(sh) {
         var sk = refineStock(pr.refine);
         var typeCls = pr.sec.type === 'N' ? 'pf-comp-n' : (pr.sec.type === 'S' ? 'pf-comp-s' : 'pf-comp-p');
         var classParts = ['pf-pick-row', grpCls];
-        if (sk.stock <= 0) classParts.push('pf-pick-empty');
+        if (sk.hasQty && sk.stock <= 0) classParts.push('pf-pick-empty');
         if (idx === rowsT.length - 1) classParts.push('pf-pick-grp-last');
         var rowCls = classParts.join(' ');
-        var stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
+        var stockDisplay;
+        var stockCls;
+        if (!sk.hasQty) {
+          stockDisplay = '<span class="pf-pick-stock-noqty" title="아직 수량 미입력 — 0g 구성 가능">미입력</span>';
+          stockCls = '';
+        } else {
+          stockCls = 'pf-pick-stock-'+(sk.stock <= 0 ? 'empty' : (sk.ratio < 0.2 ? 'low' : (sk.ratio < 0.5 ? 'mid' : 'full')));
+          stockDisplay = esc(fmtQty(sk.stock, sk.unit));
+        }
         var pickJumpBtn = '<button class="pf-comp-jump" title="공정 미리보기" onclick="APP.openProcessPopup(\''+pr.doc.id+'\',\''+pr.sec.id+'\',\''+pr.lot.id+'\',\''+pr.refine.id+'\',event)">↗</button>';
         pickerBodyParts.push(
           '<tr class="'+rowCls+'" data-doc-id="'+pr.doc.id+'" data-sec-id="'+pr.sec.id+'" data-lot-id="'+pr.lot.id+'" data-refine-id="'+pr.refine.id+'">'+
@@ -1858,11 +1889,10 @@ function renderShipDetail(sh) {
             '<td class="pf-pick-refine"><span class="pf-batch-name">'+esc(pr.refine.name||'(이름 없음)')+'</span> '+pickJumpBtn+'</td>'+
             '<td class="pf-pick-mat">'+esc(pr.doc.material||'-')+'</td>'+
             '<td class="pf-pick-doc">'+esc(pr.doc.title||'-')+'</td>'+
-            '<td class="pf-ship-num '+stockCls+'">'+esc(fmtQty(sk.stock, sk.unit))+'</td>'+
+            '<td class="pf-ship-num '+stockCls+'">'+stockDisplay+'</td>'+
             '<td class="pf-ship-num">'+
-              '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="-"'+
-                (sk.stock <= 0 ? ' disabled' : '')+
-                ' data-max="'+sk.stock+'">'+
+              '<input type="number" min="0" step="0.01" class="pf-pick-qty-inp" placeholder="0 ok"'+
+                ' data-max="'+(sk.hasQty ? sk.stock : '')+'">'+
               '<span class="pf-comp-unit">'+esc(sk.unit||'g')+'</span>'+
             '</td>'+
           '</tr>'
@@ -1877,6 +1907,7 @@ function renderShipDetail(sh) {
         '<button class="btn pf-pick-clear" onclick="APP.clearPickGrid()">입력 초기화</button>'+
       '</div>';
   }
+  pickerHtml = pickNotice + pickerHtml;
 
   return '<div class="pf-ship-detail-hd">'+
       '<button class="pf-back-btn" onclick="APP.backToShipList()">← 목록</button>'+
