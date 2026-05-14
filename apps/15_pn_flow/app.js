@@ -43,7 +43,7 @@ var SEC_LABEL  = { P:'P Type', N:'N Type', S:'Single' };
 var STATE = {
   docs: {}, currentId: null, editKey: null, timer: null,
   collapsedSecs: new Set(), collapsedLots: new Set(),
-  shipments: {}, ship: { open: false, view: 'list', selectedId: null, timer: null },
+  shipments: {}, ship: { open: false, view: 'list', selectedId: null, timer: null, filterDocId: null },
   proc: { open: false, docId: null, sectionId: null, lotId: null, refineId: null }
 };
 
@@ -768,6 +768,14 @@ window.APP = {
   /* ── 출하 Lot 관리 ─────────────────────────────── */
   openShipMgr: function() {
     STATE.ship.open = true;
+    STATE.ship.view = 'list';
+    STATE.ship.selectedId = null;
+    // 편집 중인 문서에서 열면 자동 필터 — 다른 문서의 출하는 숨김
+    STATE.ship.filterDocId = STATE.currentId || null;
+    renderShipModal();
+  },
+  setShipFilter: function(docId) {
+    STATE.ship.filterDocId = docId || null;
     STATE.ship.view = 'list';
     STATE.ship.selectedId = null;
     renderShipModal();
@@ -1594,22 +1602,104 @@ function renderShipModal() {
 }
 
 function renderShipList() {
-  var ships = Object.values(STATE.shipments)
-    .filter(function(sh){ return !sh.deleted; })
-    .sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  var filterDocId = STATE.ship.filterDocId;
+  var filterDoc = filterDocId ? STATE.docs[filterDocId] : null;
+  // 필터 대상 문서가 사라졌으면 필터 해제
+  if (filterDocId && !filterDoc) { STATE.ship.filterDocId = null; filterDocId = null; }
+
+  // 한 shipment이 touch하는 docId 집합
+  function shipDocIds(sh) {
+    var ids = [];
+    (sh.components || []).forEach(function(c) {
+      if (c.docId && ids.indexOf(c.docId) === -1) ids.push(c.docId);
+    });
+    return ids;
+  }
+
+  var allShips = Object.values(STATE.shipments).filter(function(sh){ return !sh.deleted; });
+  allShips.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
   var deleted = Object.values(STATE.shipments).filter(function(sh){ return sh.deleted; });
-  var rows = ships.map(function(sh) {
+
+  function shipRowHtml(sh, extraTags) {
     var tot = shipTotal(sh);
     var comps = Array.isArray(sh.components) ? sh.components : [];
     return '<tr class="pf-ship-row" onclick="APP.openShipDetail(\''+sh.id+'\')">'+
-      '<td class="pf-ship-name">'+esc(sh.shipName||'(이름 없음)')+'</td>'+
+      '<td class="pf-ship-name">'+esc(sh.shipName||'(이름 없음)')+(extraTags||'')+'</td>'+
       '<td>'+esc(sh.customer||'-')+'</td>'+
       '<td>'+esc(sh.date||'-')+'</td>'+
       '<td class="pf-ship-num">'+fmtQty(tot.qty, tot.unit)+'</td>'+
       '<td class="pf-ship-num">'+comps.length+'</td>'+
       '<td><button class="pf-ship-del-btn" onclick="event.stopPropagation();APP.deleteShip(\''+sh.id+'\')">삭제</button></td>'+
     '</tr>';
-  }).join('');
+  }
+
+  var headRow = '<thead><tr>'+
+      '<th>출하명</th><th>고객</th><th>일자</th><th>총량</th><th>구성</th><th></th>'+
+    '</tr></thead>';
+
+  var tableHtml = '';
+  if (filterDocId) {
+    // ── 필터 모드: 해당 문서를 포함하는 출하만 ─────────────────
+    var shipsF = allShips.filter(function(sh){ return shipDocIds(sh).indexOf(filterDocId) !== -1; });
+    if (shipsF.length === 0) {
+      tableHtml = '<div class="pf-ship-empty">이 문서에 연결된 출하 Lot이 없습니다. 우상단 <strong>+ 새 출하 Lot</strong>으로 시작하세요.</div>';
+    } else {
+      tableHtml = '<table class="pf-ship-table">'+headRow+'<tbody>'+
+        shipsF.map(function(sh){ return shipRowHtml(sh, ''); }).join('')+
+      '</tbody></table>';
+    }
+  } else {
+    // ── 그룹 모드: 문서별로 묶어서 한 번에 보여줌 ─────────────
+    if (allShips.length === 0) {
+      tableHtml = '<div class="pf-ship-empty">아직 출하 Lot이 없습니다. <strong>+ 새 출하 Lot</strong>으로 시작하세요.</div>';
+    } else {
+      // docId → [ship,...] map (출하는 touch하는 모든 doc 그룹에 노출)
+      var grouped = {};
+      var orphans = []; // 컴포넌트 없는 출하
+      allShips.forEach(function(sh) {
+        var ids = shipDocIds(sh);
+        if (ids.length === 0) { orphans.push(sh); return; }
+        ids.forEach(function(did) {
+          (grouped[did] = grouped[did] || []).push(sh);
+        });
+      });
+      // 그룹 정렬: material 알파순 → title
+      var docIds = Object.keys(grouped).sort(function(a, b) {
+        var da = STATE.docs[a] || {}; var db_ = STATE.docs[b] || {};
+        var ma = (da.material || da.title || '').toLowerCase();
+        var mb = (db_.material || db_.title || '').toLowerCase();
+        if (ma !== mb) return ma < mb ? -1 : 1;
+        return (da.title || '').localeCompare(db_.title || '');
+      });
+      var bodyParts = [];
+      docIds.forEach(function(did) {
+        var doc = STATE.docs[did] || {};
+        var shipsG = grouped[did];
+        var lbl = esc((doc.material || '(소재 없음)') + ' · ' + (doc.title || '(제목 없음)'));
+        bodyParts.push(
+          '<tr class="pf-ship-grp-hd">'+
+            '<td colspan="6">'+
+              '<button class="pf-ship-grp-filter" title="이 제품만 보기" onclick="event.stopPropagation();APP.setShipFilter(\''+did+'\')">'+lbl+' <span class="pf-ship-grp-cnt">'+shipsG.length+'건</span> <span class="pf-ship-grp-arrow">→</span></button>'+
+            '</td>'+
+          '</tr>'
+        );
+        shipsG.forEach(function(sh) {
+          // 다른 문서도 함께 포함된 출하인지 표시 (혼합 출하 마커)
+          var idsAll = shipDocIds(sh);
+          var mixTag = idsAll.length > 1 ? ' <span class="pf-ship-mix" title="다른 문서도 포함 ('+idsAll.length+')">🔗'+idsAll.length+'</span>' : '';
+          bodyParts.push(shipRowHtml(sh, mixTag));
+        });
+      });
+      if (orphans.length) {
+        bodyParts.push(
+          '<tr class="pf-ship-grp-hd pf-ship-grp-orphan"><td colspan="6"><span class="pf-ship-grp-lbl">미할당 (구성 없음)</span> · '+orphans.length+'건</td></tr>'
+        );
+        orphans.forEach(function(sh) { bodyParts.push(shipRowHtml(sh, '')); });
+      }
+      tableHtml = '<table class="pf-ship-table">'+headRow+'<tbody>'+bodyParts.join('')+'</tbody></table>';
+    }
+  }
+
   var deletedSection = '';
   if (deleted.length) {
     deletedSection = '<details class="pf-ship-deleted"><summary>삭제된 출하 ('+deleted.length+')</summary>'+
@@ -1623,15 +1713,21 @@ function renderShipList() {
         '</tr>';
       }).join('')+'</tbody></table></details>';
   }
+
+  var filterBanner = filterDocId
+    ? '<div class="pf-ship-filter-bar">'+
+        '<span class="pf-ship-filter-lbl">필터:</span>'+
+        '<span class="pf-ship-filter-chip">'+esc((filterDoc.material||'')+' · '+(filterDoc.title||''))+'</span>'+
+        '<button class="pf-ship-filter-clear" onclick="APP.setShipFilter(null)">✕ 전체 보기</button>'+
+      '</div>'
+    : '';
+
   return '<div class="pf-ship-toolbar">'+
       '<h3 class="pf-ship-h">출하 Lot 목록</h3>'+
       '<button class="btn btn-primary" onclick="APP.newShip()">+ 새 출하 Lot</button>'+
     '</div>'+
-    (ships.length === 0
-      ? '<div class="pf-ship-empty">아직 출하 Lot이 없습니다. <strong>+ 새 출하 Lot</strong>으로 시작하세요.</div>'
-      : '<table class="pf-ship-table"><thead><tr>'+
-          '<th>출하명</th><th>고객</th><th>일자</th><th>총량</th><th>구성</th><th></th>'+
-        '</tr></thead><tbody>'+rows+'</tbody></table>')+
+    filterBanner+
+    tableHtml+
     deletedSection;
 }
 
