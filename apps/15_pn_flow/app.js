@@ -189,6 +189,78 @@ function refineStock(refine) {
   return { stock: stock, qty: rq, unit: unit, hasQty: true, consumed: consumed, ratio: ratio };
 }
 
+/* refineId 집합을 사용하는 비-삭제 출하 추출 (cascade delete 사전경고 + 정리용) */
+function shipsContainingRefines(refineIds) {
+  var set = {}; refineIds.forEach(function(rid){ set[rid] = true; });
+  var hits = [];
+  Object.keys(STATE.shipments || {}).forEach(function(sid) {
+    var sh = STATE.shipments[sid];
+    if (!sh || sh.deleted) return;
+    var comps = Array.isArray(sh.components) ? sh.components : [];
+    var idx = [];
+    comps.forEach(function(c, i) { if (c && c.refineId && set[c.refineId]) idx.push(i); });
+    if (idx.length) hits.push({ shId: sid, sh: sh, indices: idx });
+  });
+  return hits;
+}
+
+/* 비-삭제 출하에서 주어진 refineId의 component 모두 제거. 호출자가 confirm 후 호출.
+   반환: 제거된 component 총 개수 */
+function cleanRefineComponentsFromShipments(refineIds) {
+  var hits = shipsContainingRefines(refineIds);
+  if (!hits.length) return 0;
+  var set = {}; refineIds.forEach(function(rid){ set[rid] = true; });
+  var total = 0;
+  hits.forEach(function(h) {
+    var sh = h.sh;
+    var keep = (sh.components || []).filter(function(c) { return !c.refineId || !set[c.refineId]; });
+    var removed = (sh.components || []).length - keep.length;
+    if (removed > 0) {
+      sh.components = keep;
+      saveShipNow(sh.id);
+      total += removed;
+    }
+  });
+  return total;
+}
+
+/* refineIds 삭제 전 confirm. 출하 참조 0이면 그냥 true.
+   참조 있으면 list 보여주고 OK 누르면 cascade clean 후 true.
+   취소면 false. */
+function confirmCascadeDelete(refineIds, kindLabel) {
+  var hits = shipsContainingRefines(refineIds);
+  if (!hits.length) return true;
+  var totalComps = hits.reduce(function(s, h){ return s + h.indices.length; }, 0);
+  var preview = hits.slice(0, 6).map(function(h) {
+    return '· ' + (h.sh.shipName || '(이름 없음)') + ' — ' + h.indices.length + '개';
+  }).join('\n');
+  var more = hits.length > 6 ? '\n· ...외 ' + (hits.length - 6) + '건' : '';
+  var msg = (kindLabel || '항목') + '이(가) 출하 ' + hits.length + '건의 ' + totalComps + '개 컴포넌트에서 사용 중입니다:\n\n' +
+    preview + more + '\n\n삭제 시 해당 출하 컴포넌트도 함께 제거됩니다 (출하 자체는 유지).\n계속하시겠습니까?';
+  if (!confirm(msg)) return false;
+  cleanRefineComponentsFromShipments(refineIds);
+  return true;
+}
+
+/* 고아 component 스캔 — 비-삭제 출하 중 lot 또는 refine이 사라진 component 추출 */
+function findOrphanComponents() {
+  var orphans = [];
+  Object.keys(STATE.shipments || {}).forEach(function(sid) {
+    var sh = STATE.shipments[sid];
+    if (!sh || sh.deleted) return;
+    var comps = Array.isArray(sh.components) ? sh.components : [];
+    comps.forEach(function(c, i) {
+      var doc = c && STATE.docs[c.docId];
+      var sec = doc && (doc.sections||[]).find(function(s){return s.id===c.sectionId;});
+      var lot = sec && (sec.lots||[]).find(function(l){return l.id===c.lotId;});
+      var refine = lot && c.refineId && (lot.refines||[]).find(function(r){return r.id===c.refineId;});
+      var isOrphan = !lot || (c.refineId && !refine);
+      if (isOrphan) orphans.push({ shId: sid, sh: sh, idx: i, c: c });
+    });
+  });
+  return orphans;
+}
+
 function fmtQty(n, unit) {
   if (n === null || n === undefined || isNaN(n)) return '';
   var s = (Math.round(n * 100) / 100).toString();
@@ -573,7 +645,15 @@ window.APP = {
     render();
   },
   deleteDoc: function(id) {
+    var doc = STATE.docs[id];
+    var refineIds = [];
+    if (doc) (doc.sections || []).forEach(function(s) {
+      (s.lots || []).forEach(function(l) {
+        (l.refines || []).forEach(function(r) { refineIds.push(r.id); });
+      });
+    });
     if(!confirm('삭제하시겠습니까?')) return;
+    if (refineIds.length && !confirmCascadeDelete(refineIds, '이 문서의 정제 Batch')) return;
     delete STATE.docs[id];
     DB.child(id).remove();
     render();
@@ -586,6 +666,12 @@ window.APP = {
   },
   deleteSection: function(sid) {
     var d = getDoc(); if(!d) return;
+    var sec = (d.sections || []).find(function(s){return s.id===sid;});
+    var refineIds = [];
+    if (sec) (sec.lots || []).forEach(function(l) {
+      (l.refines || []).forEach(function(r) { refineIds.push(r.id); });
+    });
+    if (refineIds.length && !confirmCascadeDelete(refineIds, '이 섹션의 정제 Batch')) return;
     d.sections = d.sections.filter(s=>s.id!==sid);
     save();
     render();
@@ -625,6 +711,9 @@ window.APP = {
   },
   deleteLot: function(lid) {
     var d = getDoc(); if(!d) return;
+    var lot = findLot(lid);
+    var refineIds = lot ? (lot.refines || []).map(function(r){return r.id;}) : [];
+    if (refineIds.length && !confirmCascadeDelete(refineIds, '이 Lot의 정제 Batch')) return;
     for(var s of d.sections) s.lots = s.lots.filter(l=>l.id!==lid);
     save();
     render();
@@ -689,6 +778,7 @@ window.APP = {
   },
   deleteRefine: function(lid, rid) {
     var l = findLot(lid); if(!l) return;
+    if (!confirmCascadeDelete([rid], '정제 Batch')) return;
     l.refines = (l.refines || []).filter(function(r){return r.id!==rid;});
     save();
     render();
@@ -785,6 +875,33 @@ window.APP = {
     clearTimeout(STATE.ship.timer);
     renderShipModal();
     if (STATE.proc.open) { STATE.proc.open = false; renderProcessPopup(); }
+  },
+  /* 고아 component 정리 — 원본 lot/refine이 사라진 출하 component를 일괄 제거 */
+  cleanupOrphans: function() {
+    var orphans = findOrphanComponents();
+    if (!orphans.length) { alert('고아 컴포넌트가 없습니다.'); renderShipModal(); return; }
+    var byShip = {};
+    orphans.forEach(function(o) {
+      if (!byShip[o.shId]) byShip[o.shId] = { sh: o.sh, indices: [] };
+      byShip[o.shId].indices.push(o.idx);
+    });
+    var shipCount = Object.keys(byShip).length;
+    var preview = Object.keys(byShip).slice(0, 6).map(function(sid) {
+      var s = byShip[sid];
+      return '· ' + (s.sh.shipName || '(이름 없음)') + ' — ' + s.indices.length + '개';
+    }).join('\n');
+    var more = shipCount > 6 ? '\n· ...외 ' + (shipCount - 6) + '건' : '';
+    if (!confirm('원본 Lot/정제 Batch가 삭제된 고아 컴포넌트 ' + orphans.length + '개를 출하 ' + shipCount + '건에서 제거합니다:\n\n' + preview + more + '\n\n계속하시겠습니까?')) {
+      return;
+    }
+    Object.keys(byShip).forEach(function(sid) {
+      var sh = STATE.shipments[sid]; if (!sh) return;
+      var rmSet = {}; byShip[sid].indices.forEach(function(i){ rmSet[i] = true; });
+      sh.components = (sh.components || []).filter(function(c, i) { return !rmSet[i]; });
+      saveShipNow(sid);
+    });
+    alert('고아 컴포넌트 ' + orphans.length + '개를 정리했습니다.');
+    renderShipModal();
   },
   newShip: function() {
     var sh = mkShip({ shipName: 'SHIP-' + new Date().toISOString().slice(0,10) });
@@ -1725,8 +1842,15 @@ function renderShipList() {
       '</div>'
     : '';
 
+  // 고아 컴포넌트 개수 — 0보다 크면 정리 버튼 노출
+  var orphanCount = findOrphanComponents().length;
+  var orphanBtn = orphanCount > 0
+    ? '<button class="btn pf-ship-orphan-btn" title="원본 Lot/정제 Batch가 삭제된 출하 컴포넌트 정리" onclick="APP.cleanupOrphans()">🧹 고아 정리 ('+orphanCount+')</button>'
+    : '';
+
   return '<div class="pf-ship-toolbar">'+
       '<h3 class="pf-ship-h">출하 Lot 목록</h3>'+
+      orphanBtn+
       '<button class="btn btn-primary" onclick="APP.newShip()">+ 새 출하 Lot</button>'+
     '</div>'+
     filterBanner+

@@ -718,6 +718,12 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 
 .pf-ship-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .pf-ship-h { font-size: 15px; font-weight: 700; color: #1f2937; margin: 0; flex: 1; }
+.pf-ship-orphan-btn {
+  background: #fff7ed; border: 1px solid #fdba74; color: #9a3412;
+  padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+.pf-ship-orphan-btn:hover { background: #ffedd5; }
 
 /* 필터 배너 — 현재 문서의 출하만 표시 중일 때 */
 .pf-ship-filter-bar {
