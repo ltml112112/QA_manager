@@ -1185,6 +1185,10 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
 }
 .pf-trash-purge:hover { background: #fecaca; }
 
+.pf-trash-empty {
+  padding: 16px 14px; color: #9ca3af; font-size: 12.5px; font-style: italic; text-align: center;
+}
+
 /* 공정 휴지통 — 섹션/Lot 그룹 + step list */
 .pf-trash-body { padding: 8px 12px 12px; }
 .pf-trash-group { margin-top: 10px; }

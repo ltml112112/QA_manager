@@ -1462,16 +1462,13 @@ function renderList() {
   document.getElementById('doc-grid').innerHTML = html || '';
   document.getElementById('list-empty').classList.toggle('pf-hidden', !!docs.length);
 
-  /* 휴지통 (삭제된 문서) — 목록 하단 collapsible */
+  /* 휴지통 (삭제된 문서) — 목록 하단 collapsible (빈 상태도 항상 표시) */
   var trashEl = document.getElementById('pf-doc-trash');
   if (trashEl) {
-    if (!deletedDocs.length) {
-      trashEl.innerHTML = '';
-      trashEl.classList.add('pf-hidden');
-    } else {
-      trashEl.classList.remove('pf-hidden');
-      trashEl.innerHTML = '<details class="pf-trash"><summary>🗑️ 휴지통 — 삭제된 문서 ('+deletedDocs.length+')</summary>'+
-        '<table class="pf-trash-table"><tbody>'+
+    trashEl.classList.remove('pf-hidden');
+    var bodyHtml = deletedDocs.length === 0
+      ? '<div class="pf-trash-empty">휴지통이 비어있습니다. (문서 카드 우상단 "삭제" 버튼으로 삭제하면 여기로 이동)</div>'
+      : '<table class="pf-trash-table"><tbody>'+
         deletedDocs.map(function(d) {
           var when = d.deletedAt ? new Date(d.deletedAt).toISOString().slice(0,16).replace('T',' ') : '';
           var by = d.deletedBy ? ' · '+esc(d.deletedBy.split('@')[0]) : '';
@@ -1485,8 +1482,10 @@ function renderList() {
             '</td>'+
           '</tr>';
         }).join('')+
-        '</tbody></table></details>';
-    }
+        '</tbody></table>';
+    trashEl.innerHTML = '<details class="pf-trash"><summary>🗑️ 휴지통 — 삭제된 문서 ('+deletedDocs.length+')</summary>'+
+      bodyHtml+
+    '</details>';
   }
 }
 
@@ -1534,7 +1533,7 @@ function renderStepTrash() {
       total += trash.length;
     });
   });
-  if (!total) { el.innerHTML = ''; el.classList.add('pf-hidden'); return; }
+  // 빈 상태에도 항상 표시 — 기능 발견성 + 위치 일관성
   el.classList.remove('pf-hidden');
 
   var STEP_LABEL = { react:'반응', solid:'결정화', wet:'Wet 정제', subl:'승화정제', collect:'여액 취합' };
@@ -1571,8 +1570,12 @@ function renderStepTrash() {
     '</div>';
   }).join('');
 
+  var bodyHtml = total === 0
+    ? '<div class="pf-trash-empty">휴지통이 비어있습니다. (공정 단계 ✕ 버튼으로 삭제하면 여기로 이동)</div>'
+    : '<div class="pf-trash-body">'+rows+'</div>';
+
   el.innerHTML = '<details class="pf-trash"><summary>🗑️ 휴지통 — 삭제된 공정 ('+total+')</summary>'+
-    '<div class="pf-trash-body">'+rows+'</div>'+
+    bodyHtml+
   '</details>';
 }
 
