@@ -797,6 +797,11 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
   padding: 3px 9px; border-radius: 4px; font-size: 11.5px; cursor: pointer;
 }
 .pf-ship-restore-btn:hover { background: #bbf7d0; }
+.pf-ship-purge-btn {
+  background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c;
+  padding: 3px 9px; border-radius: 4px; font-size: 11.5px; cursor: pointer; margin-left: 6px;
+}
+.pf-ship-purge-btn:hover { background: #fecaca; }
 
 .pf-ship-empty { padding: 30px 12px; text-align: center; color: #9ca3af; font-size: 13px; }
 .pf-ship-empty-sm { padding: 18px 12px; }
@@ -1141,4 +1146,77 @@ body { background: var(--bg); height: 100vh; overflow: hidden; padding: 0; margi
     top: 60px; right: 12px; left: 12px;
     width: auto; max-height: calc(100vh - 80px);
   }
+}
+
+/* ── 휴지통 (문서 / 공정 공용) ─────────────────────── */
+.pf-doc-trash { margin-top: 24px; }
+.pf-step-trash { margin-top: 18px; padding: 0 24px; }
+.pf-trash {
+  background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+  padding: 0; overflow: hidden;
+}
+.pf-trash > summary {
+  cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 600;
+  color: #6b7280; user-select: none; list-style: none;
+}
+.pf-trash > summary::-webkit-details-marker { display: none; }
+.pf-trash[open] > summary { border-bottom: 1px solid #e5e7eb; background: #f3f4f6; }
+.pf-trash > summary:hover { background: #f3f4f6; }
+
+.pf-trash-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pf-trash-table tbody tr { border-top: 1px solid #f3f4f6; }
+.pf-trash-table td { padding: 8px 12px; vertical-align: middle; color: #6b7280; }
+.pf-trash-title { color: #374151; font-weight: 500; }
+.pf-trash-title .pf-trash-mat {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  background: #eef2ff; color: #4338ca; border-radius: 3px; font-size: 10.5px;
+}
+.pf-trash-when { font-size: 11.5px; color: #9ca3af; white-space: nowrap; }
+.pf-trash-act { text-align: right; white-space: nowrap; }
+
+.pf-trash-restore {
+  background: #dcfce7; border: 1px solid #bbf7d0; color: #15803d;
+  padding: 3px 10px; border-radius: 4px; font-size: 11.5px; cursor: pointer;
+}
+.pf-trash-restore:hover { background: #bbf7d0; }
+.pf-trash-purge {
+  background: #fee2e2; border: 1px solid #fecaca; color: #b91c1c;
+  padding: 3px 10px; border-radius: 4px; font-size: 11.5px; cursor: pointer; margin-left: 6px;
+}
+.pf-trash-purge:hover { background: #fecaca; }
+
+/* 공정 휴지통 — 섹션/Lot 그룹 + step list */
+.pf-trash-body { padding: 8px 12px 12px; }
+.pf-trash-group { margin-top: 10px; }
+.pf-trash-group:first-child { margin-top: 0; }
+.pf-trash-group-hd {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; border-bottom: 1px dashed #e5e7eb;
+  font-size: 12px; color: #6b7280;
+}
+.pf-trash-group-sec {
+  display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 3px;
+  font-weight: 700; font-size: 11px; text-align: center;
+}
+.pf-trash-group-sec.pf-sec-P { background: #dbeafe; color: #1d4ed8; }
+.pf-trash-group-sec.pf-sec-N { background: #ede9fe; color: #6d28d9; }
+.pf-trash-group-sec.pf-sec-S { background: #fef3c7; color: #b45309; }
+.pf-trash-group-lot { font-weight: 600; color: #374151; }
+.pf-trash-group-count { margin-left: auto; font-size: 11px; color: #9ca3af; }
+
+.pf-trash-step-list { list-style: none; padding: 0; margin: 6px 0 0; }
+.pf-trash-step {
+  border: 1px solid #eef0f3; border-radius: 5px; background: #fff;
+  margin-top: 6px; padding: 8px 10px;
+}
+.pf-trash-step-hd {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.pf-trash-step-type { font-size: 11px; padding: 1px 8px; border-radius: 3px; }
+.pf-trash-step-tag { font-size: 10.5px; }
+.pf-trash-step-meta { color: #9ca3af; font-size: 11px; }
+.pf-trash-step-act { margin-left: auto; }
+.pf-trash-step-detail {
+  margin-top: 6px; padding: 6px 8px; background: #f9fafb; border-radius: 4px;
+  font-size: 12px; color: #4b5563; white-space: pre-wrap;
 }

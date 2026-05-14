@@ -1,6 +1,6 @@
 # 15. P/N 공정 Flow 관리
 
-> Last updated: 2026-05-13 (rev. 정제 Batch 기준 재고)
+> Last updated: 2026-05-14 (rev. 휴지통 — 문서/공정 soft-delete, 출하 완전삭제)
 > 폴더: `apps/15_pn_flow/`
 > 대분류: 공정 이력 관리 · ID: `pn_flow` · 가드: `_AG_ADMIN_ONLY = true`
 
@@ -66,11 +66,16 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
               date: 'YYYY-MM-DD',
               operator: '담당자명'
             }
+          ],
+          deletedSteps: [                   // 소프트 삭제된 step 보관 (STAGE 6)
+            // steps[] 와 동일 스키마 + deletedAt, deletedBy
           ]
         }
       ]
     }
   ],
+  deleted: false,                            // 소프트 삭제 (STAGE 6) — 휴지통 표시
+  deletedAt, deletedBy,                      // 삭제 시점 메타
   updatedAt: timestamp,
   updatedBy: 'user@email.com'
 }
@@ -117,6 +122,7 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 | 3 | drill-down(컴포넌트 → 공정 점프) + 역방향 출하이력 popover + 노란 글로우 | 구현 완료 (2026-05-13) |
 | 4 | Excel 출력 — 정제 잔량 행 + "출하 Lot" 시트 · glossary | 구현 완료 (2026-05-13) |
 | 5 | **정제 Batch 기준 재고로 피벗** — 합성 Lot의 `finalQty/unit` 제거, 재고·이력·출하 모두 refines 단위로 이동. 공정 접기 상태에서도 정제 Batch는 항상 노출 | 구현 완료 (2026-05-13) |
+| 6 | **휴지통 (soft-delete)** — 문서·공정(step) 삭제 시 휴지통으로 이동. 출하 삭제된 항목에도 완전삭제 버튼. 복원 / 완전삭제 분리 | 구현 완료 (2026-05-14) |
 
 ### STAGE 1 — 재고 데이터 모델
 
@@ -263,3 +269,32 @@ db.ref('pn_flow_shipments')  // 출하 Lot (여러 공정 Lot의 N:M 조합)
 - 정제 Batch 영역은 **공정 접힘 여부와 무관하게 항상 노출** — 사용자가 잔량을 항상 확인 가능
 - 컴포넌트 ↗ 점프 → 부모 Lot 카드 노란 글로우 + 해당 정제 Batch 행도 따로 하이라이트 (`pf-refine-pulse`)
 - 구 데이터(`refineId` 없는 component)는 "(구 데이터)" 표시 + 점프 가능하지만 잔량 검증 스킵
+
+### STAGE 6 — 휴지통 (soft-delete)
+
+기존 hard-delete 가 실수 한 번에 데이터를 잃게 했음. 문서·공정 step·출하 모두 휴지통 패턴으로 통일.
+
+**문서 휴지통** (`pn_flow_docs/{docId}` 에 `deleted: true` 플래그)
+- `APP.deleteDoc` — 소프트 삭제 (refine cascade 검사 없음; 데이터 유지로 출하 component 영향 없음)
+- `APP.restoreDoc` — `deleted` 플래그 제거
+- `APP.purgeDoc` — 실제 RTDB 노드 제거 (이때만 cascade 확인)
+- 목록 하단 `<details>` `#pf-doc-trash` 에 삭제된 문서 표시 + 복원/완전삭제 버튼
+- `renderList()` 가 `!d.deleted` 로 필터
+
+**공정(step) 휴지통** (`lot.deletedSteps[]` 분리 배열)
+- 기존 step iteration 코드 무수정. `deleteStep` 이 step 객체를 `lot.steps` 에서 `lot.deletedSteps` 로 이동 (deletedAt/deletedBy 부여)
+- `APP.restoreStep` — 역방향 이동 (단, 원래 위치 미보존 — 끝에 push, 사용자가 드래그로 재배치)
+- `APP.purgeStep` — `lot.deletedSteps` 에서 제거
+- 편집기 하단 `#pf-step-trash` 에 섹션/Lot 별 그룹화하여 표시 (`renderStepTrash()`)
+- `normDoc` 이 `l.deletedSteps` 를 배열로 강제
+
+**출하 완전삭제**
+- 기존 `deleted: true` soft-delete 옆에 `APP.purgeShip` 추가
+- "삭제된 출하" `<details>` 의 "복원" 옆에 "완전 삭제" 버튼 (`pf-ship-purge-btn`)
+- `delete STATE.shipments[shId]; SHIP_DB.child(shId).remove();`
+
+**CSS**
+- `.pf-trash` — 공통 collapsible 컨테이너 (회색 배경)
+- `.pf-trash-restore` (초록) / `.pf-trash-purge` (빨강) — 공통 버튼
+- `.pf-trash-group` — 공정 휴지통 섹션/Lot 그룹 (`.pf-trash-group-sec.pf-sec-P|N|S` 색상)
+- `.pf-trash-step` — 개별 step 카드 + `.pf-trash-step-detail`

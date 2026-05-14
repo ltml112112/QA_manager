@@ -390,6 +390,7 @@ function normDoc(d) {
     s.lots.forEach(function(l) {
       if (!Array.isArray(l.steps)) l.steps = l.steps ? Object.values(l.steps) : [];
       if (!Array.isArray(l.refines)) l.refines = l.refines ? Object.values(l.refines) : [];
+      if (!Array.isArray(l.deletedSteps)) l.deletedSteps = l.deletedSteps ? Object.values(l.deletedSteps) : [];
     });
   });
   return d;
@@ -645,14 +646,31 @@ window.APP = {
     render();
   },
   deleteDoc: function(id) {
-    var doc = STATE.docs[id];
+    var doc = STATE.docs[id]; if(!doc) return;
+    if(!confirm('"'+(doc.title||'(제목 없음)')+'" 문서를 휴지통으로 이동하시겠습니까?\n(정제 Batch 데이터는 유지 — 출하 component 영향 없음. 완전 삭제는 휴지통에서 진행)')) return;
+    doc.deleted = true;
+    doc.deletedAt = Date.now();
+    doc.deletedBy = (_currentUser && _currentUser.email) || '';
+    DB.child(id).set(doc);
+    render();
+  },
+  restoreDoc: function(id) {
+    var doc = STATE.docs[id]; if(!doc) return;
+    delete doc.deleted;
+    delete doc.deletedAt;
+    delete doc.deletedBy;
+    DB.child(id).set(doc);
+    render();
+  },
+  purgeDoc: function(id) {
+    var doc = STATE.docs[id]; if(!doc) return;
     var refineIds = [];
-    if (doc) (doc.sections || []).forEach(function(s) {
+    (doc.sections || []).forEach(function(s) {
       (s.lots || []).forEach(function(l) {
         (l.refines || []).forEach(function(r) { refineIds.push(r.id); });
       });
     });
-    if(!confirm('삭제하시겠습니까?')) return;
+    if(!confirm('"'+(doc.title||'(제목 없음)')+'" 문서를 완전 삭제합니다.\n복구할 수 없습니다. 계속하시겠습니까?')) return;
     if (refineIds.length && !confirmCascadeDelete(refineIds, '이 문서의 정제 Batch')) return;
     delete STATE.docs[id];
     DB.child(id).remove();
@@ -753,10 +771,49 @@ window.APP = {
   },
   deleteStep: function(sid) {
     var l = findStepLot(sid); if(!l) return;
-    l.steps = l.steps.filter(s=>s.id!==sid);
+    var st = (l.steps||[]).find(function(s){return s.id===sid;}); if(!st) return;
+    st.deletedAt = Date.now();
+    st.deletedBy = (_currentUser && _currentUser.email) || '';
+    if (!Array.isArray(l.deletedSteps)) l.deletedSteps = [];
+    l.deletedSteps.push(st);
+    l.steps = l.steps.filter(function(s){return s.id!==sid;});
     if(STATE.editKey===sid) closeEdit();
     save();
     render();
+  },
+  restoreStep: function(sid) {
+    var d = getDoc(); if(!d) return;
+    var lot, step, idx = -1;
+    for (var i=0; i<d.sections.length && !step; i++) {
+      var sec = d.sections[i];
+      for (var j=0; j<(sec.lots||[]).length && !step; j++) {
+        var l = sec.lots[j];
+        var trash = Array.isArray(l.deletedSteps) ? l.deletedSteps : [];
+        idx = trash.findIndex(function(s){return s.id===sid;});
+        if (idx !== -1) { lot = l; step = trash[idx]; break; }
+      }
+    }
+    if (!lot || !step) return;
+    delete step.deletedAt;
+    delete step.deletedBy;
+    lot.deletedSteps.splice(idx, 1);
+    if (!Array.isArray(lot.steps)) lot.steps = [];
+    lot.steps.push(step);
+    save();
+    render();
+  },
+  purgeStep: function(sid) {
+    var d = getDoc(); if(!d) return;
+    if (!confirm('이 공정을 완전 삭제합니다. 복구할 수 없습니다.')) return;
+    for (var i=0; i<d.sections.length; i++) {
+      var sec = d.sections[i];
+      for (var j=0; j<(sec.lots||[]).length; j++) {
+        var l = sec.lots[j];
+        if (!Array.isArray(l.deletedSteps)) continue;
+        var idx = l.deletedSteps.findIndex(function(s){return s.id===sid;});
+        if (idx !== -1) { l.deletedSteps.splice(idx, 1); save(); render(); return; }
+      }
+    }
   },
   setSectionType: function(sid, type) {
     var d = getDoc(); if(!d) return;
@@ -933,6 +990,13 @@ window.APP = {
     var sh = STATE.shipments[shId]; if(!sh) return;
     sh.deleted = false;
     saveShipNow(shId);
+    renderShipModal();
+  },
+  purgeShip: function(shId) {
+    var sh = STATE.shipments[shId]; if(!sh) return;
+    if (!confirm('출하 Lot "'+(sh.shipName||'(이름 없음)')+'" 을(를) 완전 삭제합니다.\n복구할 수 없습니다. 계속하시겠습니까?')) return;
+    delete STATE.shipments[shId];
+    SHIP_DB.child(shId).remove();
     renderShipModal();
   },
   updateShipField: function(shId, field, val) {
@@ -1365,9 +1429,12 @@ function renderList() {
   document.getElementById('v-list').classList.remove('pf-hidden');
   document.getElementById('v-doc').classList.add('pf-hidden');
   var keyword = (document.getElementById('list-search') ? document.getElementById('list-search').value : '').toLowerCase();
-  var docs = Object.values(STATE.docs).sort(function(a,b){
+  var allDocs = Object.values(STATE.docs).sort(function(a,b){
     return (b.date||'').localeCompare(a.date||'');
-  }).filter(function(d) {
+  });
+  var deletedDocs = allDocs.filter(function(d){ return d.deleted; });
+  var docs = allDocs.filter(function(d) {
+    if (d.deleted) return false;
     if(!keyword) return true;
     var t = (d.title||'').toLowerCase();
     var m = (d.material||'').toLowerCase();
@@ -1394,6 +1461,33 @@ function renderList() {
   }).join('');
   document.getElementById('doc-grid').innerHTML = html || '';
   document.getElementById('list-empty').classList.toggle('pf-hidden', !!docs.length);
+
+  /* 휴지통 (삭제된 문서) — 목록 하단 collapsible */
+  var trashEl = document.getElementById('pf-doc-trash');
+  if (trashEl) {
+    if (!deletedDocs.length) {
+      trashEl.innerHTML = '';
+      trashEl.classList.add('pf-hidden');
+    } else {
+      trashEl.classList.remove('pf-hidden');
+      trashEl.innerHTML = '<details class="pf-trash"><summary>🗑️ 휴지통 — 삭제된 문서 ('+deletedDocs.length+')</summary>'+
+        '<table class="pf-trash-table"><tbody>'+
+        deletedDocs.map(function(d) {
+          var when = d.deletedAt ? new Date(d.deletedAt).toISOString().slice(0,16).replace('T',' ') : '';
+          var by = d.deletedBy ? ' · '+esc(d.deletedBy.split('@')[0]) : '';
+          return '<tr class="pf-trash-row">'+
+            '<td class="pf-trash-title">'+esc(d.title||'(제목 없음)')+
+              (d.material?' <span class="pf-trash-mat">'+esc(d.material)+'</span>':'')+'</td>'+
+            '<td class="pf-trash-when">'+esc(when)+by+'</td>'+
+            '<td class="pf-trash-act">'+
+              '<button class="pf-trash-restore" onclick="APP.restoreDoc(\''+d.id+'\')">복원</button>'+
+              '<button class="pf-trash-purge" onclick="APP.purgeDoc(\''+d.id+'\')">완전 삭제</button>'+
+            '</td>'+
+          '</tr>';
+        }).join('')+
+        '</tbody></table></details>';
+    }
+  }
 }
 
 function renderDoc() {
@@ -1409,6 +1503,7 @@ function renderDoc() {
   var html = secs.length === 0 ? renderEmptyDoc() : secs.map(renderSec).join('');
   document.getElementById('doc-body').innerHTML = html;
   renderUpdatedInfo();
+  renderStepTrash();
   // 전체 Lot 공정 접기/펼치기 버튼 라벨 갱신
   var togBtn = document.getElementById('pf-toggle-all-btn');
   if (togBtn) {
@@ -1419,6 +1514,66 @@ function renderDoc() {
     togBtn.disabled = !lotIds.length;
   }
   APP.initSortable();
+}
+
+/* ── 공정 휴지통 — 편집기 하단 collapsible ───────────
+   삭제된 step 은 lot.deletedSteps[] 에 보관. 섹션/Lot 별로 그룹화하여
+   복원·완전삭제 버튼 제공. */
+function renderStepTrash() {
+  var el = document.getElementById('pf-step-trash');
+  if (!el) return;
+  var d = getDoc();
+  if (!d) { el.innerHTML = ''; el.classList.add('pf-hidden'); return; }
+  var groups = [];
+  var total = 0;
+  (d.sections||[]).forEach(function(sec) {
+    (sec.lots||[]).forEach(function(l) {
+      var trash = Array.isArray(l.deletedSteps) ? l.deletedSteps : [];
+      if (!trash.length) return;
+      groups.push({ sec: sec, lot: l, steps: trash });
+      total += trash.length;
+    });
+  });
+  if (!total) { el.innerHTML = ''; el.classList.add('pf-hidden'); return; }
+  el.classList.remove('pf-hidden');
+
+  var STEP_LABEL = { react:'반응', solid:'결정화', wet:'Wet 정제', subl:'승화정제', collect:'여액 취합' };
+  var rows = groups.map(function(g) {
+    var stepsHtml = g.steps.map(function(st) {
+      var lbl = STEP_LABEL[st.type] || st.type || '공정';
+      if (st.type === 'subl' && st.location) lbl = (st.location + ' ' + lbl);
+      var meta = [];
+      if (st.date) meta.push(esc(st.date));
+      if (st.operator) meta.push(esc(st.operator));
+      if (st.deletedAt) meta.push('삭제 ' + new Date(st.deletedAt).toISOString().slice(0,16).replace('T',' '));
+      if (st.deletedBy) meta.push(esc(st.deletedBy.split('@')[0]));
+      var detail = st.detail ? '<div class="pf-trash-step-detail">'+esc(st.detail)+'</div>' : '';
+      return '<li class="pf-trash-step pf-trash-step-'+esc(st.type||'')+'">'+
+        '<div class="pf-trash-step-hd">'+
+          '<span class="pf-trash-step-type pf-leg '+esc(st.type||'')+'">'+esc(lbl)+'</span>'+
+          (st.tag ? '<span class="pf-trash-step-tag pf-tag pf-tag-'+esc(st.tag)+'">'+esc(st.tag.toUpperCase())+'</span>' : '')+
+          '<span class="pf-trash-step-meta">'+meta.join(' · ')+'</span>'+
+          '<span class="pf-trash-step-act">'+
+            '<button class="pf-trash-restore" onclick="APP.restoreStep(\''+st.id+'\')">복원</button>'+
+            '<button class="pf-trash-purge" onclick="APP.purgeStep(\''+st.id+'\')">완전 삭제</button>'+
+          '</span>'+
+        '</div>'+
+        detail+
+      '</li>';
+    }).join('');
+    return '<div class="pf-trash-group">'+
+      '<div class="pf-trash-group-hd">'+
+        '<span class="pf-trash-group-sec pf-sec-'+esc(g.sec.type||'')+'">'+esc(g.sec.type||'')+'</span>'+
+        '<span class="pf-trash-group-lot">'+esc(g.lot.name||'(이름 없음)')+'</span>'+
+        '<span class="pf-trash-group-count">'+g.steps.length+'건</span>'+
+      '</div>'+
+      '<ul class="pf-trash-step-list">'+stepsHtml+'</ul>'+
+    '</div>';
+  }).join('');
+
+  el.innerHTML = '<details class="pf-trash"><summary>🗑️ 휴지통 — 삭제된 공정 ('+total+')</summary>'+
+    '<div class="pf-trash-body">'+rows+'</div>'+
+  '</details>';
 }
 
 /* ── 요약 스트립 ───────────────────────────────── */
@@ -1829,7 +1984,10 @@ function renderShipList() {
           '<td>'+esc(sh.shipName||'(이름 없음)')+'</td>'+
           '<td>'+esc(sh.customer||'-')+'</td>'+
           '<td>'+esc(sh.date||'-')+'</td>'+
-          '<td><button class="pf-ship-restore-btn" onclick="APP.restoreShip(\''+sh.id+'\')">복원</button></td>'+
+          '<td>'+
+            '<button class="pf-ship-restore-btn" onclick="APP.restoreShip(\''+sh.id+'\')">복원</button>'+
+            '<button class="pf-ship-purge-btn" onclick="APP.purgeShip(\''+sh.id+'\')">완전 삭제</button>'+
+          '</td>'+
         '</tr>';
       }).join('')+'</tbody></table></details>';
   }
